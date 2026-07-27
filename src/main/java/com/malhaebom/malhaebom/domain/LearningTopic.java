@@ -1,5 +1,7 @@
 package com.malhaebom.malhaebom.domain;
 
+import java.util.Arrays;
+
 public enum LearningTopic {
 
 	ANIMAL(1L, "동물"),
@@ -24,5 +26,12 @@ public enum LearningTopic {
 
 	public String getCode() {
 		return name();
+	}
+
+	public static LearningTopic fromTopicId(Long topicId) {
+		return Arrays.stream(values())
+			.filter(topic -> topic.topicId.equals(topicId))
+			.findFirst()
+			.orElseThrow(() -> new IllegalArgumentException("존재하지 않는 학습 주제입니다."));
 	}
 }
