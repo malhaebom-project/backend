@@ -6,22 +6,17 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.QuestionTypeResponse;
-import com.malhaebom.malhaebom.service.QuestionTypeService;
-
-import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1/question-types")
-@RequiredArgsConstructor
 public class QuestionTypeController {
-
-	private final QuestionTypeService questionTypeService;
 
 	@GetMapping
 	public ApiResponse<List<QuestionTypeResponse>> getQuestionTypes() {
-		List<QuestionTypeResponse> response = questionTypeService.getQuestionTypes().stream()
+		List<QuestionTypeResponse> response = List.of(QuestionType.values()).stream()
 			.map(QuestionTypeResponse::from)
 			.toList();
 
