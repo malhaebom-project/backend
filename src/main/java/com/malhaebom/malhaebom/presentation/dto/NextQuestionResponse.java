@@ -1,9 +1,9 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
-import com.malhaebom.malhaebom.domain.LearningSession;
-import com.malhaebom.malhaebom.domain.LearningSessionQuestion;
-import com.malhaebom.malhaebom.domain.Question;
-import com.malhaebom.malhaebom.domain.QuestionType;
+import com.malhaebom.malhaebom.domain.learning.LearningSession;
+import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
+import com.malhaebom.malhaebom.domain.learning.Question;
+import com.malhaebom.malhaebom.domain.learning.QuestionType;
 
 public record NextQuestionResponse(
 	Long questionId,

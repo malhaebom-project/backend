@@ -1,4 +1,4 @@
-package com.malhaebom.malhaebom.domain;
+package com.malhaebom.malhaebom.domain.learning;
 
 import java.util.ArrayList;
 import java.util.List;

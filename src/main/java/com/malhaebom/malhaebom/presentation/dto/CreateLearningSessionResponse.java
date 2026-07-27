@@ -2,9 +2,9 @@ package com.malhaebom.malhaebom.presentation.dto;
 
 import java.time.LocalDateTime;
 
-import com.malhaebom.malhaebom.domain.Difficulty;
-import com.malhaebom.malhaebom.domain.LearningSession;
-import com.malhaebom.malhaebom.domain.LearningSessionStatus;
+import com.malhaebom.malhaebom.domain.learning.Difficulty;
+import com.malhaebom.malhaebom.domain.learning.LearningSession;
+import com.malhaebom.malhaebom.domain.learning.LearningSessionStatus;
 
 public record CreateLearningSessionResponse(
 	Long sessionId,

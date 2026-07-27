@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.malhaebom.malhaebom.domain.QuestionType;
+import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.QuestionTypeResponse;
 

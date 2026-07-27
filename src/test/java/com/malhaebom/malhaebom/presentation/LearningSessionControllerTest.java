@@ -13,12 +13,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.malhaebom.malhaebom.domain.Difficulty;
-import com.malhaebom.malhaebom.domain.LearningTopic;
-import com.malhaebom.malhaebom.domain.Question;
-import com.malhaebom.malhaebom.domain.QuestionType;
-import com.malhaebom.malhaebom.domain.repository.LearningSessionRepository;
-import com.malhaebom.malhaebom.domain.repository.QuestionRepository;
+import com.malhaebom.malhaebom.domain.learning.Difficulty;
+import com.malhaebom.malhaebom.domain.learning.LearningTopic;
+import com.malhaebom.malhaebom.domain.learning.Question;
+import com.malhaebom.malhaebom.domain.learning.QuestionType;
+import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
+import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 
 @SpringBootTest
 @AutoConfigureMockMvc

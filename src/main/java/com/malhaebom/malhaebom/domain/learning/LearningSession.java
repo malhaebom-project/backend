@@ -1,4 +1,4 @@
-package com.malhaebom.malhaebom.domain;
+package com.malhaebom.malhaebom.domain.learning;
 
 import java.time.LocalDateTime;
 import java.util.List;

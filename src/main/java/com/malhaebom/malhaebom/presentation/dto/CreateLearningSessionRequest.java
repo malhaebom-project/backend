@@ -2,8 +2,8 @@ package com.malhaebom.malhaebom.presentation.dto;
 
 import java.util.List;
 
-import com.malhaebom.malhaebom.domain.Difficulty;
-import com.malhaebom.malhaebom.domain.QuestionType;
+import com.malhaebom.malhaebom.domain.learning.Difficulty;
+import com.malhaebom.malhaebom.domain.learning.QuestionType;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;

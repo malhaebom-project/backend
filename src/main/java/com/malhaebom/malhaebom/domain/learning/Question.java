@@ -1,4 +1,4 @@
-package com.malhaebom.malhaebom.domain;
+package com.malhaebom.malhaebom.domain.learning;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
