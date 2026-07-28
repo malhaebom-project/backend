@@ -83,6 +83,14 @@ public class LearningSessionQuestion {
 		}
 	}
 
+	void recordWrongAnswerAttempt() {
+		if (isCompleted()) {
+			throw new IllegalStateException("이미 완료한 문제입니다.");
+		}
+
+		wrongAnswerCount++;
+	}
+
 	void useHint() {
 		if (isCompleted()) {
 			throw new IllegalStateException("완료한 문제에서는 힌트를 사용할 수 없습니다.");
