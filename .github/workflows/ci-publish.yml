@@ -57,4 +57,4 @@ jobs:
           context: .
           platforms: linux/arm64
           push: true
-          tags: accoknu/backend:latest
+          tags: malhaebom/backend:latest

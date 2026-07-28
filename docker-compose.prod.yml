@@ -1,6 +1,6 @@
 services:
   was:
-    image: accoknu/backend:latest
+    image: malhaebom/backend:latest
     ports:
       - "80:8080"
     environment:
