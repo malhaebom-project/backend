@@ -64,6 +64,28 @@ public class LearningAnswerService {
 		);
 	}
 
+	@Transactional
+	public LearningSession skipRetry(
+		Long sessionId,
+		Long sessionQuestionId
+	) {
+		LearningSession session = learningSessionRepository
+			.findWithQuestionsForUpdateById(sessionId)
+			.orElseThrow(LearningSessionNotFoundException::new);
+		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
+		validateCurrentQuestion(currentQuestion, sessionQuestionId);
+
+		Answer latestAnswer = answerRepository
+			.findFirstBySessionQuestion_IdOrderByAttemptNoDesc(sessionQuestionId)
+			.orElseThrow(
+				() -> new IllegalStateException("제출된 답변이 없습니다.")
+			);
+		validateRetryable(latestAnswer);
+
+		session.completeCurrentQuestion(false);
+		return session;
+	}
+
 	private int getNextAttemptNo(Long sessionQuestionId) {
 		return answerRepository
 			.findFirstBySessionQuestion_IdOrderByAttemptNoDesc(sessionQuestionId)
@@ -77,6 +99,12 @@ public class LearningAnswerService {
 	) {
 		if (!Objects.equals(currentQuestion.getId(), sessionQuestionId)) {
 			throw new IllegalArgumentException("현재 진행 중인 문제가 아닙니다.");
+		}
+	}
+
+	private void validateRetryable(Answer answer) {
+		if (answer.isCorrect() || answer.getAttemptNo() >= MAX_ATTEMPT_COUNT) {
+			throw new IllegalStateException("재시도 가능한 오답이 아닙니다.");
 		}
 	}
 }

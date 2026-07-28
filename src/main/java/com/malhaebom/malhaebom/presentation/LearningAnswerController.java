@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
+import com.malhaebom.malhaebom.presentation.dto.LearningSessionResponse;
 import com.malhaebom.malhaebom.presentation.dto.SubmitAnswerRequest;
 import com.malhaebom.malhaebom.presentation.dto.SubmitAnswerResponse;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
@@ -34,6 +35,18 @@ public class LearningAnswerController {
 					sessionQuestionId,
 					request.answerText()
 				)
+			)
+		);
+	}
+
+	@PostMapping("/{sessionId}/questions/{sessionQuestionId}/skip-retry")
+	public ApiResponse<LearningSessionResponse> skipRetry(
+		@PathVariable Long sessionId,
+		@PathVariable Long sessionQuestionId
+	) {
+		return ApiResponse.success(
+			LearningSessionResponse.from(
+				learningAnswerService.skipRetry(sessionId, sessionQuestionId)
 			)
 		);
 	}
