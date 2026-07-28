@@ -1,3 +1,7 @@
 spring:
   application:
     name: malhaebom
+  config:
+    import:
+      - optional:file:./config/application.yaml
+      - optional:file:.env[.properties]

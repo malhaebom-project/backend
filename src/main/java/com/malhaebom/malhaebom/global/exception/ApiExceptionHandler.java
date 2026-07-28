@@ -11,8 +11,24 @@ import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
-	@ExceptionHandler(LearningSessionNotFoundException.class)
+	@ExceptionHandler(UnauthorizedException.class)
+	public ResponseEntity<ApiResponse<Void>> handleUnauthorized(
+		UnauthorizedException exception
+	) {
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+			.body(ApiResponse.error(exception.getMessage()));
+	}
+
+	@ExceptionHandler(NotFoundException.class)
 	public ResponseEntity<ApiResponse<Void>> handleNotFound(
+		NotFoundException exception
+	) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+			.body(ApiResponse.error(exception.getMessage()));
+	}
+
+	@ExceptionHandler(LearningSessionNotFoundException.class)
+	public ResponseEntity<ApiResponse<Void>> handleLearningSessionNotFound(
 		LearningSessionNotFoundException exception
 	) {
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -38,7 +54,6 @@ public class ApiExceptionHandler {
 			.getFieldErrors()
 			.getFirst()
 			.getDefaultMessage();
-
 		return ResponseEntity.badRequest()
 			.body(ApiResponse.error(message));
 	}
