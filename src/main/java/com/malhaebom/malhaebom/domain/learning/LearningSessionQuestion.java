@@ -77,10 +77,6 @@ public class LearningSessionQuestion {
 
 		this.correct = correct;
 		this.answeredAt = LocalDateTime.now();
-
-		if (!correct) {
-			wrongAnswerCount++;
-		}
 	}
 
 	void recordWrongAnswerAttempt() {

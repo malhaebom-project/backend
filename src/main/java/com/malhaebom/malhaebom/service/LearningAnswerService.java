@@ -46,9 +46,11 @@ public class LearningAnswerService {
 
 		boolean canRetry = !answer.isCorrect()
 			&& attemptNo < MAX_ATTEMPT_COUNT;
-		if (canRetry) {
+		if (!answer.isCorrect()) {
 			session.recordWrongAnswerAttempt();
-		} else {
+		}
+
+		if (!canRetry) {
 			session.completeCurrentQuestion(answer.isCorrect());
 		}
 
