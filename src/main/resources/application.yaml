@@ -1,3 +1,12 @@
 spring:
   application:
     name: malhaebom
+
+malhaebom:
+  auth:
+    issuer: malhaebom-backend
+    audience: malhaebom-api
+    access-token-ttl: 15m
+    refresh-session-ttl: 14d
+    jwt:
+      secret-base64: ${MALHAEBOM_AUTH_JWT_SECRET_BASE64}
