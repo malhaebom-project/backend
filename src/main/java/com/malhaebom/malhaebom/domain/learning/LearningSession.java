@@ -77,10 +77,6 @@ public class LearningSession {
 	public void completeCurrentQuestion(boolean correct) {
 		validateInProgress();
 		questions.completeCurrent(correct);
-
-		if (questions.isCompleted()) {
-			complete();
-		}
 	}
 
 	public void recordWrongAnswerAttempt() {
@@ -117,6 +113,11 @@ public class LearningSession {
 
 	public void complete() {
 		validateInProgress();
+
+		if (!questions.isCompleted()) {
+			throw new IllegalStateException("완료되지 않은 문제가 남아 있습니다.");
+		}
+
 		markCompleted();
 	}
 
