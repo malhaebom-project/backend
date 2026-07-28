@@ -1,0 +1,30 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:malhaebom;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+  flyway:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-google-client-id
+            client-secret: test-google-client-secret
+
+app:
+  jwt:
+    secret: test-secret-key-that-is-longer-than-32-bytes
+    access-token-seconds: 900
+    refresh-token-seconds: 1209600
+  oauth:
+    frontend-base-url: http://localhost:3000
+    login-code-seconds: 60
+  cookie:
+    name: MALHAEBOM_REFRESH
+    secure: false
+    same-site: Lax

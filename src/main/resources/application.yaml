@@ -1,3 +1,40 @@
 spring:
   application:
     name: malhaebom
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/malhaebom}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:local-google-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:local-google-client-secret}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - openid
+              - profile
+              - email
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:local-development-secret-key-must-have-32-bytes}
+    access-token-seconds: 900
+    refresh-token-seconds: 1209600
+  oauth:
+    frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:3000}
+    login-code-seconds: 60
+  cookie:
+    name: ${REFRESH_COOKIE_NAME:MALHAEBOM_REFRESH}
+    secure: ${COOKIE_SECURE:false}
+    same-site: ${COOKIE_SAME_SITE:Lax}
+
+server:
+  forward-headers-strategy: framework
