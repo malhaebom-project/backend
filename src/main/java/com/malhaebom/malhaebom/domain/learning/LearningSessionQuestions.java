@@ -55,6 +55,10 @@ public class LearningSessionQuestions {
 		currentQuestionIndex++;
 	}
 
+	void recordWrongAnswerAttempt() {
+		getCurrent().recordWrongAnswerAttempt();
+	}
+
 	void useHintOnCurrentQuestion() {
 		getCurrent().useHint();
 	}

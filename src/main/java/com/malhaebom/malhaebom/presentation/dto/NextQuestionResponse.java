@@ -6,6 +6,7 @@ import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 
 public record NextQuestionResponse(
+	Long sessionQuestionId,
 	Long questionId,
 	int questionIndex,
 	int totalQuestionCount,
@@ -24,6 +25,7 @@ public record NextQuestionResponse(
 		Question question = sessionQuestion.getQuestion();
 
 		return new NextQuestionResponse(
+			sessionQuestion.getId(),
 			question.getId(),
 			sessionQuestion.getQuestionIndex() + 1,
 			session.getQuestionCount(),

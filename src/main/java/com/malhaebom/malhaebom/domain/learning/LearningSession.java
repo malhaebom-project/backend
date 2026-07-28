@@ -83,6 +83,11 @@ public class LearningSession {
 		}
 	}
 
+	public void recordWrongAnswerAttempt() {
+		validateInProgress();
+		questions.recordWrongAnswerAttempt();
+	}
+
 	public void useHintOnCurrentQuestion() {
 		validateInProgress();
 		questions.useHintOnCurrentQuestion();
