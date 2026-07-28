@@ -1,0 +1,9 @@
+services:
+  was:
+    image: malhaebom/backend:latest
+    ports:
+      - "80:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+    volumes:
+      - ./config:/app/config:ro
