@@ -2,21 +2,6 @@ spring:
   application:
     name: malhaebom
   config:
-    import: optional:file:.env[.properties]
-
-jwt:
-  access:
-    secret-key: ${JWT_ACCESS_SECRET:local-access-secret-key-for-malhaebom}
-    expiration: 1h
-  refresh:
-    secret-key: ${JWT_REFRESH_SECRET:local-refresh-secret-key-for-malhaebom}
-    expiration: 14d
-
-cookie:
-  refresh-token:
-    path: /
-    domain: ${COOKIE_DOMAIN:localhost}
-    same-site: None
-    secure: true
-    http-only: true
-    ttl: 14d
+    import:
+      - optional:file:./config/application.yaml
+      - optional:file:.env[.properties]
