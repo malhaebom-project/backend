@@ -4,11 +4,19 @@ spring:
   config:
     import: optional:file:.env[.properties]
 
-malhaebom:
-  auth:
-    issuer: malhaebom-backend
-    audience: malhaebom-api
-    access-token-ttl: 15m
-    refresh-session-ttl: 14d
-    jwt:
-      secret-base64: ${MALHAEBOM_AUTH_JWT_SECRET_BASE64}
+jwt:
+  access:
+    secret-key: ${JWT_ACCESS_SECRET:local-access-secret-key-for-malhaebom}
+    expiration: 1h
+  refresh:
+    secret-key: ${JWT_REFRESH_SECRET:local-refresh-secret-key-for-malhaebom}
+    expiration: 14d
+
+cookie:
+  refresh-token:
+    path: /
+    domain: ${COOKIE_DOMAIN:localhost}
+    same-site: None
+    secure: true
+    http-only: true
+    ttl: 14d
