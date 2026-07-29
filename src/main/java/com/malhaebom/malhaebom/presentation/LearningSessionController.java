@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
+import com.malhaebom.malhaebom.presentation.dto.CompleteLearningSessionResponse;
 import com.malhaebom.malhaebom.presentation.dto.CreateLearningSessionRequest;
 import com.malhaebom.malhaebom.presentation.dto.CreateLearningSessionResponse;
 import com.malhaebom.malhaebom.presentation.dto.LearningSessionResponse;
@@ -63,11 +64,11 @@ public class LearningSessionController {
 	}
 
 	@PostMapping("/{sessionId}/complete")
-	public ApiResponse<LearningSessionResponse> complete(
+	public ApiResponse<CompleteLearningSessionResponse> complete(
 		@PathVariable Long sessionId
 	) {
 		return ApiResponse.success(
-			LearningSessionResponse.from(
+			CompleteLearningSessionResponse.from(
 				learningSessionService.complete(sessionId)
 			),
 			"학습을 완료했습니다."
