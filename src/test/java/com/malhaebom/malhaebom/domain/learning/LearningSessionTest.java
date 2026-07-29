@@ -1,6 +1,7 @@
 package com.malhaebom.malhaebom.domain.learning;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,6 +34,19 @@ class LearningSessionTest {
 		assertEquals(1, session.getCurrentQuestionIndex());
 		assertSame(questions.get(1), session.getCurrentQuestion().getQuestion());
 		assertEquals(1, session.getCorrectCount());
+	}
+
+	@Test
+	void 오답_시도를_기록하면_현재_문제를_유지한다() {
+		LearningSession session = createSession(createQuestions());
+		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
+
+		session.recordWrongAnswerAttempt();
+
+		assertEquals(0, session.getCurrentQuestionIndex());
+		assertSame(currentQuestion, session.getCurrentQuestion());
+		assertEquals(1, currentQuestion.getWrongAnswerCount());
+		assertFalse(currentQuestion.isCompleted());
 	}
 
 	@Test
