@@ -24,13 +24,11 @@ public interface LearningSessionRepository extends JpaRepository<LearningSession
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("""
-		select distinct session
+		select session
 		from LearningSession session
-		left join fetch session.questions.values sessionQuestion
-		left join fetch sessionQuestion.question
 		where session.id = :sessionId
 		""")
-	Optional<LearningSession> findWithQuestionsForUpdateById(
+	Optional<LearningSession> findForUpdateById(
 		@Param("sessionId") Long sessionId
 	);
 }

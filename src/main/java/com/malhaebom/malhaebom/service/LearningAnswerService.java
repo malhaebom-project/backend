@@ -31,7 +31,7 @@ public class LearningAnswerService {
 		String answerText
 	) {
 		LearningSession session = learningSessionRepository
-			.findWithQuestionsForUpdateById(sessionId)
+			.findForUpdateById(sessionId)
 			.orElseThrow(LearningSessionNotFoundException::new);
 		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
 		validateCurrentQuestion(currentQuestion, sessionQuestionId);
