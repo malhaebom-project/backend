@@ -1,6 +1,5 @@
 package com.malhaebom.malhaebom.global.exception;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -11,28 +10,16 @@ import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
-	@ExceptionHandler(UnauthorizedException.class)
-	public ResponseEntity<ApiResponse<Void>> handleUnauthorized(
-		UnauthorizedException exception
+	@ExceptionHandler(ApiException.class)
+	public ResponseEntity<ApiResponse<Void>> handleApiException(
+		ApiException exception
 	) {
-		return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-			.body(ApiResponse.error(exception.getMessage()));
-	}
-
-	@ExceptionHandler(NotFoundException.class)
-	public ResponseEntity<ApiResponse<Void>> handleNotFound(
-		NotFoundException exception
-	) {
-		return ResponseEntity.status(HttpStatus.NOT_FOUND)
-			.body(ApiResponse.error(exception.getMessage()));
-	}
-
-	@ExceptionHandler(LearningSessionNotFoundException.class)
-	public ResponseEntity<ApiResponse<Void>> handleLearningSessionNotFound(
-		LearningSessionNotFoundException exception
-	) {
-		return ResponseEntity.status(HttpStatus.NOT_FOUND)
-			.body(ApiResponse.error(exception.getMessage()));
+		ErrorCode errorCode = exception.getErrorCode();
+		return ResponseEntity.status(errorCode.getHttpStatus())
+			.body(ApiResponse.error(
+				exception.getMessage(),
+				errorCode.name()
+			));
 	}
 
 	@ExceptionHandler({
@@ -43,7 +30,10 @@ public class ApiExceptionHandler {
 		RuntimeException exception
 	) {
 		return ResponseEntity.badRequest()
-			.body(ApiResponse.error(exception.getMessage()));
+			.body(ApiResponse.error(
+				exception.getMessage(),
+				ErrorCode.INVALID_REQUEST.name()
+			));
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
@@ -55,6 +45,9 @@ public class ApiExceptionHandler {
 			.getFirst()
 			.getDefaultMessage();
 		return ResponseEntity.badRequest()
-			.body(ApiResponse.error(message));
+			.body(ApiResponse.error(
+				message,
+				ErrorCode.INVALID_REQUEST.name()
+			));
 	}
 }

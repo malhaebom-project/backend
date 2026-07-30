@@ -1,0 +1,62 @@
+package com.malhaebom.malhaebom.global.exception;
+
+import lombok.Getter;
+import org.springframework.http.HttpStatus;
+
+@Getter
+public enum ErrorCode {
+
+	INVALID_REQUEST(
+		HttpStatus.BAD_REQUEST,
+		"요청 값이 올바르지 않습니다."
+	),
+	UNAUTHORIZED(
+		HttpStatus.UNAUTHORIZED,
+		"인증이 필요합니다."
+	),
+	NOT_FOUND(
+		HttpStatus.NOT_FOUND,
+		"요청한 리소스를 찾을 수 없습니다."
+	),
+	LEARNING_SESSION_NOT_FOUND(
+		HttpStatus.NOT_FOUND,
+		"학습 세션을 찾을 수 없습니다."
+	),
+	INVALID_AUDIO_FILE(
+		HttpStatus.BAD_REQUEST,
+		"유효하지 않은 음성 파일입니다."
+	),
+	CURRENT_QUESTION_MISMATCH(
+		HttpStatus.BAD_REQUEST,
+		"현재 진행 중인 문제가 아닙니다."
+	),
+	SPEECH_PROCESSING(
+		HttpStatus.CONFLICT,
+		"음성 답변을 처리하고 있습니다."
+	),
+	SPEECH_NOT_RECOGNIZED(
+		HttpStatus.UNPROCESSABLE_CONTENT,
+		"음성을 인식하지 못했습니다."
+	),
+	AI_REQUEST_LIMIT_EXCEEDED(
+		HttpStatus.TOO_MANY_REQUESTS,
+		"음성 인식 요청이 많습니다. 잠시 후 다시 시도해 주세요."
+	),
+	STT_PROCESSING_FAILED(
+		HttpStatus.INTERNAL_SERVER_ERROR,
+		"음성 변환 처리에 실패했습니다."
+	),
+	STT_PROCESSING_TIMEOUT(
+		HttpStatus.GATEWAY_TIMEOUT,
+		"음성 변환 처리 시간이 초과되었습니다."
+	);
+
+	private final HttpStatus httpStatus;
+	private final String message;
+
+	ErrorCode(HttpStatus httpStatus, String message) {
+		this.httpStatus = httpStatus;
+		this.message = message;
+	}
+
+}
