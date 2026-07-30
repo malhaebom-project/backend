@@ -1,12 +1,12 @@
 package com.malhaebom.malhaebom.global.exception;
 
-public class UnauthorizedException extends RuntimeException {
+public class UnauthorizedException extends ApiException {
 
 	public UnauthorizedException(String message) {
-		super(message);
+		super(ErrorCode.UNAUTHORIZED, message);
 	}
 
 	public UnauthorizedException(String message, Throwable cause) {
-		super(message, cause);
+		super(ErrorCode.UNAUTHORIZED, message, cause);
 	}
 }
