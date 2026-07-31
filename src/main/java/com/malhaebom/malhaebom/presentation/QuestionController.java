@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
-import com.malhaebom.malhaebom.global.exception.NotFoundException;
+import com.malhaebom.malhaebom.global.exception.QuestionNotFoundException;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.QuestionTtsResponse;
 
@@ -24,10 +24,9 @@ public class QuestionController {
 	public ApiResponse<QuestionTtsResponse> getTts(
 		@PathVariable Long questionId
 	) {
-		Question question = questionRepository.findById(questionId)
-			.orElseThrow(() -> new NotFoundException(
-				"문제를 찾을 수 없습니다."
-			));
+		Question question = questionRepository
+			.findByIdAndActiveTrue(questionId)
+			.orElseThrow(QuestionNotFoundException::new);
 
 		return ApiResponse.success(QuestionTtsResponse.from(question));
 	}

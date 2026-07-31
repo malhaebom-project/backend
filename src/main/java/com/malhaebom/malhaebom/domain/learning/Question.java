@@ -3,6 +3,7 @@ package com.malhaebom.malhaebom.domain.learning;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 
 import jakarta.persistence.CollectionTable;
@@ -70,6 +71,9 @@ public class Question extends BaseEntity {
 
 	private String ttsUrl;
 
+	@Column(nullable = false)
+	private boolean active;
+
 	public static Question create(
 		LearningTopic topic,
 		Difficulty difficulty,
@@ -82,6 +86,13 @@ public class Question extends BaseEntity {
 		String hintText,
 		String ttsUrl
 	) {
+		validateQuestionValues(
+			topic,
+			difficulty,
+			type,
+			questionText,
+			questionTextKo
+		);
 		validateAnswers(modelAnswer, acceptedAnswers);
 
 		Question question = new Question();
@@ -95,7 +106,53 @@ public class Question extends BaseEntity {
 		question.acceptedAnswers.addAll(acceptedAnswers);
 		question.hintText = hintText;
 		question.ttsUrl = ttsUrl;
+		question.active = true;
 		return question;
+	}
+
+	public boolean update(
+		LearningTopic topic,
+		Difficulty difficulty,
+		QuestionType type,
+		String questionText,
+		String questionTextKo,
+		String imageUrl,
+		String modelAnswer,
+		Set<String> acceptedAnswers,
+		String hintText
+	) {
+		validateQuestionValues(
+			topic,
+			difficulty,
+			type,
+			questionText,
+			questionTextKo
+		);
+		validateAnswers(modelAnswer, acceptedAnswers);
+
+		boolean ttsRegenerationRequired =
+			!Objects.equals(this.questionText, questionText);
+
+		this.topic = topic;
+		this.difficulty = difficulty;
+		this.type = type;
+		this.questionText = questionText;
+		this.questionTextKo = questionTextKo;
+		this.imageUrl = imageUrl;
+		this.modelAnswer = modelAnswer;
+		this.acceptedAnswers.clear();
+		this.acceptedAnswers.addAll(acceptedAnswers);
+		this.hintText = hintText;
+
+		if (ttsRegenerationRequired) {
+			this.ttsUrl = null;
+		}
+
+		return ttsRegenerationRequired;
+	}
+
+	public void deactivate() {
+		active = false;
 	}
 
 	public Set<String> getAcceptedAnswers() {
@@ -115,6 +172,28 @@ public class Question extends BaseEntity {
 		return acceptedAnswers.stream()
 			.map(Question::normalize)
 			.anyMatch(normalizedAnswer::equals);
+	}
+
+	private static void validateQuestionValues(
+		LearningTopic topic,
+		Difficulty difficulty,
+		QuestionType type,
+		String questionText,
+		String questionTextKo
+	) {
+		if (topic == null || difficulty == null || type == null) {
+			throw new IllegalArgumentException(
+				"주제, 난이도, 문제 유형은 필수입니다."
+			);
+		}
+
+		if (questionText == null || questionText.isBlank()) {
+			throw new IllegalArgumentException("영문 문제는 비어 있을 수 없습니다.");
+		}
+
+		if (questionTextKo == null || questionTextKo.isBlank()) {
+			throw new IllegalArgumentException("한글 문제는 비어 있을 수 없습니다.");
+		}
 	}
 
 	private static void validateAnswers(
