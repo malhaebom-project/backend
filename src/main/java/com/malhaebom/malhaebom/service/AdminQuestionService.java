@@ -2,18 +2,18 @@ package com.malhaebom.malhaebom.service;
 
 import java.util.List;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.malhaebom.malhaebom.domain.User;
 import com.malhaebom.malhaebom.domain.learning.Question;
-import com.malhaebom.malhaebom.domain.learning.QuestionTtsOutbox;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.QuestionTtsOutboxRepository;
 import com.malhaebom.malhaebom.domain.repository.UserRepository;
 import com.malhaebom.malhaebom.global.exception.ForbiddenException;
 import com.malhaebom.malhaebom.global.exception.QuestionNotFoundException;
 import com.malhaebom.malhaebom.service.dto.AdminQuestionCommand;
+import com.malhaebom.malhaebom.service.event.QuestionTtsRequestedEvent;
 
 import lombok.RequiredArgsConstructor;
 
@@ -23,7 +23,7 @@ public class AdminQuestionService {
 
 	private final UserRepository userRepository;
 	private final QuestionRepository questionRepository;
-	private final QuestionTtsOutboxRepository outboxRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional
 	public Question create(Long userId, AdminQuestionCommand command) {
@@ -43,7 +43,12 @@ public class AdminQuestionService {
 				null
 			)
 		);
-		outboxRepository.save(QuestionTtsOutbox.create(question.getId()));
+		eventPublisher.publishEvent(
+			new QuestionTtsRequestedEvent(
+				question.getId(),
+				question.getQuestionText()
+			)
+		);
 		return question;
 	}
 
@@ -77,10 +82,12 @@ public class AdminQuestionService {
 			command.acceptedAnswers(),
 			command.hintText()
 		);
-
 		if (ttsRegenerationRequired) {
-			outboxRepository.save(
-				QuestionTtsOutbox.create(question.getId())
+			eventPublisher.publishEvent(
+				new QuestionTtsRequestedEvent(
+					question.getId(),
+					question.getQuestionText()
+				)
 			);
 		}
 

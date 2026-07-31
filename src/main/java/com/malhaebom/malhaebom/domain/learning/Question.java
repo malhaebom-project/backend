@@ -151,6 +151,10 @@ public class Question extends BaseEntity {
 		return ttsRegenerationRequired;
 	}
 
+	public void updateTtsUrl(String ttsUrl) {
+		this.ttsUrl = ttsUrl;
+	}
+
 	public void deactivate() {
 		active = false;
 	}
