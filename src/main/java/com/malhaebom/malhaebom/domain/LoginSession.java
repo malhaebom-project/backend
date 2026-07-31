@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "login_sessions")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class LoginSession {
+public class LoginSession extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,23 +42,18 @@ public class LoginSession {
 	@Column(nullable = false)
 	private Instant refreshTokenExpiresAt;
 
-	@Column(nullable = false, updatable = false)
-	private Instant createdAt;
-
 	private LoginSession(
 		User user,
 		String accessToken,
 		String refreshToken,
 		Instant accessTokenExpiresAt,
-		Instant refreshTokenExpiresAt,
-		Instant createdAt
+		Instant refreshTokenExpiresAt
 	) {
 		this.user = user;
 		this.accessToken = accessToken;
 		this.refreshToken = refreshToken;
 		this.accessTokenExpiresAt = accessTokenExpiresAt;
 		this.refreshTokenExpiresAt = refreshTokenExpiresAt;
-		this.createdAt = createdAt;
 	}
 
 	public static LoginSession create(
@@ -66,16 +61,14 @@ public class LoginSession {
 		String accessToken,
 		String refreshToken,
 		Instant accessTokenExpiresAt,
-		Instant refreshTokenExpiresAt,
-		Instant createdAt
+		Instant refreshTokenExpiresAt
 	) {
 		return new LoginSession(
 			user,
 			accessToken,
 			refreshToken,
 			accessTokenExpiresAt,
-			refreshTokenExpiresAt,
-			createdAt
+			refreshTokenExpiresAt
 		);
 	}
 

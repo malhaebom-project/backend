@@ -34,7 +34,8 @@ public class LearningSessionService {
 	) {
 		LearningTopic topic = LearningTopic.fromTopicId(topicId);
 		List<Question> candidates =
-			questionRepository.findAllByTopicAndDifficultyAndTypeInOrderByIdAsc(
+			questionRepository
+				.findAllByTopicAndDifficultyAndTypeInAndActiveTrueAndTtsUrlIsNotNullOrderByIdAsc(
 				topic,
 				difficulty,
 				questionTypes

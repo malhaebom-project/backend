@@ -102,8 +102,7 @@ public class LoginService {
 			tokens.accessToken(),
 			tokens.refreshToken(),
 			parseAccessExpiresAt(tokens.accessToken()),
-			parseRefreshExpiresAt(tokens.refreshToken()),
-			Instant.now()
+			parseRefreshExpiresAt(tokens.refreshToken())
 		);
 	}
 

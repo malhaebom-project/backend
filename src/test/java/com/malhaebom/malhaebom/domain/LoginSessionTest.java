@@ -15,26 +15,24 @@ class LoginSessionTest {
 			"user@example.com",
 			"encoded-password"
 		);
-		Instant createdAt = Instant.parse("2026-07-28T00:00:00Z");
+		Instant now = Instant.parse("2026-07-28T00:00:00Z");
 		LoginSession session = LoginSession.create(
 			user,
 			"access-token",
 			"refresh-token",
-			createdAt.plusSeconds(3600),
-			createdAt.plusSeconds(1209600),
-			createdAt
+			now.plusSeconds(3600),
+			now.plusSeconds(1209600)
 		);
 
 		session.rotate(
 			"new-access-token",
 			"new-refresh-token",
-			createdAt.plusSeconds(7200),
-			createdAt.plusSeconds(1213200)
+			now.plusSeconds(7200),
+			now.plusSeconds(1213200)
 		);
 
 		assertEquals(user, session.getUser());
 		assertEquals("new-access-token", session.getAccessToken());
 		assertEquals("new-refresh-token", session.getRefreshToken());
-		assertEquals(createdAt, session.getCreatedAt());
 	}
 }
