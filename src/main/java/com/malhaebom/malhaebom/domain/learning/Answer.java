@@ -19,6 +19,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import com.malhaebom.malhaebom.domain.BaseEntity;
+
 @Entity
 @Table(
 	name = "answers",
@@ -31,7 +33,7 @@ import lombok.NoArgsConstructor;
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Answer {
+public class Answer extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
