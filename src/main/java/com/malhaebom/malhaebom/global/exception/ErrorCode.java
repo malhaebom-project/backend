@@ -30,6 +30,10 @@ public enum ErrorCode {
 		HttpStatus.NOT_FOUND,
 		"학습 세션을 찾을 수 없습니다."
 	),
+	SPEECH_ANSWER_NOT_FOUND(
+		HttpStatus.NOT_FOUND,
+		"음성 답변을 찾을 수 없습니다."
+	),
 	INVALID_AUDIO_FILE(
 		HttpStatus.BAD_REQUEST,
 		"유효하지 않은 음성 파일입니다."

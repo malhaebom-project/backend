@@ -1,6 +1,7 @@
 package com.malhaebom.malhaebom.global.exception;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -48,6 +49,15 @@ public class ApiExceptionHandler {
 			.body(ApiResponse.error(
 				message,
 				ErrorCode.INVALID_REQUEST.name()
+			));
+	}
+
+	@ExceptionHandler(MaxUploadSizeExceededException.class)
+	public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceeded() {
+		return ResponseEntity.badRequest()
+			.body(ApiResponse.error(
+				"음성 파일은 5MB를 초과할 수 없습니다.",
+				ErrorCode.INVALID_AUDIO_FILE.name()
 			));
 	}
 }
