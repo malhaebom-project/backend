@@ -32,7 +32,7 @@ import com.malhaebom.malhaebom.global.exception.SpeechTranscriptionTimeoutExcept
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
-import com.malhaebom.malhaebom.service.speech.SpeechTranscriber;
+import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 
 @ExtendWith(MockitoExtension.class)
 class SpeechAnswerServiceTest {

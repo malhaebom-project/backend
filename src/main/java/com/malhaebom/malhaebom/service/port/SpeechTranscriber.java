@@ -1,4 +1,4 @@
-package com.malhaebom.malhaebom.service.speech;
+package com.malhaebom.malhaebom.service.port;
 
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;

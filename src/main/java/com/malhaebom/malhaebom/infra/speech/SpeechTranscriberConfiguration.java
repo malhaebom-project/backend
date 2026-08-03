@@ -4,7 +4,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.malhaebom.malhaebom.service.speech.SpeechTranscriber;
+import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 
 @Configuration(proxyBeanMethods = false)
 public class SpeechTranscriberConfiguration {
