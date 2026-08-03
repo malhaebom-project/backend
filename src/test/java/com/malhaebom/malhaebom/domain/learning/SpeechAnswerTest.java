@@ -2,7 +2,6 @@ package com.malhaebom.malhaebom.domain.learning;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -40,8 +39,6 @@ class SpeechAnswerTest {
 		assertNull(speechAnswer.getConfidence());
 		assertNull(speechAnswer.getSttProvider());
 		assertNull(speechAnswer.getFailureMessage());
-		assertNotNull(speechAnswer.getCreatedAt());
-		assertEquals(speechAnswer.getCreatedAt(), speechAnswer.getUpdatedAt());
 		assertFalse(speechAnswer.isCompleted());
 	}
 
@@ -106,7 +103,6 @@ class SpeechAnswerTest {
 		assertTrue(speechAnswer.isCompleted());
 		assertTrue(speechAnswer.isUsableFor(sessionQuestion));
 		assertFalse(speechAnswer.isUsableFor(createSessionQuestion()));
-		assertFalse(speechAnswer.getUpdatedAt().isBefore(speechAnswer.getCreatedAt()));
 	}
 
 	@Test

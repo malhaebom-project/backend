@@ -1,7 +1,5 @@
 package com.malhaebom.malhaebom.domain.learning;
 
-import java.time.LocalDateTime;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -19,6 +17,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import com.malhaebom.malhaebom.domain.BaseEntity;
+
 @Entity
 @Table(
 	name = "speech_answers",
@@ -35,7 +35,7 @@ import lombok.NoArgsConstructor;
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class SpeechAnswer {
+public class SpeechAnswer extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -67,12 +67,6 @@ public class SpeechAnswer {
 	@Column(name = "failure_message", length = 1000)
 	private String failureMessage;
 
-	@Column(name = "created_at", nullable = false, updatable = false)
-	private LocalDateTime createdAt;
-
-	@Column(name = "updated_at", nullable = false)
-	private LocalDateTime updatedAt;
-
 	public static SpeechAnswer start(
 		LearningSessionQuestion sessionQuestion,
 		String requestKey,
@@ -80,14 +74,11 @@ public class SpeechAnswer {
 	) {
 		validateStart(sessionQuestion, requestKey, recordingNo);
 
-		LocalDateTime now = LocalDateTime.now();
 		SpeechAnswer speechAnswer = new SpeechAnswer();
 		speechAnswer.sessionQuestion = sessionQuestion;
 		speechAnswer.requestKey = requestKey;
 		speechAnswer.recordingNo = recordingNo;
 		speechAnswer.processingStatus = SpeechProcessingStatus.PROCESSING;
-		speechAnswer.createdAt = now;
-		speechAnswer.updatedAt = now;
 		return speechAnswer;
 	}
 
@@ -105,7 +96,6 @@ public class SpeechAnswer {
 		this.confidence = confidence;
 		this.sttProvider = sttProvider;
 		this.processingStatus = SpeechProcessingStatus.COMPLETED;
-		this.updatedAt = LocalDateTime.now();
 	}
 
 	public void fail(String failureMessage, String sttProvider) {
@@ -114,7 +104,6 @@ public class SpeechAnswer {
 		this.failureMessage = failureMessage;
 		this.sttProvider = sttProvider;
 		this.processingStatus = SpeechProcessingStatus.FAILED;
-		this.updatedAt = LocalDateTime.now();
 	}
 
 	public boolean isCompleted() {
