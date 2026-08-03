@@ -32,6 +32,7 @@ public class LearningAnswerController {
 				learningAnswerService.submit(
 					sessionId,
 					sessionQuestionId,
+					request.speechAnswerId(),
 					request.answerText()
 				)
 			)

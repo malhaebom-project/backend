@@ -8,9 +8,13 @@ import org.springframework.transaction.annotation.Transactional;
 import com.malhaebom.malhaebom.domain.learning.Answer;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
+import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
+import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
+import com.malhaebom.malhaebom.global.exception.CurrentQuestionMismatchException;
 import com.malhaebom.malhaebom.global.exception.LearningSessionNotFoundException;
+import com.malhaebom.malhaebom.global.exception.SpeechAnswerNotFoundException;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 
 import lombok.RequiredArgsConstructor;
@@ -23,11 +27,13 @@ public class LearningAnswerService {
 
 	private final LearningSessionRepository learningSessionRepository;
 	private final AnswerRepository answerRepository;
+	private final SpeechAnswerRepository speechAnswerRepository;
 
 	@Transactional
 	public AnswerSubmissionResult submit(
 		Long sessionId,
 		Long sessionQuestionId,
+		Long speechAnswerId,
 		String answerText
 	) {
 		LearningSession session = learningSessionRepository
@@ -35,6 +41,11 @@ public class LearningAnswerService {
 			.orElseThrow(LearningSessionNotFoundException::new);
 		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
 		validateCurrentQuestion(currentQuestion, sessionQuestionId);
+		validateSpeechAnswer(
+			getSpeechAnswer(speechAnswerId),
+			currentQuestion,
+			answerText
+		);
 
 		int attemptNo = getNextAttemptNo(sessionQuestionId);
 		if (attemptNo > MAX_ATTEMPT_COUNT) {
@@ -60,6 +71,33 @@ public class LearningAnswerService {
 			canRetry,
 			remainingAttempts
 		);
+	}
+
+	private SpeechAnswer getSpeechAnswer(Long speechAnswerId) {
+		return speechAnswerRepository.findById(speechAnswerId)
+			.orElseThrow(SpeechAnswerNotFoundException::new);
+	}
+
+	private void validateSpeechAnswer(
+		SpeechAnswer speechAnswer,
+		LearningSessionQuestion currentQuestion,
+		String answerText
+	) {
+		if (!speechAnswer.isCompleted()) {
+			throw new IllegalStateException(
+				"처리가 완료되지 않은 음성 답변입니다."
+			);
+		}
+
+		if (!speechAnswer.isUsableFor(currentQuestion)) {
+			throw new CurrentQuestionMismatchException();
+		}
+
+		if (!Objects.equals(speechAnswer.getTranscript(), answerText)) {
+			throw new IllegalArgumentException(
+				"음성 인식 결과와 제출 답변이 일치하지 않습니다."
+			);
+		}
 	}
 
 	private int getNextAttemptNo(Long sessionQuestionId) {
