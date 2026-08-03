@@ -65,22 +65,25 @@ public class Answer extends BaseEntity {
 	public static Answer create(
 		LearningSessionQuestion sessionQuestion,
 		String answerText,
-		int attemptNo
+		int attemptNo,
+		AnswerEvaluation evaluation
 	) {
-		validateCreation(sessionQuestion, answerText, attemptNo);
-
-		Question question = sessionQuestion.getQuestion();
-		AnswerResult result = question.matchesAnswer(answerText)
-			? AnswerResult.CORRECT
-			: AnswerResult.INCORRECT;
+		validateCreation(
+			sessionQuestion,
+			answerText,
+			attemptNo,
+			evaluation
+		);
 
 		Answer answer = new Answer();
 		answer.sessionQuestion = sessionQuestion;
 		answer.attemptNo = attemptNo;
 		answer.answerText = answerText;
-		answer.result = result;
-		answer.score = result.getScore();
-		answer.modelAnswerSnapshot = question.getModelAnswer();
+		answer.result = evaluation.result();
+		answer.score = evaluation.score();
+		answer.modelAnswerSnapshot = sessionQuestion
+			.getQuestion()
+			.getModelAnswer();
 		answer.submittedAt = LocalDateTime.now();
 		return answer;
 	}
@@ -92,7 +95,8 @@ public class Answer extends BaseEntity {
 	private static void validateCreation(
 		LearningSessionQuestion sessionQuestion,
 		String answerText,
-		int attemptNo
+		int attemptNo,
+		AnswerEvaluation evaluation
 	) {
 		if (sessionQuestion == null) {
 			throw new IllegalArgumentException("세션 문제는 null일 수 없습니다.");
@@ -108,6 +112,10 @@ public class Answer extends BaseEntity {
 
 		if (attemptNo < 1) {
 			throw new IllegalArgumentException("답변 시도 번호는 1 이상이어야 합니다.");
+		}
+
+		if (evaluation == null) {
+			throw new IllegalArgumentException("채점 결과는 null일 수 없습니다.");
 		}
 	}
 }

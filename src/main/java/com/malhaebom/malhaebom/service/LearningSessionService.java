@@ -64,7 +64,11 @@ public class LearningSessionService {
 	@Transactional
 	public LearningSession complete(Long sessionId) {
 		LearningSession session = getSession(sessionId);
-		session.complete();
+		if (!session.isCompleted()) {
+			throw new IllegalStateException(
+				"모든 문제를 완료한 학습 세션이 아닙니다."
+			);
+		}
 		return session;
 	}
 

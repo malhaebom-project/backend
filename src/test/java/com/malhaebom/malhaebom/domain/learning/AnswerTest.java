@@ -15,13 +15,27 @@ import org.junit.jupiter.api.Test;
 class AnswerTest {
 
 	@Test
-	void 모범_답안을_제출하면_정답_시도를_생성한다() {
+	void 답변_결과별_기본_점수를_제공한다() {
+		assertEquals(100, AnswerResult.CORRECT.getDefaultScore());
+		assertEquals(50, AnswerResult.PARTIALLY_CORRECT.getDefaultScore());
+		assertEquals(0, AnswerResult.INCORRECT.getDefaultScore());
+		assertEquals(0, AnswerResult.UNRECOGNIZED.getDefaultScore());
+
+		assertTrue(AnswerResult.CORRECT.isCorrect());
+		assertFalse(AnswerResult.PARTIALLY_CORRECT.isCorrect());
+		assertFalse(AnswerResult.INCORRECT.isCorrect());
+		assertFalse(AnswerResult.UNRECOGNIZED.isCorrect());
+	}
+
+	@Test
+	void 정답_평가_결과로_답변_시도를_생성한다() {
 		LearningSessionQuestion sessionQuestion = createSessionQuestion();
 
 		Answer answer = Answer.create(
 			sessionQuestion,
 			"The boy is running.",
-			1
+			1,
+			AnswerEvaluation.from(AnswerResult.CORRECT)
 		);
 
 		assertSame(sessionQuestion, answer.getSessionQuestion());
@@ -35,15 +49,17 @@ class AnswerTest {
 	}
 
 	@Test
-	void 허용_답안을_제출해도_정답으로_판정한다() {
+	void 부분_정답의_동적_점수를_저장한다() {
 		Answer answer = Answer.create(
 			createSessionQuestion(),
 			"He's running.",
-			1
+			1,
+			new AnswerEvaluation(AnswerResult.PARTIALLY_CORRECT, 78)
 		);
 
-		assertEquals(AnswerResult.CORRECT, answer.getResult());
-		assertEquals(100, answer.getScore());
+		assertEquals(AnswerResult.PARTIALLY_CORRECT, answer.getResult());
+		assertEquals(78, answer.getScore());
+		assertFalse(answer.isCorrect());
 	}
 
 	@Test
@@ -51,7 +67,8 @@ class AnswerTest {
 		Answer answer = Answer.create(
 			createSessionQuestion(),
 			"He is walking.",
-			2
+			2,
+			AnswerEvaluation.from(AnswerResult.INCORRECT)
 		);
 
 		assertEquals(2, answer.getAttemptNo());
@@ -64,7 +81,12 @@ class AnswerTest {
 	void 세션_문제_없이_답변을_생성할_수_없다() {
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> Answer.create(null, "The boy is running.", 1)
+			() -> Answer.create(
+				null,
+				"The boy is running.",
+				1,
+				AnswerEvaluation.from(AnswerResult.CORRECT)
+			)
 		);
 	}
 
@@ -75,7 +97,12 @@ class AnswerTest {
 
 		assertThrows(
 			IllegalStateException.class,
-			() -> Answer.create(sessionQuestion, "The boy is running.", 2)
+			() -> Answer.create(
+				sessionQuestion,
+				"The boy is running.",
+				2,
+				AnswerEvaluation.from(AnswerResult.CORRECT)
+			)
 		);
 	}
 
@@ -83,7 +110,12 @@ class AnswerTest {
 	void 비어_있는_답변으로_답변을_생성할_수_없다() {
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> Answer.create(createSessionQuestion(), " ", 1)
+			() -> Answer.create(
+				createSessionQuestion(),
+				" ",
+				1,
+				AnswerEvaluation.from(AnswerResult.INCORRECT)
+			)
 		);
 	}
 
@@ -94,7 +126,21 @@ class AnswerTest {
 			() -> Answer.create(
 				createSessionQuestion(),
 				"The boy is running.",
-				0
+				0,
+				AnswerEvaluation.from(AnswerResult.CORRECT)
+			)
+		);
+	}
+
+	@Test
+	void 채점_결과_없이_답변을_생성할_수_없다() {
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> Answer.create(
+				createSessionQuestion(),
+				"The boy is running.",
+				1,
+				null
 			)
 		);
 	}

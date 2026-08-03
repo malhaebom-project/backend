@@ -6,12 +6,14 @@ import lombok.Getter;
 public enum AnswerResult {
 
 	CORRECT(100),
-	INCORRECT(0);
+	PARTIALLY_CORRECT(50),
+	INCORRECT(0),
+	UNRECOGNIZED(0);
 
-	private final int score;
+	private final int defaultScore;
 
-	AnswerResult(int score) {
-		this.score = score;
+	AnswerResult(int defaultScore) {
+		this.defaultScore = defaultScore;
 	}
 
 	public boolean isCorrect() {
