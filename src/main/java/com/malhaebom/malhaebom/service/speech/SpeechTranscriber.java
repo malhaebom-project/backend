@@ -1,7 +1,7 @@
 package com.malhaebom.malhaebom.service.speech;
 
-import com.malhaebom.malhaebom.service.model.SpeechAudio;
-import com.malhaebom.malhaebom.service.model.SpeechTranscriptionResult;
+import com.malhaebom.malhaebom.service.dto.SpeechAudio;
+import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 
 public interface SpeechTranscriber {
 

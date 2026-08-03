@@ -2,7 +2,7 @@ package com.malhaebom.malhaebom.presentation.dto;
 
 import com.malhaebom.malhaebom.domain.learning.Answer;
 import com.malhaebom.malhaebom.domain.learning.AnswerResult;
-import com.malhaebom.malhaebom.service.model.AnswerSubmissionResult;
+import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 
 public record SubmitAnswerResponse(
 	Long answerId,

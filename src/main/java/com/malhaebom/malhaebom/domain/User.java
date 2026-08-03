@@ -2,6 +2,8 @@ package com.malhaebom.malhaebom.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -15,7 +17,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "users")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class User {
+public class User extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,13 +32,45 @@ public class User {
 	@Column(nullable = false)
 	private String password;
 
-	private User(String name, String email, String password) {
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
+	private AccountRole role;
+
+	private User(
+		String name,
+		String email,
+		String password,
+		AccountRole role
+	) {
 		this.name = name;
 		this.email = email;
 		this.password = password;
+		this.role = role;
 	}
 
 	public static User create(String name, String email, String encodedPassword) {
-		return new User(name, email, encodedPassword);
+		return new User(
+			name,
+			email,
+			encodedPassword,
+			AccountRole.GUARDIAN
+		);
+	}
+
+	public static User createAdmin(
+		String name,
+		String email,
+		String encodedPassword
+	) {
+		return new User(
+			name,
+			email,
+			encodedPassword,
+			AccountRole.ADMIN
+		);
+	}
+
+	public boolean isAdmin() {
+		return role == AccountRole.ADMIN;
 	}
 }

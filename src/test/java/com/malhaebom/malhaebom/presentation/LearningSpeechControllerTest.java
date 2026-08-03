@@ -28,8 +28,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
 import com.malhaebom.malhaebom.global.exception.SpeechProcessingException;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
-import com.malhaebom.malhaebom.service.model.SpeechAnswerResult;
-import com.malhaebom.malhaebom.service.model.SpeechAudio;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
+import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 
 @ExtendWith(MockitoExtension.class)
 class LearningSpeechControllerTest {

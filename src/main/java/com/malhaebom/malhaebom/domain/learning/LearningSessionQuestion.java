@@ -17,6 +17,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import com.malhaebom.malhaebom.domain.BaseEntity;
+
 @Entity
 @Table(
 	name = "learning_session_questions",
@@ -29,7 +31,7 @@ import lombok.NoArgsConstructor;
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class LearningSessionQuestion {
+public class LearningSessionQuestion extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

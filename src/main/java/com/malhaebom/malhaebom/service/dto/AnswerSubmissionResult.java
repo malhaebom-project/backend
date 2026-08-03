@@ -1,4 +1,4 @@
-package com.malhaebom.malhaebom.service.model;
+package com.malhaebom.malhaebom.service.dto;
 
 import com.malhaebom.malhaebom.domain.learning.Answer;
 

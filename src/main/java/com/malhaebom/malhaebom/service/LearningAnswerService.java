@@ -11,7 +11,7 @@ import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.global.exception.LearningSessionNotFoundException;
-import com.malhaebom.malhaebom.service.model.AnswerSubmissionResult;
+import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 
 import lombok.RequiredArgsConstructor;
 

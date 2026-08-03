@@ -29,9 +29,9 @@ import com.malhaebom.malhaebom.global.exception.CurrentQuestionMismatchException
 import com.malhaebom.malhaebom.global.exception.SpeechNotRecognizedException;
 import com.malhaebom.malhaebom.global.exception.SpeechProcessingFailedException;
 import com.malhaebom.malhaebom.global.exception.SpeechTranscriptionTimeoutException;
-import com.malhaebom.malhaebom.service.model.SpeechAnswerResult;
-import com.malhaebom.malhaebom.service.model.SpeechAudio;
-import com.malhaebom.malhaebom.service.model.SpeechTranscriptionResult;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
+import com.malhaebom.malhaebom.service.dto.SpeechAudio;
+import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.speech.SpeechTranscriber;
 
 @ExtendWith(MockitoExtension.class)

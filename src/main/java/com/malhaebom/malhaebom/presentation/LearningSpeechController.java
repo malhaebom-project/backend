@@ -17,7 +17,7 @@ import com.malhaebom.malhaebom.global.exception.InvalidAudioFileException;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.SpeechAnswerResponse;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
-import com.malhaebom.malhaebom.service.model.SpeechAudio;
+import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 
 import lombok.RequiredArgsConstructor;
 

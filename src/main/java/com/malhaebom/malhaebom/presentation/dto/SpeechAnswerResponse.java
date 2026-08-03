@@ -1,6 +1,6 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
-import com.malhaebom.malhaebom.service.model.SpeechAnswerResult;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
 
 public record SpeechAnswerResponse(
 	Long speechAnswerId,
