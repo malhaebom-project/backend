@@ -13,7 +13,7 @@ import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionReposit
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.global.exception.CurrentQuestionMismatchException;
 import com.malhaebom.malhaebom.global.exception.LearningSessionNotFoundException;
-import com.malhaebom.malhaebom.global.exception.NotFoundException;
+import com.malhaebom.malhaebom.global.exception.SpeechAnswerNotFoundException;
 import com.malhaebom.malhaebom.global.exception.SpeechProcessingException;
 import com.malhaebom.malhaebom.global.exception.SpeechProcessingFailedException;
 
@@ -112,9 +112,7 @@ public class SpeechAnswerStateService {
 
 	private SpeechAnswer getSpeechAnswer(Long speechAnswerId) {
 		return speechAnswerRepository.findById(speechAnswerId)
-			.orElseThrow(
-				() -> new NotFoundException("음성 답변을 찾을 수 없습니다.")
-			);
+			.orElseThrow(SpeechAnswerNotFoundException::new);
 	}
 
 	private boolean isSameQuestion(

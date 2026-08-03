@@ -31,6 +31,7 @@ import com.malhaebom.malhaebom.domain.learning.SpeechProcessingStatus;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.global.exception.CurrentQuestionMismatchException;
+import com.malhaebom.malhaebom.global.exception.SpeechAnswerNotFoundException;
 import com.malhaebom.malhaebom.global.exception.SpeechProcessingException;
 import com.malhaebom.malhaebom.global.exception.SpeechProcessingFailedException;
 
@@ -264,6 +265,22 @@ class SpeechAnswerStateServiceTest {
 			completed.getProcessingStatus()
 		);
 		assertEquals("He is running.", completed.getTranscript());
+	}
+
+	@Test
+	void 존재하지_않는_음성_답변은_전용_예외를_발생시킨다() {
+		when(speechAnswerRepository.findById(SPEECH_ANSWER_ID))
+			.thenReturn(Optional.empty());
+
+		assertThrows(
+			SpeechAnswerNotFoundException.class,
+			() -> stateService.complete(
+				SPEECH_ANSWER_ID,
+				"He is running.",
+				0.94,
+				STT_PROVIDER
+			)
+		);
 	}
 
 	private void prepareSession() {

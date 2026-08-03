@@ -142,6 +142,11 @@ class ApiExceptionHandlerTest {
 				ErrorCode.CURRENT_QUESTION_MISMATCH
 			),
 			Arguments.of(
+				new SpeechAnswerNotFoundException(),
+				HttpStatus.NOT_FOUND,
+				ErrorCode.SPEECH_ANSWER_NOT_FOUND
+			),
+			Arguments.of(
 				new SpeechProcessingException(),
 				HttpStatus.CONFLICT,
 				ErrorCode.SPEECH_PROCESSING
