@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.malhaebom.malhaebom.domain.learning.Answer;
+import com.malhaebom.malhaebom.domain.learning.AnswerEvaluation;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
@@ -28,6 +29,7 @@ public class LearningAnswerService {
 	private final LearningSessionRepository learningSessionRepository;
 	private final AnswerRepository answerRepository;
 	private final SpeechAnswerRepository speechAnswerRepository;
+	private final AnswerEvaluator answerEvaluator;
 
 	@Transactional
 	public AnswerSubmissionResult submit(
@@ -52,7 +54,16 @@ public class LearningAnswerService {
 			throw new IllegalStateException("답변 가능 횟수를 초과했습니다.");
 		}
 
-		Answer answer = Answer.create(currentQuestion, answerText, attemptNo);
+		AnswerEvaluation evaluation = answerEvaluator.evaluate(
+			currentQuestion.getQuestion(),
+			answerText
+		);
+		Answer answer = Answer.create(
+			currentQuestion,
+			answerText,
+			attemptNo,
+			evaluation
+		);
 		answerRepository.save(answer);
 
 		boolean canRetry = !answer.isCorrect()

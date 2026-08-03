@@ -20,6 +20,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.malhaebom.malhaebom.domain.learning.Answer;
+import com.malhaebom.malhaebom.domain.learning.AnswerEvaluation;
+import com.malhaebom.malhaebom.domain.learning.AnswerResult;
 import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
@@ -51,6 +53,9 @@ class LearningAnswerServiceTest {
 	@Mock
 	private SpeechAnswerRepository speechAnswerRepository;
 
+	@Mock
+	private AnswerEvaluator answerEvaluator;
+
 	private LearningAnswerService learningAnswerService;
 	private LearningSession session;
 	private LearningSessionQuestion currentQuestion;
@@ -60,7 +65,8 @@ class LearningAnswerServiceTest {
 		learningAnswerService = new LearningAnswerService(
 			learningSessionRepository,
 			answerRepository,
-			speechAnswerRepository
+			speechAnswerRepository,
+			answerEvaluator
 		);
 		session = createSession();
 		currentQuestion = session.getCurrentQuestion();
@@ -86,6 +92,10 @@ class LearningAnswerServiceTest {
 		).thenReturn(Optional.empty());
 		when(answerRepository.save(any(Answer.class)))
 			.thenAnswer(invocation -> invocation.getArgument(0));
+		when(answerEvaluator.evaluate(
+			currentQuestion.getQuestion(),
+			ANSWER_TEXT
+		)).thenReturn(AnswerEvaluation.from(AnswerResult.CORRECT));
 
 		AnswerSubmissionResult result = learningAnswerService.submit(
 			SESSION_ID,
@@ -98,6 +108,40 @@ class LearningAnswerServiceTest {
 		assertEquals(1, result.answer().getAttemptNo());
 		assertTrue(result.answer().isCorrect());
 		verify(answerRepository).save(result.answer());
+	}
+
+	@Test
+	void 부분_정답_평가_결과와_동적_점수를_저장한다() {
+		SpeechAnswer speechAnswer = completedSpeechAnswer(currentQuestion);
+		prepareSession();
+		when(speechAnswerRepository.findById(SPEECH_ANSWER_ID))
+			.thenReturn(Optional.of(speechAnswer));
+		when(
+			answerRepository
+				.findFirstBySessionQuestion_IdOrderByAttemptNoDesc(
+					SESSION_QUESTION_ID
+				)
+		).thenReturn(Optional.empty());
+		when(answerRepository.save(any(Answer.class)))
+			.thenAnswer(invocation -> invocation.getArgument(0));
+		when(answerEvaluator.evaluate(
+			currentQuestion.getQuestion(),
+			ANSWER_TEXT
+		)).thenReturn(
+			new AnswerEvaluation(AnswerResult.PARTIALLY_CORRECT, 78)
+		);
+
+		AnswerSubmissionResult result = learningAnswerService.submit(
+			SESSION_ID,
+			SESSION_QUESTION_ID,
+			SPEECH_ANSWER_ID,
+			ANSWER_TEXT
+		);
+
+		assertEquals(AnswerResult.PARTIALLY_CORRECT, result.answer().getResult());
+		assertEquals(78, result.answer().getScore());
+		assertTrue(result.canRetry());
+		assertEquals(1, result.remainingAttempts());
 	}
 
 	@Test

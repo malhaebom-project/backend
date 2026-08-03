@@ -21,6 +21,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.malhaebom.malhaebom.domain.learning.Answer;
+import com.malhaebom.malhaebom.domain.learning.AnswerEvaluation;
+import com.malhaebom.malhaebom.domain.learning.AnswerResult;
 import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
@@ -131,7 +133,12 @@ class LearningAnswerControllerTest {
 			"id",
 			SESSION_QUESTION_ID
 		);
-		Answer answer = Answer.create(sessionQuestion, ANSWER_TEXT, 1);
+		Answer answer = Answer.create(
+			sessionQuestion,
+			ANSWER_TEXT,
+			1,
+			AnswerEvaluation.from(AnswerResult.CORRECT)
+		);
 		ReflectionTestUtils.setField(answer, "id", 40L);
 		return new AnswerSubmissionResult(answer, false, 0);
 	}
