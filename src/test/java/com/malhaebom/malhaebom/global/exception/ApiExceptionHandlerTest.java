@@ -21,26 +21,8 @@ class ApiExceptionHandlerTest {
 	private final ApiExceptionHandler handler = new ApiExceptionHandler();
 
 	@ParameterizedTest
-	@MethodSource("commonApiExceptions")
-	void 공통_API_예외를_HTTP_상태와_오류_코드로_변환한다(
-		ApiException exception,
-		HttpStatus expectedStatus,
-		ErrorCode expectedErrorCode
-	) {
-		ResponseEntity<ApiResponse<Void>> response =
-			handler.handleApiException(exception);
-
-		assertErrorResponse(
-			response,
-			expectedStatus,
-			exception.getMessage(),
-			expectedErrorCode
-		);
-	}
-
-	@ParameterizedTest
-	@MethodSource("speechExceptions")
-	void Speech_예외를_HTTP_상태와_오류_코드로_변환한다(
+	@MethodSource("apiExceptions")
+	void API_예외를_HTTP_상태와_오류_코드로_변환한다(
 		ApiException exception,
 		HttpStatus expectedStatus,
 		ErrorCode expectedErrorCode
@@ -109,7 +91,7 @@ class ApiExceptionHandlerTest {
 		assertThat(body.errorCode()).isEqualTo(expectedErrorCode.name());
 	}
 
-	private static Stream<Arguments> commonApiExceptions() {
+	private static Stream<Arguments> apiExceptions() {
 		return Stream.of(
 			Arguments.of(
 				new UnauthorizedException("인증에 실패했습니다."),
@@ -125,12 +107,7 @@ class ApiExceptionHandlerTest {
 				new LearningSessionNotFoundException(),
 				HttpStatus.NOT_FOUND,
 				ErrorCode.LEARNING_SESSION_NOT_FOUND
-			)
-		);
-	}
-
-	private static Stream<Arguments> speechExceptions() {
-		return Stream.of(
+			),
 			Arguments.of(
 				new InvalidAudioFileException(),
 				HttpStatus.BAD_REQUEST,

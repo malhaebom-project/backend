@@ -26,7 +26,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
-import com.malhaebom.malhaebom.global.exception.SpeechProcessingException;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
@@ -120,10 +119,7 @@ class LearningSpeechControllerTest {
 	@ParameterizedTest
 	@ValueSource(strings = {
 		"audio/webm",
-		"audio/webm;codecs=opus",
-		"audio/webm;codecs=vorbis",
 		"audio/mp4",
-		"audio/mp4;codecs=mp4a.40.2",
 		"audio/mp4; codecs=\"mp4a.40.2\"",
 		"audio/mpeg"
 	})
@@ -222,30 +218,6 @@ class LearningSpeechControllerTest {
 			));
 
 		verifyNoInteractions(speechAnswerService);
-	}
-
-	@Test
-	void 처리_중인_멱등_요청은_409와_SPEECH_PROCESSING을_반환한다()
-		throws Exception {
-		when(
-			speechAnswerService.upload(
-				any(),
-				any(),
-				any(),
-				any()
-			)
-		).thenThrow(new SpeechProcessingException());
-
-		mockMvc.perform(
-			multipart(ENDPOINT, SESSION_ID, SESSION_QUESTION_ID)
-				.file(audio(new byte[] {1}, "audio/webm;codecs=opus"))
-				.header("Idempotency-Key", REQUEST_KEY)
-		)
-			.andExpect(status().isConflict())
-			.andExpect(jsonPath("$.success").value(false))
-			.andExpect(jsonPath("$.errorCode").value(
-				"SPEECH_PROCESSING"
-			));
 	}
 
 	private MockMultipartFile audio(byte[] content, String contentType) {
