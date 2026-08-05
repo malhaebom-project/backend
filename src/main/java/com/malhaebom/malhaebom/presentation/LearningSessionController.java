@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
+import com.malhaebom.malhaebom.infra.storage.image.QuestionImageUrlResolver;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.CreateLearningSessionRequest;
 import com.malhaebom.malhaebom.presentation.dto.CreateLearningSessionResponse;
@@ -23,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 public class LearningSessionController {
 
 	private final LearningSessionService learningSessionService;
+	private final QuestionImageUrlResolver questionImageUrlResolver;
 
 	@PostMapping
 	public ApiResponse<CreateLearningSessionResponse> create(
@@ -46,9 +49,14 @@ public class LearningSessionController {
 	public ApiResponse<NextQuestionResponse> getNextQuestion(
 		@PathVariable Long sessionId
 	) {
+		LearningSessionQuestion sessionQuestion =
+			learningSessionService.getNextQuestion(sessionId);
 		return ApiResponse.success(
 			NextQuestionResponse.from(
-				learningSessionService.getNextQuestion(sessionId)
+				sessionQuestion,
+				questionImageUrlResolver.resolve(
+					sessionQuestion.getQuestion().getImageUrl()
+				)
 			)
 		);
 	}

@@ -19,7 +19,8 @@ public record NextQuestionResponse(
 ) {
 
 	public static NextQuestionResponse from(
-		LearningSessionQuestion sessionQuestion
+		LearningSessionQuestion sessionQuestion,
+		String imageUrl
 	) {
 		LearningSession session = sessionQuestion.getLearningSession();
 		Question question = sessionQuestion.getQuestion();
@@ -32,7 +33,7 @@ public record NextQuestionResponse(
 			question.getType(),
 			question.getQuestionText(),
 			question.getQuestionTextKo(),
-			question.getImageUrl(),
+			imageUrl,
 			question.getHintText(),
 			question.getTtsUrl()
 		);

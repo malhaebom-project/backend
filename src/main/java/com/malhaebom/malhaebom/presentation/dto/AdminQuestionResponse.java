@@ -25,7 +25,10 @@ public record AdminQuestionResponse(
 	Instant updatedAt
 ) {
 
-	public static AdminQuestionResponse from(Question question) {
+	public static AdminQuestionResponse from(
+		Question question,
+		String imageUrl
+	) {
 		return new AdminQuestionResponse(
 			question.getId(),
 			question.getTopic(),
@@ -33,7 +36,7 @@ public record AdminQuestionResponse(
 			question.getType(),
 			question.getQuestionText(),
 			question.getQuestionTextKo(),
-			question.getImageUrl(),
+			imageUrl,
 			question.getModelAnswer(),
 			question.getAcceptedAnswers(),
 			question.getHintText(),

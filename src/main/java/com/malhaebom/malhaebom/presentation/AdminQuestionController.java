@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.malhaebom.malhaebom.domain.learning.Question;
+import com.malhaebom.malhaebom.infra.storage.image.QuestionImageUrlResolver;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.AdminQuestionRequest;
 import com.malhaebom.malhaebom.presentation.dto.AdminQuestionResponse;
@@ -29,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 public class AdminQuestionController {
 
 	private final AdminQuestionService adminQuestionService;
+	private final QuestionImageUrlResolver questionImageUrlResolver;
 
 	@PostMapping
 	public ResponseEntity<ApiResponse<AdminQuestionResponse>> create(
@@ -37,7 +40,7 @@ public class AdminQuestionController {
 	) {
 		return ResponseEntity.status(HttpStatus.CREATED)
 			.body(ApiResponse.success(
-				AdminQuestionResponse.from(
+				toResponse(
 					adminQuestionService.create(
 						loginUser.userId(),
 						request.toCommand()
@@ -53,7 +56,7 @@ public class AdminQuestionController {
 		List<AdminQuestionResponse> questions =
 			adminQuestionService.getAll(loginUser.userId())
 				.stream()
-				.map(AdminQuestionResponse::from)
+				.map(this::toResponse)
 				.toList();
 		return ApiResponse.success(questions);
 	}
@@ -64,7 +67,7 @@ public class AdminQuestionController {
 		@PathVariable Long questionId
 	) {
 		return ApiResponse.success(
-			AdminQuestionResponse.from(
+			toResponse(
 				adminQuestionService.get(
 					loginUser.userId(),
 					questionId
@@ -80,7 +83,7 @@ public class AdminQuestionController {
 		@Valid @RequestBody AdminQuestionRequest request
 	) {
 		return ApiResponse.success(
-			AdminQuestionResponse.from(
+			toResponse(
 				adminQuestionService.update(
 					loginUser.userId(),
 					questionId,
@@ -97,5 +100,12 @@ public class AdminQuestionController {
 	) {
 		adminQuestionService.delete(loginUser.userId(), questionId);
 		return ApiResponse.success(null, "문제를 삭제했습니다.");
+	}
+
+	private AdminQuestionResponse toResponse(Question question) {
+		return AdminQuestionResponse.from(
+			question,
+			questionImageUrlResolver.resolve(question.getImageUrl())
+		);
 	}
 }
