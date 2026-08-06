@@ -7,3 +7,14 @@ spring:
     import:
       - optional:file:./config/application.yaml
       - optional:file:.env[.properties]
+
+malhaebom:
+  stt:
+    language-code: en-US
+    timeout: 15s
+    max-recording-duration: 15s
+    google:
+      project-id: ${GOOGLE_CLOUD_PROJECT:}
+      location: ${GOOGLE_STT_LOCATION:global}
+      recognizer-id: ${GOOGLE_STT_RECOGNIZER_ID:_}
+      model: ${GOOGLE_STT_MODEL:short}

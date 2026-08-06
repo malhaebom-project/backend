@@ -43,7 +43,7 @@ class SpeechAnswerStateServiceTest {
 	private static final Long SPEECH_ANSWER_ID = 30L;
 	private static final String REQUEST_KEY =
 		"e23b37e7-d7d4-407e-9f54-dcdaee508799";
-	private static final String STT_PROVIDER = "AMAZON_TRANSCRIBE";
+	private static final String STT_PROVIDER = "GOOGLE_CLOUD_STT_V2";
 
 	@Mock
 	private LearningSessionRepository learningSessionRepository;

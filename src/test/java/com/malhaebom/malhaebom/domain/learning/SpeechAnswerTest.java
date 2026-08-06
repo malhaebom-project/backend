@@ -16,7 +16,7 @@ class SpeechAnswerTest {
 
 	private static final String REQUEST_KEY =
 		"e23b37e7-d7d4-407e-9f54-dcdaee508799";
-	private static final String STT_PROVIDER = "AMAZON_TRANSCRIBE";
+	private static final String STT_PROVIDER = "GOOGLE_CLOUD_STT_V2";
 
 	@Test
 	void 음성_답변을_처리_중_상태로_생성한다() {

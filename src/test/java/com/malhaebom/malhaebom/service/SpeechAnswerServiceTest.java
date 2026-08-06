@@ -42,7 +42,7 @@ class SpeechAnswerServiceTest {
 	private static final Long SPEECH_ANSWER_ID = 30L;
 	private static final String REQUEST_KEY =
 		"e23b37e7-d7d4-407e-9f54-dcdaee508799";
-	private static final String STT_PROVIDER = "AMAZON_TRANSCRIBE";
+	private static final String STT_PROVIDER = "GOOGLE_CLOUD_STT_V2";
 	private static final SpeechAudio AUDIO = new SpeechAudio(
 		new byte[] {1, 2, 3},
 		"audio/webm;codecs=opus"
@@ -71,7 +71,7 @@ class SpeechAnswerServiceTest {
 			new SpeechTranscriptionResult(
 				"He is running.",
 				0.94,
-				STT_PROVIDER
+				"RESULT_PROVIDER_MUST_NOT_BE_TRUSTED"
 			);
 		transcriber.willReturn(transcription);
 		when(
@@ -101,8 +101,6 @@ class SpeechAnswerServiceTest {
 		assertEquals("He is running.", result.transcript());
 		assertEquals(0.94, result.confidence());
 		assertEquals(1, transcriber.callCount);
-		assertEquals(SPEECH_ANSWER_ID, transcriber.speechAnswerId);
-		assertEquals(REQUEST_KEY, transcriber.requestKey);
 		assertSame(AUDIO, transcriber.audio);
 	}
 
@@ -246,6 +244,35 @@ class SpeechAnswerServiceTest {
 	}
 
 	@Test
+	void 어댑터가_변환한_STT_실패_예외는_그대로_반환한다() {
+		SpeechAnswer processing = createSpeechAnswer(false);
+		SpeechProcessingFailedException processingFailed =
+			new SpeechProcessingFailedException(
+				new RuntimeException("Google response must not be exposed")
+			);
+		transcriber.willThrow(processingFailed);
+		when(
+			stateService.start(
+				SESSION_ID,
+				SESSION_QUESTION_ID,
+				REQUEST_KEY
+			)
+		).thenReturn(processing);
+
+		SpeechProcessingFailedException thrown = assertThrows(
+			SpeechProcessingFailedException.class,
+			() -> upload()
+		);
+
+		assertSame(processingFailed, thrown);
+		verify(stateService).fail(
+			SPEECH_ANSWER_ID,
+			"STT 처리에 실패했습니다.",
+			STT_PROVIDER
+		);
+	}
+
+	@Test
 	void 현재_문제가_아니면_STT를_호출하지_않는다() {
 		when(
 			stateService.start(
@@ -322,8 +349,6 @@ class SpeechAnswerServiceTest {
 		private SpeechTranscriptionResult result;
 		private RuntimeException exception;
 		private int callCount;
-		private Long speechAnswerId;
-		private String requestKey;
 		private SpeechAudio audio;
 
 		void willReturn(SpeechTranscriptionResult result) {
@@ -337,14 +362,13 @@ class SpeechAnswerServiceTest {
 		}
 
 		@Override
-		public SpeechTranscriptionResult transcribe(
-			Long speechAnswerId,
-			String requestKey,
-			SpeechAudio audio
-		) {
+		public String provider() {
+			return STT_PROVIDER;
+		}
+
+		@Override
+		public SpeechTranscriptionResult transcribe(SpeechAudio audio) {
 			callCount++;
-			this.speechAnswerId = speechAnswerId;
-			this.requestKey = requestKey;
 			this.audio = audio;
 
 			if (exception != null) {
