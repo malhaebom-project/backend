@@ -1,6 +1,8 @@
 spring:
   application:
     name: malhaebom
+  profiles:
+    default: local
   config:
     import:
       - optional:file:./config/application.yaml

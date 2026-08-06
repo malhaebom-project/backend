@@ -4,6 +4,7 @@ import java.time.Duration;
 
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 @Component
 public class CookieProvider {
@@ -14,13 +15,17 @@ public class CookieProvider {
 		CookieProperties properties,
 		Duration ttl
 	) {
-		return ResponseCookie.from(name, value)
+		ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(name, value)
 			.maxAge(ttl)
-			.domain(properties.getDomain())
 			.sameSite(properties.getSameSite())
 			.secure(properties.isSecure())
 			.httpOnly(properties.isHttpOnly())
-			.path(properties.getPath())
-			.build();
+			.path(properties.getPath());
+
+		if (StringUtils.hasText(properties.getDomain())) {
+			builder.domain(properties.getDomain());
+		}
+
+		return builder.build();
 	}
 }
