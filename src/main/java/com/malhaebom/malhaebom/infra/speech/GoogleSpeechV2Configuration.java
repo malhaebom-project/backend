@@ -3,11 +3,11 @@ package com.malhaebom.malhaebom.infra.speech;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.context.annotation.Profile;
 
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.auth.oauth2.GoogleCredentials;
@@ -17,7 +17,11 @@ import com.google.cloud.speech.v2.SpeechSettings;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 
 @Configuration(proxyBeanMethods = false)
-@Profile("!local-fake-stt")
+@ConditionalOnProperty(
+	prefix = "malhaebom.stt.google",
+	name = "enabled",
+	havingValue = "true"
+)
 @EnableConfigurationProperties(GoogleSpeechV2Properties.class)
 public class GoogleSpeechV2Configuration {
 

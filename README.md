@@ -159,61 +159,11 @@ macOS 및 Linux:
 ./gradlew bootRun
 ```
 
-로컬에서 실제 STT 대신 가짜 음성 인식 구현과 H2를 사용하려면
-`local-fake-stt` 프로필을 활성화합니다.
-
-Windows PowerShell:
-
-```powershell
-.\gradlew.bat bootRun --args="--spring.profiles.active=local-fake-stt"
-```
-
-macOS 및 Linux:
-
-```bash
-./gradlew bootRun --args="--spring.profiles.active=local-fake-stt"
-```
-
 기본 운영 구현은 Google Cloud Speech-to-Text V2를 사용합니다. 접근 권한이 있는
 `config` 저장소를 내려받으면 서비스 계정 자격증명도 함께 준비되며, 별도의
 `GOOGLE_APPLICATION_CREDENTIALS` 환경변수 없이 실행할 수 있습니다. config가
 없거나 `config/google-credentials.json`을 읽을 수 없으면 애플리케이션 시작 단계에서
 실패합니다.
-
-### 로컬 Google STT 실연동 테스트
-
-실연동 테스트도 `config/google-credentials.json`을 사용합니다. 테스트할 음성 파일과
-실연동 테스트 활성화 여부만 PowerShell 세션에 환경변수로 지정합니다.
-
-```powershell
-$env:GOOGLE_STT_LIVE_TEST = 'true'
-$env:GOOGLE_STT_SAMPLE_AUDIO = (
-    Resolve-Path 'postman\files\529bb216-c690-4e7a-a155-4c6f4d4e7a9a.mp3'
-).Path
-
-.\gradlew.bat test `
-    --tests 'com.malhaebom.malhaebom.infra.speech.GoogleSpeechV2LiveIntegrationTest' `
-    --no-daemon
-```
-
-성공하면 테스트 리포트의 `system-out`에서 `LIVE_STT_TRANSCRIPT`와
-`LIVE_STT_CONFIDENCE`를 확인할 수 있습니다. 실연동 테스트는
-`GOOGLE_STT_LIVE_TEST=true`일 때만 Google API를 호출하므로 일반 `test`와 CI에서는
-자동으로 건너뜁니다.
-
-config 저장소가 준비된 상태에서 애플리케이션 자체를 실제 Google STT로 실행하려면
-다음 명령을 실행합니다.
-
-```powershell
-.\gradlew.bat bootRun
-```
-
-테스트를 마친 뒤 현재 PowerShell 세션의 설정을 제거할 수 있습니다.
-
-```powershell
-Remove-Item Env:GOOGLE_STT_LIVE_TEST
-Remove-Item Env:GOOGLE_STT_SAMPLE_AUDIO
-```
 
 ## 테스트
 

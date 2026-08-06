@@ -23,6 +23,7 @@ malhaebom:
     timeout: 15s
     max-recording-duration: 15s
     google:
+      enabled: true
       project-id: malhaebom-504606
       location: global
       recognizer-id: _

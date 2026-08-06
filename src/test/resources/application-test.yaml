@@ -2,3 +2,6 @@ malhaebom:
   auth:
     jwt:
       secret-base64: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+  stt:
+    google:
+      enabled: false
