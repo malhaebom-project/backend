@@ -3,6 +3,7 @@ package com.malhaebom.malhaebom.infra.speech;
 import java.time.Duration;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.core.io.Resource;
 import org.springframework.validation.annotation.Validated;
 
 import jakarta.validation.Valid;
@@ -29,7 +30,13 @@ public record GoogleSpeechV2Properties(
 		@NotBlank String projectId,
 		@NotBlank String location,
 		@NotBlank String recognizerId,
-		@NotBlank String model
+		@NotBlank String model,
+		@Valid @NotNull Credentials credentials
+	) {
+	}
+
+	public record Credentials(
+		@NotNull Resource location
 	) {
 	}
 }

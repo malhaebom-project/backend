@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.io.FileSystemResource;
 
 import com.google.api.gax.rpc.ApiException;
 import com.google.api.gax.rpc.StatusCode;
@@ -55,7 +56,12 @@ class GoogleSpeechV2TranscriberTest {
 				"malhaebom-504606",
 				"global",
 				"_",
-				"short"
+				"short",
+				new GoogleSpeechV2Properties.Credentials(
+					new FileSystemResource(
+						"config/google-credentials.json"
+					)
+				)
 			)
 		);
 		transcriber = new GoogleSpeechV2Transcriber(client, properties);

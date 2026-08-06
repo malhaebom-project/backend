@@ -15,3 +15,16 @@ spring:
 malhaebom:
   cors:
     allowed-origins: http://localhost:3000
+  assets:
+    base-url: https://malhaebom-assets-prod-514090179227-ap-northeast-2-an.s3.ap-northeast-2.amazonaws.com
+  stt:
+    language-code: en-US
+    timeout: 15s
+    max-recording-duration: 15s
+    google:
+      project-id: malhaebom-504606
+      location: global
+      recognizer-id: _
+      model: short
+      credentials:
+        location: file:./config/google-credentials.json
