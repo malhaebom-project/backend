@@ -66,9 +66,11 @@ public class LoginController {
 
 	@DeleteMapping("/logout")
 	public ResponseEntity<Void> logout(
-		@CookieValue(RefreshCookieProvider.REFRESH_TOKEN_KEY) String refreshToken
+		@CookieValue(value = RefreshCookieProvider.REFRESH_TOKEN_KEY, required = false) String refreshToken
 	) {
-		loginService.logout(refreshToken);
+		if (refreshToken != null) {
+			loginService.logout(refreshToken);
+		}
 		ResponseCookie cookie = refreshCookieProvider.expire();
 		return ResponseEntity.noContent()
 			.header(HttpHeaders.SET_COOKIE, cookie.toString())

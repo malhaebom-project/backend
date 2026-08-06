@@ -1,9 +1,12 @@
 package com.malhaebom.malhaebom.presentation;
 
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -12,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseCookie;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -26,6 +30,7 @@ import com.malhaebom.malhaebom.service.UserService;
 class LoginControllerTest {
 
 	private static final String SIGNUP_ENDPOINT = "/api/v1/auth/signup";
+	private static final String LOGOUT_ENDPOINT = "/api/v1/auth/logout";
 
 	@Mock
 	private LoginService loginService;
@@ -92,5 +97,17 @@ class LoginControllerTest {
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.success").value(false))
 			.andExpect(jsonPath("$.errorCode").value("EMAIL_ALREADY_EXISTS"));
+	}
+
+	@Test
+	void logsOutWithoutRefreshCookie() throws Exception {
+		when(refreshCookieProvider.expire())
+			.thenReturn(ResponseCookie.from("refresh_token", "").path("/").build());
+
+		mockMvc.perform(delete(LOGOUT_ENDPOINT))
+			.andExpect(status().isNoContent())
+			.andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("refresh_token=")));
+
+		verify(loginService, never()).logout(org.mockito.ArgumentMatchers.anyString());
 	}
 }
