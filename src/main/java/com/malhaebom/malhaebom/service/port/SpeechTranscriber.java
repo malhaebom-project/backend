@@ -5,9 +5,7 @@ import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 
 public interface SpeechTranscriber {
 
-	SpeechTranscriptionResult transcribe(
-		Long speechAnswerId,
-		String requestKey,
-		SpeechAudio audio
-	);
+	String provider();
+
+	SpeechTranscriptionResult transcribe(SpeechAudio audio);
 }

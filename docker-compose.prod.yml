@@ -1,6 +1,7 @@
 services:
   was:
     image: malhaebom/backend:latest
+    restart: unless-stopped
     ports:
       - "80:8080"
     environment:

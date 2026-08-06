@@ -20,8 +20,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class SpeechAnswerService {
 
-	private static final String STT_PROVIDER = "AMAZON_TRANSCRIBE";
-
 	private final SpeechAnswerStateService stateService;
 	private final SpeechTranscriber transcriber;
 
@@ -41,48 +39,52 @@ public class SpeechAnswerService {
 		if (started.isCompleted()) {
 			return SpeechAnswerResult.from(started);
 		}
+		String provider = transcriber.provider();
 
 		try {
-			SpeechTranscriptionResult result = transcriber.transcribe(
-				started.getId(),
-				requestKey,
-				audio
-			);
+			SpeechTranscriptionResult result = transcriber.transcribe(audio);
 			validateTranscript(result);
 
 			SpeechAnswer completed = stateService.complete(
 				started.getId(),
 				result.transcript(),
 				result.confidence(),
-				result.provider()
+				provider
 			);
 			return SpeechAnswerResult.from(completed);
 		} catch (SpeechNotRecognizedException exception) {
 			stateService.fail(
 				started.getId(),
 				"인식된 발화가 없습니다.",
-				STT_PROVIDER
+				provider
 			);
 			throw exception;
 		} catch (SpeechTranscriptionTimeoutException exception) {
 			stateService.fail(
 				started.getId(),
-					"STT 처리 시간이 초과되었습니다.",
-				STT_PROVIDER
+				"STT 처리 시간이 초과되었습니다.",
+				provider
 			);
 			throw exception;
 		} catch (AiRequestLimitExceededException exception) {
 			stateService.fail(
 				started.getId(),
-					"STT 요청 제한을 초과했습니다.",
-				STT_PROVIDER
+				"STT 요청 제한을 초과했습니다.",
+				provider
+			);
+			throw exception;
+		} catch (SpeechProcessingFailedException exception) {
+			stateService.fail(
+				started.getId(),
+				"STT 처리에 실패했습니다.",
+				provider
 			);
 			throw exception;
 		} catch (RuntimeException exception) {
 			stateService.fail(
 				started.getId(),
-					"STT 처리에 실패했습니다.",
-				STT_PROVIDER
+				"STT 처리에 실패했습니다.",
+				provider
 			);
 			throw new SpeechProcessingFailedException(exception);
 		}

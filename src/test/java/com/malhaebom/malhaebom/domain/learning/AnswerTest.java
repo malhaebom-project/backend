@@ -30,15 +30,20 @@ class AnswerTest {
 	@Test
 	void 정답_평가_결과로_답변_시도를_생성한다() {
 		LearningSessionQuestion sessionQuestion = createSessionQuestion();
+		SpeechAnswer speechAnswer = completedSpeechAnswer(
+			sessionQuestion,
+			"The boy is running."
+		);
 
 		Answer answer = Answer.create(
 			sessionQuestion,
-			"The boy is running.",
+			speechAnswer,
 			1,
 			AnswerEvaluation.from(AnswerResult.CORRECT)
 		);
 
 		assertSame(sessionQuestion, answer.getSessionQuestion());
+		assertSame(speechAnswer, answer.getSpeechAnswer());
 		assertEquals(1, answer.getAttemptNo());
 		assertEquals("The boy is running.", answer.getAnswerText());
 		assertEquals(AnswerResult.CORRECT, answer.getResult());
@@ -50,9 +55,10 @@ class AnswerTest {
 
 	@Test
 	void 부분_정답의_동적_점수를_저장한다() {
+		LearningSessionQuestion sessionQuestion = createSessionQuestion();
 		Answer answer = Answer.create(
-			createSessionQuestion(),
-			"He's running.",
+			sessionQuestion,
+			completedSpeechAnswer(sessionQuestion, "He's running."),
 			1,
 			new AnswerEvaluation(AnswerResult.PARTIALLY_CORRECT, 78)
 		);
@@ -64,9 +70,10 @@ class AnswerTest {
 
 	@Test
 	void 등록되지_않은_답안을_제출하면_오답_시도를_생성한다() {
+		LearningSessionQuestion sessionQuestion = createSessionQuestion();
 		Answer answer = Answer.create(
-			createSessionQuestion(),
-			"He is walking.",
+			sessionQuestion,
+			completedSpeechAnswer(sessionQuestion, "He is walking."),
 			2,
 			AnswerEvaluation.from(AnswerResult.INCORRECT)
 		);
@@ -79,11 +86,17 @@ class AnswerTest {
 
 	@Test
 	void 세션_문제_없이_답변을_생성할_수_없다() {
+		LearningSessionQuestion sessionQuestion = createSessionQuestion();
+		SpeechAnswer speechAnswer = completedSpeechAnswer(
+			sessionQuestion,
+			"The boy is running."
+		);
+
 		assertThrows(
 			IllegalArgumentException.class,
 			() -> Answer.create(
 				null,
-				"The boy is running.",
+				speechAnswer,
 				1,
 				AnswerEvaluation.from(AnswerResult.CORRECT)
 			)
@@ -93,13 +106,17 @@ class AnswerTest {
 	@Test
 	void 완료한_문제에는_답변을_생성할_수_없다() {
 		LearningSessionQuestion sessionQuestion = createSessionQuestion();
+		SpeechAnswer speechAnswer = completedSpeechAnswer(
+			sessionQuestion,
+			"The boy is running."
+		);
 		sessionQuestion.getLearningSession().completeCurrentQuestion(true);
 
 		assertThrows(
 			IllegalStateException.class,
 			() -> Answer.create(
 				sessionQuestion,
-				"The boy is running.",
+				speechAnswer,
 				2,
 				AnswerEvaluation.from(AnswerResult.CORRECT)
 			)
@@ -107,12 +124,19 @@ class AnswerTest {
 	}
 
 	@Test
-	void 비어_있는_답변으로_답변을_생성할_수_없다() {
+	void 처리가_완료되지_않은_음성_답변으로_답변을_생성할_수_없다() {
+		LearningSessionQuestion sessionQuestion = createSessionQuestion();
+		SpeechAnswer speechAnswer = SpeechAnswer.start(
+			sessionQuestion,
+			"request-key",
+			1
+		);
+
 		assertThrows(
 			IllegalArgumentException.class,
 			() -> Answer.create(
-				createSessionQuestion(),
-				" ",
+				sessionQuestion,
+				speechAnswer,
 				1,
 				AnswerEvaluation.from(AnswerResult.INCORRECT)
 			)
@@ -121,11 +145,15 @@ class AnswerTest {
 
 	@Test
 	void 답변_시도_번호는_1_이상이어야_한다() {
+		LearningSessionQuestion sessionQuestion = createSessionQuestion();
 		assertThrows(
 			IllegalArgumentException.class,
 			() -> Answer.create(
-				createSessionQuestion(),
-				"The boy is running.",
+				sessionQuestion,
+				completedSpeechAnswer(
+					sessionQuestion,
+					"The boy is running."
+				),
 				0,
 				AnswerEvaluation.from(AnswerResult.CORRECT)
 			)
@@ -134,15 +162,45 @@ class AnswerTest {
 
 	@Test
 	void 채점_결과_없이_답변을_생성할_수_없다() {
+		LearningSessionQuestion sessionQuestion = createSessionQuestion();
 		assertThrows(
 			IllegalArgumentException.class,
 			() -> Answer.create(
-				createSessionQuestion(),
-				"The boy is running.",
+				sessionQuestion,
+				completedSpeechAnswer(
+					sessionQuestion,
+					"The boy is running."
+				),
 				1,
 				null
 			)
 		);
+	}
+
+	@Test
+	void 음성_답변_없이_답변을_생성할_수_없다() {
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> Answer.create(
+				createSessionQuestion(),
+				null,
+				1,
+				AnswerEvaluation.from(AnswerResult.CORRECT)
+			)
+		);
+	}
+
+	private SpeechAnswer completedSpeechAnswer(
+		LearningSessionQuestion sessionQuestion,
+		String transcript
+	) {
+		SpeechAnswer speechAnswer = SpeechAnswer.start(
+			sessionQuestion,
+			"request-key",
+			1
+		);
+		speechAnswer.complete(transcript, 0.94, "TEST_STT");
+		return speechAnswer;
 	}
 
 	private LearningSessionQuestion createSessionQuestion() {
