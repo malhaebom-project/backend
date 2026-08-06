@@ -35,19 +35,16 @@ public class LearningAnswerService {
 	public AnswerSubmissionResult submit(
 		Long sessionId,
 		Long sessionQuestionId,
-		Long speechAnswerId,
-		String answerText
+		Long speechAnswerId
 	) {
 		LearningSession session = learningSessionRepository
 			.findForUpdateById(sessionId)
 			.orElseThrow(LearningSessionNotFoundException::new);
 		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
 		validateCurrentQuestion(currentQuestion, sessionQuestionId);
-		validateSpeechAnswer(
-			getSpeechAnswer(speechAnswerId),
-			currentQuestion,
-			answerText
-		);
+		SpeechAnswer speechAnswer = getSpeechAnswer(speechAnswerId);
+		validateSpeechAnswer(speechAnswer, currentQuestion);
+		validateSpeechAnswerNotUsed(speechAnswerId);
 
 		int attemptNo = getNextAttemptNo(sessionQuestionId);
 		if (attemptNo > MAX_ATTEMPT_COUNT) {
@@ -56,11 +53,11 @@ public class LearningAnswerService {
 
 		AnswerEvaluation evaluation = answerEvaluator.evaluate(
 			currentQuestion.getQuestion(),
-			answerText
+			speechAnswer.getTranscript()
 		);
 		Answer answer = Answer.create(
 			currentQuestion,
-			answerText,
+			speechAnswer,
 			attemptNo,
 			evaluation
 		);
@@ -91,8 +88,7 @@ public class LearningAnswerService {
 
 	private void validateSpeechAnswer(
 		SpeechAnswer speechAnswer,
-		LearningSessionQuestion currentQuestion,
-		String answerText
+		LearningSessionQuestion currentQuestion
 	) {
 		if (!speechAnswer.isCompleted()) {
 			throw new IllegalStateException(
@@ -103,10 +99,12 @@ public class LearningAnswerService {
 		if (!speechAnswer.isUsableFor(currentQuestion)) {
 			throw new CurrentQuestionMismatchException();
 		}
+	}
 
-		if (!Objects.equals(speechAnswer.getTranscript(), answerText)) {
-			throw new IllegalArgumentException(
-				"음성 인식 결과와 제출 답변이 일치하지 않습니다."
+	private void validateSpeechAnswerNotUsed(Long speechAnswerId) {
+		if (answerRepository.existsBySpeechAnswer_Id(speechAnswerId)) {
+			throw new IllegalStateException(
+				"이미 답변 제출에 사용된 음성 답변입니다."
 			);
 		}
 	}
@@ -123,7 +121,7 @@ public class LearningAnswerService {
 		Long sessionQuestionId
 	) {
 		if (!Objects.equals(currentQuestion.getId(), sessionQuestionId)) {
-			throw new IllegalArgumentException("현재 진행 중인 문제가 아닙니다.");
+			throw new CurrentQuestionMismatchException();
 		}
 	}
 }

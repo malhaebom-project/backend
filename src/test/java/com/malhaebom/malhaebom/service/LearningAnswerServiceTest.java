@@ -1,6 +1,7 @@
 package com.malhaebom.malhaebom.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -100,11 +101,11 @@ class LearningAnswerServiceTest {
 		AnswerSubmissionResult result = learningAnswerService.submit(
 			SESSION_ID,
 			SESSION_QUESTION_ID,
-			SPEECH_ANSWER_ID,
-			ANSWER_TEXT
+			SPEECH_ANSWER_ID
 		);
 
 		assertEquals(ANSWER_TEXT, result.answer().getAnswerText());
+		assertSame(speechAnswer, result.answer().getSpeechAnswer());
 		assertEquals(1, result.answer().getAttemptNo());
 		assertTrue(result.answer().isCorrect());
 		verify(answerRepository).save(result.answer());
@@ -134,8 +135,7 @@ class LearningAnswerServiceTest {
 		AnswerSubmissionResult result = learningAnswerService.submit(
 			SESSION_ID,
 			SESSION_QUESTION_ID,
-			SPEECH_ANSWER_ID,
-			ANSWER_TEXT
+			SPEECH_ANSWER_ID
 		);
 
 		assertEquals(AnswerResult.PARTIALLY_CORRECT, result.answer().getResult());
@@ -155,8 +155,7 @@ class LearningAnswerServiceTest {
 			() -> learningAnswerService.submit(
 				SESSION_ID,
 				SESSION_QUESTION_ID,
-				SPEECH_ANSWER_ID,
-				ANSWER_TEXT
+				SPEECH_ANSWER_ID
 			)
 		);
 		verifyNoInteractions(answerRepository);
@@ -177,30 +176,57 @@ class LearningAnswerServiceTest {
 			() -> learningAnswerService.submit(
 				SESSION_ID,
 				SESSION_QUESTION_ID,
-				SPEECH_ANSWER_ID,
-				ANSWER_TEXT
+				SPEECH_ANSWER_ID
 			)
 		);
 		verifyNoInteractions(answerRepository);
 	}
 
 	@Test
-	void 음성_인식_결과와_다른_답변_텍스트는_거부한다() {
-		SpeechAnswer speechAnswer = completedSpeechAnswer(currentQuestion);
+	void 처리가_완료되지_않은_음성_답변은_거부한다() {
+		SpeechAnswer speechAnswer = SpeechAnswer.start(
+			currentQuestion,
+			"request-key",
+			1
+		);
+		ReflectionTestUtils.setField(
+			speechAnswer,
+			"id",
+			SPEECH_ANSWER_ID
+		);
 		prepareSession();
 		when(speechAnswerRepository.findById(SPEECH_ANSWER_ID))
 			.thenReturn(Optional.of(speechAnswer));
 
 		assertThrows(
-			IllegalArgumentException.class,
+			IllegalStateException.class,
 			() -> learningAnswerService.submit(
 				SESSION_ID,
 				SESSION_QUESTION_ID,
-				SPEECH_ANSWER_ID,
-				"Different answer."
+				SPEECH_ANSWER_ID
 			)
 		);
 		verifyNoInteractions(answerRepository);
+	}
+
+	@Test
+	void 이미_제출에_사용한_음성_답변은_거부한다() {
+		SpeechAnswer speechAnswer = completedSpeechAnswer(currentQuestion);
+		prepareSession();
+		when(speechAnswerRepository.findById(SPEECH_ANSWER_ID))
+			.thenReturn(Optional.of(speechAnswer));
+		when(answerRepository.existsBySpeechAnswer_Id(SPEECH_ANSWER_ID))
+			.thenReturn(true);
+
+		assertThrows(
+			IllegalStateException.class,
+			() -> learningAnswerService.submit(
+				SESSION_ID,
+				SESSION_QUESTION_ID,
+				SPEECH_ANSWER_ID
+			)
+		);
+		verifyNoInteractions(answerEvaluator);
 	}
 
 	private void prepareSession() {

@@ -11,4 +11,6 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
 	Optional<Answer> findFirstBySessionQuestion_IdOrderByAttemptNoDesc(
 		Long sessionQuestionId
 	);
+
+	boolean existsBySpeechAnswer_Id(Long speechAnswerId);
 }

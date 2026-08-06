@@ -29,6 +29,7 @@ import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
 import com.malhaebom.malhaebom.domain.learning.LearningTopic;
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
+import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
@@ -63,16 +64,14 @@ class LearningAnswerControllerTest {
 		when(learningAnswerService.submit(
 			SESSION_ID,
 			SESSION_QUESTION_ID,
-			SPEECH_ANSWER_ID,
-			ANSWER_TEXT
+			SPEECH_ANSWER_ID
 		)).thenReturn(answerSubmission());
 
 		mockMvc.perform(post(ENDPOINT, SESSION_ID, SESSION_QUESTION_ID)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content("""
 				{
-				  "speechAnswerId": 30,
-				  "answerText": "He is running."
+				  "speechAnswerId": 30
 				}
 				"""))
 			.andExpect(status().isOk())
@@ -87,8 +86,34 @@ class LearningAnswerControllerTest {
 		verify(learningAnswerService).submit(
 			SESSION_ID,
 			SESSION_QUESTION_ID,
-			SPEECH_ANSWER_ID,
-			ANSWER_TEXT
+			SPEECH_ANSWER_ID
+		);
+	}
+
+	@Test
+	void 클라이언트가_answerText를_보내도_제출_입력으로_사용하지_않는다()
+		throws Exception {
+		when(learningAnswerService.submit(
+			SESSION_ID,
+			SESSION_QUESTION_ID,
+			SPEECH_ANSWER_ID
+		)).thenReturn(answerSubmission());
+
+		mockMvc.perform(post(ENDPOINT, SESSION_ID, SESSION_QUESTION_ID)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("""
+				{
+				  "speechAnswerId": 30,
+				  "answerText": "Manipulated client answer."
+				}
+				"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.answerText").value(ANSWER_TEXT));
+
+		verify(learningAnswerService).submit(
+			SESSION_ID,
+			SESSION_QUESTION_ID,
+			SPEECH_ANSWER_ID
 		);
 	}
 
@@ -96,11 +121,7 @@ class LearningAnswerControllerTest {
 	void speechAnswerId가_없으면_요청을_거부한다() throws Exception {
 		mockMvc.perform(post(ENDPOINT, SESSION_ID, SESSION_QUESTION_ID)
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("""
-				{
-				  "answerText": "He is running."
-				}
-				"""))
+			.content("{}"))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.success").value(false))
 			.andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));
@@ -133,9 +154,15 @@ class LearningAnswerControllerTest {
 			"id",
 			SESSION_QUESTION_ID
 		);
+		SpeechAnswer speechAnswer = SpeechAnswer.start(
+			sessionQuestion,
+			"request-key",
+			1
+		);
+		speechAnswer.complete(ANSWER_TEXT, 0.94, "TEST_STT");
 		Answer answer = Answer.create(
 			sessionQuestion,
-			ANSWER_TEXT,
+			speechAnswer,
 			1,
 			AnswerEvaluation.from(AnswerResult.CORRECT)
 		);

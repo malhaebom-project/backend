@@ -12,6 +12,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
@@ -43,6 +44,10 @@ public class Answer extends BaseEntity {
 	@JoinColumn(name = "session_question_id", nullable = false)
 	private LearningSessionQuestion sessionQuestion;
 
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "speech_answer_id", unique = true)
+	private SpeechAnswer speechAnswer;
+
 	@Column(name = "attempt_no", nullable = false)
 	private int attemptNo;
 
@@ -64,21 +69,22 @@ public class Answer extends BaseEntity {
 
 	public static Answer create(
 		LearningSessionQuestion sessionQuestion,
-		String answerText,
+		SpeechAnswer speechAnswer,
 		int attemptNo,
 		AnswerEvaluation evaluation
 	) {
 		validateCreation(
 			sessionQuestion,
-			answerText,
+			speechAnswer,
 			attemptNo,
 			evaluation
 		);
 
 		Answer answer = new Answer();
 		answer.sessionQuestion = sessionQuestion;
+		answer.speechAnswer = speechAnswer;
 		answer.attemptNo = attemptNo;
-		answer.answerText = answerText;
+		answer.answerText = speechAnswer.getTranscript();
 		answer.result = evaluation.result();
 		answer.score = evaluation.score();
 		answer.modelAnswerSnapshot = sessionQuestion
@@ -94,7 +100,7 @@ public class Answer extends BaseEntity {
 
 	private static void validateCreation(
 		LearningSessionQuestion sessionQuestion,
-		String answerText,
+		SpeechAnswer speechAnswer,
 		int attemptNo,
 		AnswerEvaluation evaluation
 	) {
@@ -106,7 +112,18 @@ public class Answer extends BaseEntity {
 			throw new IllegalStateException("이미 완료한 문제에는 답변할 수 없습니다.");
 		}
 
-		if (answerText == null || answerText.isBlank()) {
+		if (speechAnswer == null) {
+			throw new IllegalArgumentException("음성 답변은 null일 수 없습니다.");
+		}
+
+		if (!speechAnswer.isUsableFor(sessionQuestion)) {
+			throw new IllegalArgumentException(
+				"현재 문제에 사용할 수 있는 완료된 음성 답변이 아닙니다."
+			);
+		}
+
+		if (speechAnswer.getTranscript() == null
+			|| speechAnswer.getTranscript().isBlank()) {
 			throw new IllegalArgumentException("답변은 비어 있을 수 없습니다.");
 		}
 
