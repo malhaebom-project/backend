@@ -1,9 +1,16 @@
 services:
   was:
     image: malhaebom/backend:latest
+    restart: unless-stopped
     ports:
       - "80:8080"
     environment:
       SPRING_PROFILES_ACTIVE: prod
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/google-credentials.json
+      GOOGLE_CLOUD_PROJECT: malhaebom-504606
+      GOOGLE_STT_LOCATION: global
+      GOOGLE_STT_RECOGNIZER_ID: _
+      GOOGLE_STT_MODEL: short
     volumes:
       - ./config:/app/config:ro
+      - /opt/malhaebom/secrets/google-credentials.json:/run/secrets/google-credentials.json:ro
