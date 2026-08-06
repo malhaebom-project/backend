@@ -14,7 +14,10 @@ import com.malhaebom.malhaebom.presentation.cookie.RefreshCookieProvider;
 import com.malhaebom.malhaebom.presentation.dto.AccessTokenResponse;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.LoginRequest;
+import com.malhaebom.malhaebom.presentation.dto.SignupRequest;
+import com.malhaebom.malhaebom.presentation.dto.UserResponse;
 import com.malhaebom.malhaebom.service.LoginService;
+import com.malhaebom.malhaebom.service.UserService;
 import com.malhaebom.malhaebom.service.dto.TokenPair;
 
 import jakarta.validation.Valid;
@@ -26,7 +29,21 @@ import lombok.RequiredArgsConstructor;
 public class LoginController {
 
 	private final LoginService loginService;
+	private final UserService userService;
 	private final RefreshCookieProvider refreshCookieProvider;
+
+	@PostMapping("/signup")
+	public ResponseEntity<ApiResponse<UserResponse>> signup(
+		@Valid @RequestBody SignupRequest request
+	) {
+		UserResponse user = UserResponse.from(userService.create(
+			request.name(),
+			request.email(),
+			request.password()
+		));
+		return ResponseEntity.status(201)
+			.body(ApiResponse.success(user, "회원가입되었습니다."));
+	}
 
 	@PostMapping("/login")
 	public ResponseEntity<ApiResponse<AccessTokenResponse>> login(
