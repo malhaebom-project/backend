@@ -21,7 +21,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.malhaebom.malhaebom.domain.learning.Answer;
-import com.malhaebom.malhaebom.domain.learning.AnswerEvaluation;
 import com.malhaebom.malhaebom.domain.learning.AnswerResult;
 import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
@@ -35,6 +34,7 @@ import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionReposit
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.global.exception.CurrentQuestionMismatchException;
 import com.malhaebom.malhaebom.global.exception.SpeechAnswerNotFoundException;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 
 @ExtendWith(MockitoExtension.class)
@@ -55,7 +55,7 @@ class LearningAnswerServiceTest {
 	private SpeechAnswerRepository speechAnswerRepository;
 
 	@Mock
-	private AnswerEvaluator answerEvaluator;
+	private AnswerAssessmentService answerAssessmentService;
 
 	private LearningAnswerService learningAnswerService;
 	private LearningSession session;
@@ -67,7 +67,7 @@ class LearningAnswerServiceTest {
 			learningSessionRepository,
 			answerRepository,
 			speechAnswerRepository,
-			answerEvaluator
+			answerAssessmentService
 		);
 		session = createSession();
 		currentQuestion = session.getCurrentQuestion();
@@ -82,6 +82,7 @@ class LearningAnswerServiceTest {
 	@Test
 	void 현재_문제의_완료된_음성_답변으로_답변을_제출한다() {
 		SpeechAnswer speechAnswer = completedSpeechAnswer(currentQuestion);
+		AnswerAssessment assessment = correctAssessment();
 		prepareSession();
 		when(speechAnswerRepository.findById(SPEECH_ANSWER_ID))
 			.thenReturn(Optional.of(speechAnswer));
@@ -93,10 +94,10 @@ class LearningAnswerServiceTest {
 		).thenReturn(Optional.empty());
 		when(answerRepository.save(any(Answer.class)))
 			.thenAnswer(invocation -> invocation.getArgument(0));
-		when(answerEvaluator.evaluate(
+		when(answerAssessmentService.assess(
 			currentQuestion.getQuestion(),
 			ANSWER_TEXT
-		)).thenReturn(AnswerEvaluation.from(AnswerResult.CORRECT));
+		)).thenReturn(assessment);
 
 		AnswerSubmissionResult result = learningAnswerService.submit(
 			SESSION_ID,
@@ -108,6 +109,7 @@ class LearningAnswerServiceTest {
 		assertSame(speechAnswer, result.answer().getSpeechAnswer());
 		assertEquals(1, result.answer().getAttemptNo());
 		assertTrue(result.answer().isCorrect());
+		assertSame(assessment, result.assessment());
 		verify(answerRepository).save(result.answer());
 	}
 
@@ -125,17 +127,19 @@ class LearningAnswerServiceTest {
 		).thenReturn(Optional.empty());
 		when(answerRepository.save(any(Answer.class)))
 			.thenAnswer(invocation -> invocation.getArgument(0));
-		when(answerEvaluator.evaluate(
+		AnswerAssessment assessment = new AnswerAssessment(
+			true,
+			40,
+			23,
+			15,
+			List.of("running"),
+			List.of("the boy"),
+			"동작 표현은 좋았어요. 주어를 함께 말해 보세요."
+		);
+		when(answerAssessmentService.assess(
 			currentQuestion.getQuestion(),
 			ANSWER_TEXT
-		)).thenReturn(
-			new AnswerEvaluation(
-				AnswerResult.PARTIALLY_CORRECT,
-				40,
-				23,
-				15
-			)
-		);
+		)).thenReturn(assessment);
 
 		AnswerSubmissionResult result = learningAnswerService.submit(
 			SESSION_ID,
@@ -145,6 +149,7 @@ class LearningAnswerServiceTest {
 
 		assertEquals(AnswerResult.PARTIALLY_CORRECT, result.answer().getResult());
 		assertEquals(78, result.answer().getScore());
+		assertSame(assessment, result.assessment());
 		assertTrue(result.canRetry());
 		assertEquals(1, result.remainingAttempts());
 	}
@@ -231,7 +236,19 @@ class LearningAnswerServiceTest {
 				SPEECH_ANSWER_ID
 			)
 		);
-		verifyNoInteractions(answerEvaluator);
+		verifyNoInteractions(answerAssessmentService);
+	}
+
+	private AnswerAssessment correctAssessment() {
+		return new AnswerAssessment(
+			true,
+			50,
+			30,
+			20,
+			List.of("is running"),
+			List.of(),
+			"현재진행형을 정확하게 사용했어요!"
+		);
 	}
 
 	private void prepareSession() {

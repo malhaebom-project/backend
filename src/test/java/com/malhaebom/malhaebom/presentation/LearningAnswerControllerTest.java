@@ -31,9 +31,8 @@ import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
-import com.malhaebom.malhaebom.service.AnswerFeedbackService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
-import com.malhaebom.malhaebom.service.dto.AnswerFeedback;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 
 @ExtendWith(MockitoExtension.class)
@@ -50,18 +49,12 @@ class LearningAnswerControllerTest {
 	@Mock
 	private LearningAnswerService learningAnswerService;
 
-	@Mock
-	private AnswerFeedbackService answerFeedbackService;
-
 	private MockMvc mockMvc;
 
 	@BeforeEach
 	void setUp() {
 		mockMvc = MockMvcBuilders.standaloneSetup(
-			new LearningAnswerController(
-				learningAnswerService,
-				answerFeedbackService
-			)
+			new LearningAnswerController(learningAnswerService)
 		)
 			.setControllerAdvice(new ApiExceptionHandler())
 			.build();
@@ -75,9 +68,6 @@ class LearningAnswerControllerTest {
 			SESSION_QUESTION_ID,
 			SPEECH_ANSWER_ID
 		)).thenReturn(submission);
-		when(answerFeedbackService.generate(submission.answer()))
-			.thenReturn(answerFeedback());
-
 		mockMvc.perform(post(ENDPOINT, SESSION_ID, SESSION_QUESTION_ID)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content("""
@@ -101,7 +91,6 @@ class LearningAnswerControllerTest {
 			SESSION_QUESTION_ID,
 			SPEECH_ANSWER_ID
 		);
-		verify(answerFeedbackService).generate(submission.answer());
 	}
 
 	@Test
@@ -113,9 +102,6 @@ class LearningAnswerControllerTest {
 			SESSION_QUESTION_ID,
 			SPEECH_ANSWER_ID
 		)).thenReturn(submission);
-		when(answerFeedbackService.generate(submission.answer()))
-			.thenReturn(answerFeedback());
-
 		mockMvc.perform(post(ENDPOINT, SESSION_ID, SESSION_QUESTION_ID)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content("""
@@ -132,7 +118,6 @@ class LearningAnswerControllerTest {
 			SESSION_QUESTION_ID,
 			SPEECH_ANSWER_ID
 		);
-		verify(answerFeedbackService).generate(submission.answer());
 	}
 
 	@Test
@@ -144,18 +129,7 @@ class LearningAnswerControllerTest {
 			.andExpect(jsonPath("$.success").value(false))
 			.andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));
 
-		verifyNoInteractions(
-			learningAnswerService,
-			answerFeedbackService
-		);
-	}
-
-	private AnswerFeedback answerFeedback() {
-		return new AnswerFeedback(
-			List.of("is running"),
-			List.of(),
-			"현재진행형을 정확하게 사용했어요!"
-		);
+		verifyNoInteractions(learningAnswerService);
 	}
 
 	private AnswerSubmissionResult answerSubmission() {
@@ -196,6 +170,15 @@ class LearningAnswerControllerTest {
 			AnswerEvaluation.from(AnswerResult.CORRECT)
 		);
 		ReflectionTestUtils.setField(answer, "id", 40L);
-		return new AnswerSubmissionResult(answer, false, 0);
+		AnswerAssessment assessment = new AnswerAssessment(
+			true,
+			50,
+			30,
+			20,
+			List.of("is running"),
+			List.of(),
+			"현재진행형을 정확하게 사용했어요!"
+		);
+		return new AnswerSubmissionResult(answer, assessment, false, 0);
 	}
 }

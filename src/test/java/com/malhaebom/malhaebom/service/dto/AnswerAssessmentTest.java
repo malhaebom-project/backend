@@ -111,4 +111,36 @@ class AnswerAssessmentTest {
 			)
 		);
 	}
+
+	@Test
+	void 같은_키워드가_일치와_누락에_함께_있으면_거부한다() {
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> new AnswerAssessment(
+				true,
+				30,
+				20,
+				10,
+				List.of("running"),
+				List.of("running"),
+				"피드백"
+			)
+		);
+	}
+
+	@Test
+	void 인식되지_않은_답변에_일치_키워드가_있으면_거부한다() {
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> new AnswerAssessment(
+				false,
+				0,
+				0,
+				0,
+				List.of("running"),
+				List.of(),
+				"피드백"
+			)
+		);
+	}
 }

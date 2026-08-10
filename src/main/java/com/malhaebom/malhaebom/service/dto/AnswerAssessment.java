@@ -2,7 +2,9 @@ package com.malhaebom.malhaebom.service.dto;
 
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 
+import com.malhaebom.malhaebom.domain.learning.AnswerEvaluation;
 import com.malhaebom.malhaebom.domain.learning.AnswerResult;
 
 public record AnswerAssessment(
@@ -19,7 +21,12 @@ public record AnswerAssessment(
 	private static final int MAX_EXPRESSION_SCORE = 30;
 	private static final int MAX_GRAMMAR_SCORE = 20;
 	private static final int MAX_KEYWORDS = 3;
+	private static final int MAX_KEYWORD_LENGTH = 80;
 	private static final int MAX_FEEDBACK_LENGTH = 300;
+	private static final String CORRECT_FALLBACK =
+		"정확하고 또박또박 잘 말했어요!";
+	private static final String RETRY_FALLBACK =
+		"좋은 시도예요! 모범 답안을 참고해서 다시 말해 보세요.";
 
 	public AnswerAssessment {
 		validateScore("의미 전달 점수", meaningScore, MAX_MEANING_SCORE);
@@ -35,6 +42,35 @@ public record AnswerAssessment(
 		matchedKeywords = normalizeKeywords(matchedKeywords);
 		missingKeywords = normalizeKeywords(missingKeywords);
 		feedbackText = normalizeFeedback(feedbackText);
+
+		if (!recognized && !matchedKeywords.isEmpty()) {
+			throw new IllegalArgumentException(
+				"인식되지 않은 답변에는 일치 키워드가 있을 수 없습니다."
+			);
+		}
+
+		if (matchedKeywords.stream().anyMatch(missingKeywords::contains)) {
+			throw new IllegalArgumentException(
+				"같은 키워드를 일치와 누락 결과에 함께 넣을 수 없습니다."
+			);
+		}
+	}
+
+	public static AnswerAssessment fallback(AnswerEvaluation evaluation) {
+		Objects.requireNonNull(evaluation, "평가 결과는 null일 수 없습니다.");
+		String feedbackText = evaluation.result().isCorrect()
+			? CORRECT_FALLBACK
+			: RETRY_FALLBACK;
+
+		return new AnswerAssessment(
+			evaluation.result() != AnswerResult.UNRECOGNIZED,
+			evaluation.meaningScore(),
+			evaluation.expressionScore(),
+			evaluation.grammarScore(),
+			List.of(),
+			List.of(),
+			feedbackText
+		);
 	}
 
 	public int totalScore() {
@@ -57,6 +93,15 @@ public record AnswerAssessment(
 		return AnswerResult.INCORRECT;
 	}
 
+	public AnswerEvaluation toEvaluation() {
+		return new AnswerEvaluation(
+			result(),
+			meaningScore,
+			expressionScore,
+			grammarScore
+		);
+	}
+
 	private static void validateScore(
 		String scoreName,
 		int score,
@@ -75,8 +120,9 @@ public record AnswerAssessment(
 		}
 
 		return keywords.stream()
-			.filter(keyword -> keyword != null && !keyword.isBlank())
-			.map(String::strip)
+			.filter(Objects::nonNull)
+			.map(keyword -> normalizeText(keyword, MAX_KEYWORD_LENGTH))
+			.filter(Objects::nonNull)
 			.collect(
 				LinkedHashSet<String>::new,
 				LinkedHashSet::add,
@@ -88,15 +134,22 @@ public record AnswerAssessment(
 	}
 
 	private static String normalizeFeedback(String feedbackText) {
-		if (feedbackText == null || feedbackText.isBlank()) {
+		String normalized = normalizeText(feedbackText, MAX_FEEDBACK_LENGTH);
+		if (normalized == null) {
 			throw new IllegalArgumentException("피드백은 비어 있을 수 없습니다.");
 		}
 
-		String normalized = feedbackText.strip();
-		if (normalized.length() <= MAX_FEEDBACK_LENGTH) {
-			return normalized;
+		return normalized;
+	}
+
+	private static String normalizeText(String text, int maximumLength) {
+		if (text == null || text.isBlank()) {
+			return null;
 		}
 
-		return normalized.substring(0, MAX_FEEDBACK_LENGTH);
+		String normalized = text.strip();
+		return normalized.length() <= maximumLength
+			? normalized
+			: normalized.substring(0, maximumLength);
 	}
 }
