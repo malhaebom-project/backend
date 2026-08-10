@@ -9,7 +9,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.SubmitAnswerRequest;
 import com.malhaebom.malhaebom.presentation.dto.SubmitAnswerResponse;
+import com.malhaebom.malhaebom.service.AnswerFeedbackService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
+import com.malhaebom.malhaebom.service.dto.AnswerFeedback;
+import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 public class LearningAnswerController {
 
 	private final LearningAnswerService learningAnswerService;
+	private final AnswerFeedbackService answerFeedbackService;
 
 	@PostMapping("/{sessionId}/questions/{sessionQuestionId}/answers")
 	public ApiResponse<SubmitAnswerResponse> submit(
@@ -27,14 +31,17 @@ public class LearningAnswerController {
 		@PathVariable Long sessionQuestionId,
 		@Valid @RequestBody SubmitAnswerRequest request
 	) {
+		AnswerSubmissionResult submission = learningAnswerService.submit(
+			sessionId,
+			sessionQuestionId,
+			request.speechAnswerId()
+		);
+		AnswerFeedback feedback = answerFeedbackService.generate(
+			submission.answer()
+		);
+
 		return ApiResponse.success(
-			SubmitAnswerResponse.from(
-				learningAnswerService.submit(
-					sessionId,
-					sessionQuestionId,
-					request.speechAnswerId()
-				)
-			)
+			SubmitAnswerResponse.from(submission, feedback)
 		);
 	}
 }
