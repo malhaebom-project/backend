@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
   datasource:
     url: jdbc:postgresql://aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require
     username: postgres.gkbjfdrnxtngxnaqnkto
@@ -8,6 +12,20 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
+  ai:
+    openai:
+      api-key: "${OPENAI_API_KEY}"
+      chat:
+        model: gpt-5.6-terra
+        reasoning-effort: none
+        verbosity: low
+        max-completion-tokens: 300
+    retry:
+      max-attempts: 2
+      backoff:
+        initial-interval: 200ms
+        multiplier: 2
+        max-interval: 1s
 
 cookie:
   refresh-token:

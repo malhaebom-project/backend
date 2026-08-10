@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.malhaebom.malhaebom.domain.learning.Answer;
-import com.malhaebom.malhaebom.domain.learning.AnswerEvaluation;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
@@ -16,6 +15,7 @@ import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository
 import com.malhaebom.malhaebom.global.exception.CurrentQuestionMismatchException;
 import com.malhaebom.malhaebom.global.exception.LearningSessionNotFoundException;
 import com.malhaebom.malhaebom.global.exception.SpeechAnswerNotFoundException;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 
 import lombok.RequiredArgsConstructor;
@@ -29,7 +29,7 @@ public class LearningAnswerService {
 	private final LearningSessionRepository learningSessionRepository;
 	private final AnswerRepository answerRepository;
 	private final SpeechAnswerRepository speechAnswerRepository;
-	private final AnswerEvaluator answerEvaluator;
+	private final AnswerAssessmentService answerAssessmentService;
 
 	@Transactional
 	public AnswerSubmissionResult submit(
@@ -51,7 +51,7 @@ public class LearningAnswerService {
 			throw new IllegalStateException("답변 가능 횟수를 초과했습니다.");
 		}
 
-		AnswerEvaluation evaluation = answerEvaluator.evaluate(
+		AnswerAssessment assessment = answerAssessmentService.assess(
 			currentQuestion.getQuestion(),
 			speechAnswer.getTranscript()
 		);
@@ -59,7 +59,7 @@ public class LearningAnswerService {
 			currentQuestion,
 			speechAnswer,
 			attemptNo,
-			evaluation
+			assessment.toEvaluation()
 		);
 		answerRepository.save(answer);
 
@@ -76,6 +76,7 @@ public class LearningAnswerService {
 			: 0;
 		return new AnswerSubmissionResult(
 			answer,
+			assessment,
 			canRetry,
 			remainingAttempts
 		);

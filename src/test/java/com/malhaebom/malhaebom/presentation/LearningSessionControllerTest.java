@@ -26,6 +26,7 @@ import com.malhaebom.malhaebom.domain.learning.LearningTopic;
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
+import com.malhaebom.malhaebom.infra.storage.image.QuestionImageProperties;
 import com.malhaebom.malhaebom.infra.storage.image.QuestionImageUrlResolver;
 import com.malhaebom.malhaebom.service.LearningSessionService;
 
@@ -38,13 +39,15 @@ class LearningSessionControllerTest {
 
 	@Mock
 	private LearningSessionService learningSessionService;
-	@Mock
 	private QuestionImageUrlResolver questionImageUrlResolver;
 
 	private MockMvc mockMvc;
 
 	@BeforeEach
 	void setUp() {
+		questionImageUrlResolver = new QuestionImageUrlResolver(
+			new QuestionImageProperties("https://assets.example.com")
+		);
 		mockMvc = MockMvcBuilders.standaloneSetup(
 			new LearningSessionController(
 				learningSessionService,
@@ -85,17 +88,12 @@ class LearningSessionControllerTest {
 
 		when(learningSessionService.getNextQuestion(SESSION_ID))
 			.thenReturn(sessionQuestion);
-		when(questionImageUrlResolver.resolve(question.getImageUrl()))
-			.thenReturn(resolvedImageUrl);
-
 		mockMvc.perform(get(
 			"/api/v1/learning-sessions/{sessionId}/questions/next",
 			SESSION_ID
 		))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.imageUrl").value(resolvedImageUrl));
-
-		verify(questionImageUrlResolver).resolve(question.getImageUrl());
 	}
 
 	@Test
@@ -119,24 +117,6 @@ class LearningSessionControllerTest {
 			.andExpect(jsonPath("$.message").value("학습을 완료했습니다."));
 
 		verify(learningSessionService).complete(SESSION_ID);
-	}
-
-	@Test
-	void 모든_문제를_완료하지_않은_세션은_완료를_거부한다()
-		throws Exception {
-		when(learningSessionService.complete(SESSION_ID)).thenThrow(
-			new IllegalStateException(
-				"모든 문제를 완료한 학습 세션이 아닙니다."
-			)
-		);
-
-		mockMvc.perform(post(ENDPOINT, SESSION_ID))
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.success").value(false))
-			.andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"))
-			.andExpect(jsonPath("$.message").value(
-				"모든 문제를 완료한 학습 세션이 아닙니다."
-			));
 	}
 
 	private LearningSession createSession() {

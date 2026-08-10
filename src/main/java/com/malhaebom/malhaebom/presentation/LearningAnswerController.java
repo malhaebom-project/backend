@@ -10,6 +10,7 @@ import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.SubmitAnswerRequest;
 import com.malhaebom.malhaebom.presentation.dto.SubmitAnswerResponse;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
+import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,14 +28,13 @@ public class LearningAnswerController {
 		@PathVariable Long sessionQuestionId,
 		@Valid @RequestBody SubmitAnswerRequest request
 	) {
+		AnswerSubmissionResult submission = learningAnswerService.submit(
+			sessionId,
+			sessionQuestionId,
+			request.speechAnswerId()
+		);
 		return ApiResponse.success(
-			SubmitAnswerResponse.from(
-				learningAnswerService.submit(
-					sessionId,
-					sessionQuestionId,
-					request.speechAnswerId()
-				)
-			)
+			SubmitAnswerResponse.from(submission)
 		);
 	}
 }
