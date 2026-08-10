@@ -26,7 +26,6 @@ import com.malhaebom.malhaebom.global.exception.CurrentQuestionMismatchException
 import com.malhaebom.malhaebom.global.exception.SpeechAnswerNotFoundException;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.AnswerAssessmentService;
-import com.malhaebom.malhaebom.service.AnswerEvaluator;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
@@ -54,10 +53,7 @@ class LearningAnswerServiceJpaTest {
 	void setUp() {
 		assessmentGenerator = new TestAnswerAssessmentGenerator();
 		AnswerAssessmentService assessmentService =
-			new AnswerAssessmentService(
-				assessmentGenerator,
-				new AnswerEvaluator()
-			);
+			new AnswerAssessmentService(assessmentGenerator);
 		learningAnswerService = new LearningAnswerService(
 			learningSessionRepository,
 			answerRepository,

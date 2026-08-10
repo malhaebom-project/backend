@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import com.malhaebom.malhaebom.domain.learning.AnswerEvaluation;
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
@@ -20,7 +19,6 @@ public class AnswerAssessmentService {
 	);
 
 	private final AnswerAssessmentGenerator answerAssessmentGenerator;
-	private final AnswerEvaluator answerEvaluator;
 
 	public AnswerAssessment assess(Question question, String answerText) {
 		try {
@@ -38,11 +36,9 @@ public class AnswerAssessmentService {
 				"AI 답변 평가에 실패해 기본 평가를 사용합니다. errorType={}",
 				exception.getClass().getSimpleName()
 			);
-			AnswerEvaluation fallback = answerEvaluator.evaluate(
-				question,
-				answerText
+			return AnswerAssessment.fallback(
+				question.evaluateAnswer(answerText)
 			);
-			return AnswerAssessment.fallback(fallback);
 		}
 	}
 }
