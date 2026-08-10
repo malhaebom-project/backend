@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,7 +18,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.FileSystemResource;
 
 import com.google.api.gax.rpc.ApiException;
-import com.google.api.gax.rpc.StatusCode;
+import com.google.api.gax.rpc.ApiExceptionFactory;
+import com.google.api.gax.grpc.GrpcStatusCode;
 import com.google.cloud.speech.v2.RecognizeRequest;
 import com.google.cloud.speech.v2.RecognizeResponse;
 import com.google.cloud.speech.v2.SpeechClient;
@@ -32,6 +32,8 @@ import com.malhaebom.malhaebom.global.exception.SpeechProcessingFailedException;
 import com.malhaebom.malhaebom.global.exception.SpeechTranscriptionTimeoutException;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
+
+import io.grpc.Status;
 
 @ExtendWith(MockitoExtension.class)
 class GoogleSpeechV2TranscriberTest {
@@ -125,7 +127,7 @@ class GoogleSpeechV2TranscriberTest {
 	@Test
 	void RESOURCE_EXHAUSTED를_요청_제한_예외로_변환한다() {
 		ApiException googleException = googleException(
-			StatusCode.Code.RESOURCE_EXHAUSTED
+			Status.Code.RESOURCE_EXHAUSTED
 		);
 		when(client.recognize(any(RecognizeRequest.class)))
 			.thenThrow(googleException);
@@ -141,7 +143,7 @@ class GoogleSpeechV2TranscriberTest {
 	@Test
 	void DEADLINE_EXCEEDED를_타임아웃_예외로_변환한다() {
 		ApiException googleException = googleException(
-			StatusCode.Code.DEADLINE_EXCEEDED
+			Status.Code.DEADLINE_EXCEEDED
 		);
 		when(client.recognize(any(RecognizeRequest.class)))
 			.thenThrow(googleException);
@@ -157,7 +159,7 @@ class GoogleSpeechV2TranscriberTest {
 	@Test
 	void 인증과_그_밖의_Google_오류를_안전한_처리_실패로_변환한다() {
 		ApiException googleException = googleException(
-			StatusCode.Code.UNAUTHENTICATED
+			Status.Code.UNAUTHENTICATED
 		);
 		when(client.recognize(any(RecognizeRequest.class)))
 			.thenThrow(googleException);
@@ -193,11 +195,11 @@ class GoogleSpeechV2TranscriberTest {
 			.build();
 	}
 
-	private ApiException googleException(StatusCode.Code code) {
-		ApiException exception = mock(ApiException.class);
-		StatusCode statusCode = mock(StatusCode.class);
-		when(exception.getStatusCode()).thenReturn(statusCode);
-		when(statusCode.getCode()).thenReturn(code);
-		return exception;
+	private ApiException googleException(Status.Code code) {
+		return ApiExceptionFactory.createException(
+			new RuntimeException("Google API error"),
+			GrpcStatusCode.of(code),
+			false
+		);
 	}
 }

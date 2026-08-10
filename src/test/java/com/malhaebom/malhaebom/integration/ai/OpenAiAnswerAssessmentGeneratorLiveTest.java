@@ -1,4 +1,4 @@
-package com.malhaebom.malhaebom.infra.ai;
+package com.malhaebom.malhaebom.integration.ai;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -21,6 +21,7 @@ import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningTopic;
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
+import com.malhaebom.malhaebom.infra.ai.OpenAiAnswerAssessmentGenerator;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 

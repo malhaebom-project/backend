@@ -168,6 +168,26 @@ class AnswerTest {
 	}
 
 	@Test
+	void 다른_문제의_음성_답변으로_답변을_생성할_수_없다() {
+		LearningSessionQuestion currentQuestion = createSessionQuestion();
+		LearningSessionQuestion otherQuestion = createSessionQuestion();
+		SpeechAnswer speechAnswer = completedSpeechAnswer(
+			otherQuestion,
+			"The boy is running."
+		);
+
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> Answer.create(
+				currentQuestion,
+				speechAnswer,
+				1,
+				AnswerEvaluation.from(AnswerResult.CORRECT)
+			)
+		);
+	}
+
+	@Test
 	void 답변_시도_번호는_1_이상이어야_한다() {
 		LearningSessionQuestion sessionQuestion = createSessionQuestion();
 		assertThrows(
