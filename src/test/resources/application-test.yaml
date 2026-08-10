@@ -5,3 +5,9 @@ malhaebom:
   stt:
     google:
       enabled: false
+
+spring:
+  ai:
+    openai:
+      # 일반 테스트에서는 클라이언트 빈만 생성하며 외부 API를 호출하지 않습니다.
+      api-key: test-key
