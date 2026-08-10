@@ -77,7 +77,7 @@ TTS를 사용하지 않을 때는 다음 값을 유지합니다. 이 경우 Goog
 자격증명은 사용되지 않습니다.
 
 ```yaml
-malhaebom:
+google:
   tts:
     enabled: false
 ```
@@ -86,11 +86,10 @@ TTS를 사용하려면 Google Cloud Text-to-Speech API를 활성화한 후 다�
 설정합니다. STT와 TTS는 아래의 공통 Google Cloud 자격증명을 사용합니다.
 
 ```yaml
-malhaebom:
+google:
   tts:
     enabled: true
 
-google:
   cloud:
     project-id: malhaebom-504606
     credentials:

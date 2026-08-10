@@ -38,12 +38,14 @@ malhaebom:
 
 google:
   stt:
+    enabled: true
     language-code: en-US
     timeout: 15s
     location: global
     recognizer-id: _
     model: short
   tts:
+    enabled: false
     language-code: en-US
     voice-name: en-US-Standard-C
     speaking-rate: 1.0
