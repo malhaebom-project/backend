@@ -7,3 +7,7 @@ spring:
     import:
       - optional:file:./config/application.yaml
       - optional:file:.env[.properties]
+
+google:
+  cloud:
+    project-id: malhaebom-504606

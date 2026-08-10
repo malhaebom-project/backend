@@ -18,6 +18,7 @@ import com.malhaebom.malhaebom.global.exception.AiRequestLimitExceededException;
 import com.malhaebom.malhaebom.global.exception.SpeechNotRecognizedException;
 import com.malhaebom.malhaebom.global.exception.SpeechProcessingFailedException;
 import com.malhaebom.malhaebom.global.exception.SpeechTranscriptionTimeoutException;
+import com.malhaebom.malhaebom.infra.gcp.GoogleCloudProperties;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
@@ -34,11 +35,12 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 
 	public GoogleSpeechV2Transcriber(
 		SpeechClient client,
-		GoogleSpeechV2Properties properties
+		GoogleSpeechV2Properties properties,
+		GoogleCloudProperties cloudProperties
 	) {
 		this.client = client;
 		this.recognitionConfig = createRecognitionConfig(properties);
-		this.recognizer = createRecognizerName(properties);
+		this.recognizer = createRecognizerName(properties, cloudProperties);
 	}
 
 	@Override
@@ -135,18 +137,18 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 				AutoDetectDecodingConfig.newBuilder().build()
 			)
 			.addLanguageCodes(properties.languageCode())
-			.setModel(properties.google().model())
+			.setModel(properties.model())
 			.build();
 	}
 
 	private static String createRecognizerName(
-		GoogleSpeechV2Properties properties
+		GoogleSpeechV2Properties properties,
+		GoogleCloudProperties cloudProperties
 	) {
-		GoogleSpeechV2Properties.Google google = properties.google();
 		return RecognizerName.of(
-			google.projectId(),
-			google.location(),
-			google.recognizerId()
+			cloudProperties.projectId(),
+			properties.location(),
+			properties.recognizerId()
 		).toString();
 	}
 }

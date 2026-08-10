@@ -15,7 +15,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.core.io.FileSystemResource;
 
 import com.google.api.gax.rpc.ApiException;
 import com.google.api.gax.rpc.ApiExceptionFactory;
@@ -30,6 +29,7 @@ import com.malhaebom.malhaebom.global.exception.AiRequestLimitExceededException;
 import com.malhaebom.malhaebom.global.exception.SpeechNotRecognizedException;
 import com.malhaebom.malhaebom.global.exception.SpeechProcessingFailedException;
 import com.malhaebom.malhaebom.global.exception.SpeechTranscriptionTimeoutException;
+import com.malhaebom.malhaebom.infra.gcp.GoogleCloudProperties;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 
@@ -54,19 +54,19 @@ class GoogleSpeechV2TranscriberTest {
 		GoogleSpeechV2Properties properties = new GoogleSpeechV2Properties(
 			"en-US",
 			Duration.ofSeconds(15),
-			new GoogleSpeechV2Properties.Google(
-				"malhaebom-504606",
-				"global",
-				"_",
-				"short",
-				new GoogleSpeechV2Properties.Credentials(
-					new FileSystemResource(
-						"config/google-credentials.json"
-					)
-				)
-			)
+			"global",
+			"_",
+			"short"
 		);
-		transcriber = new GoogleSpeechV2Transcriber(client, properties);
+		GoogleCloudProperties cloudProperties = new GoogleCloudProperties(
+			"malhaebom-504606",
+			null
+		);
+		transcriber = new GoogleSpeechV2Transcriber(
+			client,
+			properties,
+			cloudProperties
+		);
 	}
 
 	@Test

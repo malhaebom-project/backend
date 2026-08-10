@@ -1,24 +1,21 @@
 package com.malhaebom.malhaebom.infra.speech;
 
 import java.io.IOException;
-import java.io.InputStream;
-
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
-import com.google.api.gax.core.FixedCredentialsProvider;
-import com.google.auth.oauth2.GoogleCredentials;
-import com.google.auth.oauth2.ServiceAccountCredentials;
+import com.google.api.gax.core.CredentialsProvider;
 import com.google.cloud.speech.v2.SpeechClient;
 import com.google.cloud.speech.v2.SpeechSettings;
+import com.malhaebom.malhaebom.infra.gcp.GoogleCloudProperties;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnProperty(
-	prefix = "malhaebom.stt.google",
+	prefix = "google.stt",
 	name = "enabled",
 	havingValue = "true"
 )
@@ -30,17 +27,15 @@ public class GoogleSpeechV2Configuration {
 
 	@Bean(destroyMethod = "close")
 	SpeechClient googleSpeechV2Client(
-		GoogleSpeechV2Properties properties
+		GoogleSpeechV2Properties properties,
+		CredentialsProvider credentialsProvider
 	) throws IOException {
-		GoogleCredentials credentials = loadCredentials(properties);
 		SpeechSettings.Builder settings = SpeechSettings.newBuilder()
-			.setCredentialsProvider(
-				FixedCredentialsProvider.create(credentials)
-			);
+			.setCredentialsProvider(credentialsProvider);
 		settings.recognizeSettings()
 			.setSimpleTimeoutNoRetriesDuration(properties.timeout());
 
-		String location = properties.google().location();
+		String location = properties.location();
 		if (!GLOBAL_LOCATION.equals(location)) {
 			settings.setEndpoint(
 				location + "-speech.googleapis.com:" + GOOGLE_API_PORT
@@ -50,24 +45,17 @@ public class GoogleSpeechV2Configuration {
 		return SpeechClient.create(settings.build());
 	}
 
-	private GoogleCredentials loadCredentials(
-		GoogleSpeechV2Properties properties
-	) throws IOException {
-		try (InputStream input = properties.google()
-			.credentials()
-			.location()
-			.getInputStream()) {
-			return ServiceAccountCredentials.fromStream(input)
-				.createScoped(SpeechSettings.getDefaultServiceScopes());
-		}
-	}
-
 	@Bean
 	@Primary
 	SpeechTranscriber googleSpeechV2Transcriber(
 		SpeechClient client,
-		GoogleSpeechV2Properties properties
+		GoogleSpeechV2Properties properties,
+		GoogleCloudProperties cloudProperties
 	) {
-		return new GoogleSpeechV2Transcriber(client, properties);
+		return new GoogleSpeechV2Transcriber(
+			client,
+			properties,
+			cloudProperties
+		);
 	}
 }
