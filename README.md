@@ -82,8 +82,8 @@ malhaebom:
     enabled: false
 ```
 
-TTS를 사용하려면 Google Cloud Text-to-Speech API를 활성화하고 서비스 계정의
-JSON 키를 발급한 후 다음 값을 설정합니다.
+TTS를 사용하려면 Google Cloud Text-to-Speech API를 활성화한 후 다음 값을
+설정합니다. STT와 TTS는 아래의 공통 Google Cloud 자격증명을 사용합니다.
 
 ```yaml
 malhaebom:
@@ -91,24 +91,28 @@ malhaebom:
     enabled: true
 
 google:
+  cloud:
+    project-id: malhaebom-504606
+    credentials:
+      location: file:./config/google-credentials.json
+  stt:
+    enabled: true
+    language-code: en-US
+    timeout: 15s
+    location: global
+    recognizer-id: _
+    model: short
   tts:
     language-code: en-US
     voice-name: en-US-Standard-C
     speaking-rate: 1.0
     pitch: 0.0
-    credentials:
-      project-id: JSON의_project_id
-      client-email: JSON의_client_email
-      private-key-id: JSON의_private_key_id
-      private-key: |
-        -----BEGIN PRIVATE KEY-----
-        JSON의_private_key_본문
-        -----END PRIVATE KEY-----
 ```
 
-`client-email`에는 Google 로그인용 Gmail 주소가 아니라 서비스 계정 JSON의
-`client_email` 값을 입력해야 합니다. 일반적으로
-`서비스계정명@프로젝트ID.iam.gserviceaccount.com` 형태입니다.
+`google.cloud.credentials.location`을 설정하면 해당 JSON 키 파일을 사용합니다.
+설정을 생략하면 Google Cloud Java 라이브러리의 Application Default Credentials
+(ADC)를 사용하므로 `GOOGLE_APPLICATION_CREDENTIALS`, 로컬 ADC 또는 실행 환경에
+연결된 서비스 계정을 자동으로 탐색합니다.
 
 현재 S3 클라이언트 구현은 정적 자격증명을 사용하므로 TTS를 활성화할 때
 `access-key`와 `secret-key`가 모두 필요합니다.
@@ -160,10 +164,10 @@ macOS 및 Linux:
 ```
 
 기본 운영 구현은 Google Cloud Speech-to-Text V2를 사용합니다. 접근 권한이 있는
-`config` 저장소를 내려받으면 서비스 계정 자격증명도 함께 준비되며, 별도의
-`GOOGLE_APPLICATION_CREDENTIALS` 환경변수 없이 실행할 수 있습니다. config가
-없거나 `config/google-credentials.json`을 읽을 수 없으면 애플리케이션 시작 단계에서
-실패합니다.
+`config` 저장소를 내려받으면 STT와 TTS가 함께 사용하는 서비스 계정 자격증명도
+준비됩니다. 로컬 프로필은 `config/google-credentials.json`, 운영 프로필은
+`/app/config/google-credentials.json`을 읽습니다. 경로 설정을 제거하면 Google Cloud
+Java 라이브러리의 ADC를 사용합니다.
 
 ## 테스트
 

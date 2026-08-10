@@ -7,15 +7,6 @@ public record GoogleTextToSpeechProperties(
 	String languageCode,
 	String voiceName,
 	double speakingRate,
-	double pitch,
-	Credentials credentials
+	double pitch
 ) {
-
-	public record Credentials(
-		String projectId,
-		String clientEmail,
-		String privateKeyId,
-		String privateKey
-	) {
-	}
 }
