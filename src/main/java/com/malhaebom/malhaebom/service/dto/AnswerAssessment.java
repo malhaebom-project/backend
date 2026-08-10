@@ -60,11 +60,11 @@ public record AnswerAssessment(
 			return AnswerResult.UNRECOGNIZED;
 		}
 
-		if (totalScore() >= 80) {
+		if (meaningScore >= 40 && totalScore() >= 80) {
 			return AnswerResult.CORRECT;
 		}
 
-		if (totalScore() >= 40) {
+		if (meaningScore >= 30 && totalScore() >= 40) {
 			return AnswerResult.PARTIALLY_CORRECT;
 		}
 

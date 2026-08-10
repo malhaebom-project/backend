@@ -38,6 +38,20 @@ class AnswerAssessmentTest {
 	}
 
 	@Test
+	void 총점이_높아도_의미_점수가_30점_미만이면_오답이다() {
+		AnswerAssessment assessment = new AnswerAssessment(
+			true,
+			25,
+			28,
+			20,
+			"문법은 맞지만 질문의 핵심 의미와 다른 답변이에요."
+		);
+
+		assertEquals(73, assessment.totalScore());
+		assertEquals(AnswerResult.INCORRECT, assessment.result());
+	}
+
+	@Test
 	void 피드백을_정규화한다() {
 		AnswerAssessment assessment = new AnswerAssessment(
 			true,

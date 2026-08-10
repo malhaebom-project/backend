@@ -54,7 +54,20 @@ dependencyManagement {
 }
 
 tasks.named('test') {
-	useJUnitPlatform()
+	useJUnitPlatform {
+		excludeTags 'live'
+	}
+}
+
+tasks.register('liveTest', Test) {
+	description = 'Runs tests that call external services.'
+	group = 'verification'
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform {
+		includeTags 'live'
+	}
+	shouldRunAfter tasks.named('test')
 }
 
 tasks.named('bootJar') {
