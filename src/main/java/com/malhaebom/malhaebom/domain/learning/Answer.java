@@ -59,7 +59,13 @@ public class Answer extends BaseEntity {
 	private AnswerResult result;
 
 	@Column(nullable = false)
-	private int score;
+	private int meaningScore;
+
+	@Column(nullable = false)
+	private int expressionScore;
+
+	@Column(nullable = false)
+	private int grammarScore;
 
 	@Column(nullable = false, length = 1000)
 	private String modelAnswerSnapshot;
@@ -86,7 +92,9 @@ public class Answer extends BaseEntity {
 		answer.attemptNo = attemptNo;
 		answer.answerText = speechAnswer.getTranscript();
 		answer.result = evaluation.result();
-		answer.score = evaluation.score();
+		answer.meaningScore = evaluation.meaningScore();
+		answer.expressionScore = evaluation.expressionScore();
+		answer.grammarScore = evaluation.grammarScore();
 		answer.modelAnswerSnapshot = sessionQuestion
 			.getQuestion()
 			.getModelAnswer();
@@ -96,6 +104,10 @@ public class Answer extends BaseEntity {
 
 	public boolean isCorrect() {
 		return result.isCorrect();
+	}
+
+	public int getScore() {
+		return meaningScore + expressionScore + grammarScore;
 	}
 
 	private static void validateCreation(

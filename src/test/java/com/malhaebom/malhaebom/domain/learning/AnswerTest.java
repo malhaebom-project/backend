@@ -48,6 +48,9 @@ class AnswerTest {
 		assertEquals("The boy is running.", answer.getAnswerText());
 		assertEquals(AnswerResult.CORRECT, answer.getResult());
 		assertEquals(100, answer.getScore());
+		assertEquals(50, answer.getMeaningScore());
+		assertEquals(30, answer.getExpressionScore());
+		assertEquals(20, answer.getGrammarScore());
 		assertEquals("The boy is running.", answer.getModelAnswerSnapshot());
 		assertNotNull(answer.getSubmittedAt());
 		assertTrue(answer.isCorrect());
@@ -60,12 +63,33 @@ class AnswerTest {
 			sessionQuestion,
 			completedSpeechAnswer(sessionQuestion, "He's running."),
 			1,
-			new AnswerEvaluation(AnswerResult.PARTIALLY_CORRECT, 78)
+			new AnswerEvaluation(
+				AnswerResult.PARTIALLY_CORRECT,
+				40,
+				23,
+				15
+			)
 		);
 
 		assertEquals(AnswerResult.PARTIALLY_CORRECT, answer.getResult());
 		assertEquals(78, answer.getScore());
+		assertEquals(40, answer.getMeaningScore());
+		assertEquals(23, answer.getExpressionScore());
+		assertEquals(15, answer.getGrammarScore());
 		assertFalse(answer.isCorrect());
+	}
+
+	@Test
+	void 세부_점수가_허용_범위를_벗어나면_평가를_생성할_수_없다() {
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> new AnswerEvaluation(
+				AnswerResult.PARTIALLY_CORRECT,
+				51,
+				0,
+				0
+			)
+		);
 	}
 
 	@Test

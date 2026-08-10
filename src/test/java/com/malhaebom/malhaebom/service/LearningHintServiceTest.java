@@ -19,7 +19,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
-import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
 import com.malhaebom.malhaebom.domain.learning.LearningTopic;
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;

@@ -31,7 +31,9 @@ import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
+import com.malhaebom.malhaebom.service.AnswerFeedbackService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
+import com.malhaebom.malhaebom.service.dto.AnswerFeedback;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,24 +50,33 @@ class LearningAnswerControllerTest {
 	@Mock
 	private LearningAnswerService learningAnswerService;
 
+	@Mock
+	private AnswerFeedbackService answerFeedbackService;
+
 	private MockMvc mockMvc;
 
 	@BeforeEach
 	void setUp() {
 		mockMvc = MockMvcBuilders.standaloneSetup(
-			new LearningAnswerController(learningAnswerService)
+			new LearningAnswerController(
+				learningAnswerService,
+				answerFeedbackService
+			)
 		)
 			.setControllerAdvice(new ApiExceptionHandler())
 			.build();
 	}
 
 	@Test
-	void 답변_제출_요청과_임시_피드백_응답_계약을_반환한다() throws Exception {
+	void 답변_제출_요청과_AI_피드백_응답_계약을_반환한다() throws Exception {
+		AnswerSubmissionResult submission = answerSubmission();
 		when(learningAnswerService.submit(
 			SESSION_ID,
 			SESSION_QUESTION_ID,
 			SPEECH_ANSWER_ID
-		)).thenReturn(answerSubmission());
+		)).thenReturn(submission);
+		when(answerFeedbackService.generate(submission.answer()))
+			.thenReturn(answerFeedback());
 
 		mockMvc.perform(post(ENDPOINT, SESSION_ID, SESSION_QUESTION_ID)
 			.contentType(MediaType.APPLICATION_JSON)
@@ -76,10 +87,12 @@ class LearningAnswerControllerTest {
 				"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.attemptNo").value(1))
-			.andExpect(jsonPath("$.data.matchedKeywords").isEmpty())
+			.andExpect(jsonPath("$.data.matchedKeywords[0]").value(
+				"is running"
+			))
 			.andExpect(jsonPath("$.data.missingKeywords").isEmpty())
 			.andExpect(jsonPath("$.data.feedbackText").value(
-				"정확하고 또박또박 잘 말했어요!"
+				"현재진행형을 정확하게 사용했어요!"
 			))
 			.andExpect(jsonPath("$.data.feedbackTtsUrl").isEmpty());
 
@@ -88,16 +101,20 @@ class LearningAnswerControllerTest {
 			SESSION_QUESTION_ID,
 			SPEECH_ANSWER_ID
 		);
+		verify(answerFeedbackService).generate(submission.answer());
 	}
 
 	@Test
 	void 클라이언트가_answerText를_보내도_제출_입력으로_사용하지_않는다()
 		throws Exception {
+		AnswerSubmissionResult submission = answerSubmission();
 		when(learningAnswerService.submit(
 			SESSION_ID,
 			SESSION_QUESTION_ID,
 			SPEECH_ANSWER_ID
-		)).thenReturn(answerSubmission());
+		)).thenReturn(submission);
+		when(answerFeedbackService.generate(submission.answer()))
+			.thenReturn(answerFeedback());
 
 		mockMvc.perform(post(ENDPOINT, SESSION_ID, SESSION_QUESTION_ID)
 			.contentType(MediaType.APPLICATION_JSON)
@@ -115,6 +132,7 @@ class LearningAnswerControllerTest {
 			SESSION_QUESTION_ID,
 			SPEECH_ANSWER_ID
 		);
+		verify(answerFeedbackService).generate(submission.answer());
 	}
 
 	@Test
@@ -126,7 +144,18 @@ class LearningAnswerControllerTest {
 			.andExpect(jsonPath("$.success").value(false))
 			.andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));
 
-		verifyNoInteractions(learningAnswerService);
+		verifyNoInteractions(
+			learningAnswerService,
+			answerFeedbackService
+		);
+	}
+
+	private AnswerFeedback answerFeedback() {
+		return new AnswerFeedback(
+			List.of("is running"),
+			List.of(),
+			"현재진행형을 정확하게 사용했어요!"
+		);
 	}
 
 	private AnswerSubmissionResult answerSubmission() {

@@ -129,7 +129,12 @@ class LearningAnswerServiceTest {
 			currentQuestion.getQuestion(),
 			ANSWER_TEXT
 		)).thenReturn(
-			new AnswerEvaluation(AnswerResult.PARTIALLY_CORRECT, 78)
+			new AnswerEvaluation(
+				AnswerResult.PARTIALLY_CORRECT,
+				40,
+				23,
+				15
+			)
 		);
 
 		AnswerSubmissionResult result = learningAnswerService.submit(
