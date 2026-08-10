@@ -6,7 +6,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -54,8 +53,6 @@ class AnswerAssessmentServiceTest {
 			48,
 			27,
 			18,
-			List.of("is running"),
-			List.of(),
 			"현재진행형을 자연스럽게 잘 사용했어요!"
 		);
 		when(answerAssessmentGenerator.generate(question, ANSWER_TEXT))

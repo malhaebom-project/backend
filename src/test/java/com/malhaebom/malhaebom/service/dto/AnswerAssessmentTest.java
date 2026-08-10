@@ -3,8 +3,6 @@ package com.malhaebom.malhaebom.service.dto;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.List;
-
 import org.junit.jupiter.api.Test;
 
 import com.malhaebom.malhaebom.domain.learning.AnswerResult;
@@ -18,8 +16,6 @@ class AnswerAssessmentTest {
 			45,
 			25,
 			15,
-			List.of("is running"),
-			List.of(),
 			"현재진행형을 정확하게 사용했어요!"
 		);
 
@@ -28,35 +24,29 @@ class AnswerAssessmentTest {
 	}
 
 	@Test
-	void 누락된_핵심_표현이_있으면_80점_이상이어도_부분_정답이다() {
+	void 총점이_80점_미만이면_부분_정답이다() {
 		AnswerAssessment assessment = new AnswerAssessment(
 			true,
 			45,
-			27,
-			18,
-			List.of("running"),
-			List.of("the boy"),
+			20,
+			14,
 			"동작 표현은 좋았어요. 주어를 함께 말해 보세요."
 		);
 
-		assertEquals(90, assessment.totalScore());
+		assertEquals(79, assessment.totalScore());
 		assertEquals(AnswerResult.PARTIALLY_CORRECT, assessment.result());
 	}
 
 	@Test
-	void 키워드와_피드백을_정규화한다() {
+	void 피드백을_정규화한다() {
 		AnswerAssessment assessment = new AnswerAssessment(
 			true,
 			20,
 			10,
 			5,
-			List.of(" running ", "running", "is", "boy", "extra"),
-			null,
 			"  좋은 시도예요. 문장 구조를 다시 확인해 보세요.  "
 		);
 
-		assertEquals(List.of("running", "is", "boy"), assessment.matchedKeywords());
-		assertEquals(List.of(), assessment.missingKeywords());
 		assertEquals(
 			"좋은 시도예요. 문장 구조를 다시 확인해 보세요.",
 			assessment.feedbackText()
@@ -71,8 +61,6 @@ class AnswerAssessmentTest {
 			0,
 			0,
 			0,
-			List.of(),
-			List.of(),
 			"답변을 인식하지 못했어요. 다시 한번 말해 주세요."
 		);
 
@@ -89,8 +77,6 @@ class AnswerAssessmentTest {
 				51,
 				0,
 				0,
-				List.of(),
-				List.of(),
 				"피드백"
 			)
 		);
@@ -105,40 +91,6 @@ class AnswerAssessmentTest {
 				1,
 				0,
 				0,
-				List.of(),
-				List.of(),
-				"피드백"
-			)
-		);
-	}
-
-	@Test
-	void 같은_키워드가_일치와_누락에_함께_있으면_거부한다() {
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> new AnswerAssessment(
-				true,
-				30,
-				20,
-				10,
-				List.of("running"),
-				List.of("running"),
-				"피드백"
-			)
-		);
-	}
-
-	@Test
-	void 인식되지_않은_답변에_일치_키워드가_있으면_거부한다() {
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> new AnswerAssessment(
-				false,
-				0,
-				0,
-				0,
-				List.of("running"),
-				List.of(),
 				"피드백"
 			)
 		);

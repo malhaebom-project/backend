@@ -28,9 +28,6 @@ public class OpenAiAnswerAssessmentGenerator
 		- expressionScore(0~30): 문맥에 자연스럽고 적절한 영어 표현인지
 		- grammarScore(0~20): 문법과 문장 구조가 정확한지
 
-		matchedKeywords에는 답변에서 의미상 올바른 핵심 영어 단어나 짧은
-		구문을 최대 3개 넣으세요. missingKeywords에는 모범 답안의 핵심 중
-		빠뜨렸거나 잘못 표현한 영어 단어나 짧은 구문을 최대 3개 넣으세요.
 		feedbackText는 한국어 1~2문장으로 작성하고, 잘한 점을 먼저 말한 뒤
 		필요한 교정 방법을 구체적으로 알려 주세요.
 

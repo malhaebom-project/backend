@@ -1,7 +1,5 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
-import java.util.List;
-
 import com.malhaebom.malhaebom.domain.learning.Answer;
 import com.malhaebom.malhaebom.domain.learning.AnswerResult;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
@@ -15,8 +13,6 @@ public record SubmitAnswerResponse(
 	AnswerResult result,
 	int score,
 	String modelAnswer,
-	List<String> matchedKeywords,
-	List<String> missingKeywords,
 	String feedbackText,
 	String feedbackTtsUrl,
 	boolean canRetry,
@@ -34,8 +30,6 @@ public record SubmitAnswerResponse(
 			answer.getResult(),
 			answer.getScore(),
 			answer.getModelAnswerSnapshot(),
-			assessment.matchedKeywords(),
-			assessment.missingKeywords(),
 			assessment.feedbackText(),
 			null,
 			submission.canRetry(),

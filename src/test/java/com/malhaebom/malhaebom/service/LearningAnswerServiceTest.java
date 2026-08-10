@@ -132,8 +132,6 @@ class LearningAnswerServiceTest {
 			40,
 			23,
 			15,
-			List.of("running"),
-			List.of("the boy"),
 			"동작 표현은 좋았어요. 주어를 함께 말해 보세요."
 		);
 		when(answerAssessmentService.assess(
@@ -245,8 +243,6 @@ class LearningAnswerServiceTest {
 			50,
 			30,
 			20,
-			List.of("is running"),
-			List.of(),
 			"현재진행형을 정확하게 사용했어요!"
 		);
 	}

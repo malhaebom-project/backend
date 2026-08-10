@@ -1,7 +1,5 @@
 package com.malhaebom.malhaebom.service.dto;
 
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Objects;
 
 import com.malhaebom.malhaebom.domain.learning.AnswerEvaluation;
@@ -12,16 +10,12 @@ public record AnswerAssessment(
 	int meaningScore,
 	int expressionScore,
 	int grammarScore,
-	List<String> matchedKeywords,
-	List<String> missingKeywords,
 	String feedbackText
 ) {
 
 	private static final int MAX_MEANING_SCORE = 50;
 	private static final int MAX_EXPRESSION_SCORE = 30;
 	private static final int MAX_GRAMMAR_SCORE = 20;
-	private static final int MAX_KEYWORDS = 3;
-	private static final int MAX_KEYWORD_LENGTH = 80;
 	private static final int MAX_FEEDBACK_LENGTH = 300;
 	private static final String CORRECT_FALLBACK =
 		"정확하고 또박또박 잘 말했어요!";
@@ -39,21 +33,7 @@ public record AnswerAssessment(
 			);
 		}
 
-		matchedKeywords = normalizeKeywords(matchedKeywords);
-		missingKeywords = normalizeKeywords(missingKeywords);
 		feedbackText = normalizeFeedback(feedbackText);
-
-		if (!recognized && !matchedKeywords.isEmpty()) {
-			throw new IllegalArgumentException(
-				"인식되지 않은 답변에는 일치 키워드가 있을 수 없습니다."
-			);
-		}
-
-		if (matchedKeywords.stream().anyMatch(missingKeywords::contains)) {
-			throw new IllegalArgumentException(
-				"같은 키워드를 일치와 누락 결과에 함께 넣을 수 없습니다."
-			);
-		}
 	}
 
 	public static AnswerAssessment fallback(AnswerEvaluation evaluation) {
@@ -67,8 +47,6 @@ public record AnswerAssessment(
 			evaluation.meaningScore(),
 			evaluation.expressionScore(),
 			evaluation.grammarScore(),
-			List.of(),
-			List.of(),
 			feedbackText
 		);
 	}
@@ -82,7 +60,7 @@ public record AnswerAssessment(
 			return AnswerResult.UNRECOGNIZED;
 		}
 
-		if (totalScore() >= 80 && missingKeywords.isEmpty()) {
+		if (totalScore() >= 80) {
 			return AnswerResult.CORRECT;
 		}
 
@@ -112,25 +90,6 @@ public record AnswerAssessment(
 				scoreName + "는 0점 이상 " + maximum + "점 이하여야 합니다."
 			);
 		}
-	}
-
-	private static List<String> normalizeKeywords(List<String> keywords) {
-		if (keywords == null) {
-			return List.of();
-		}
-
-		return keywords.stream()
-			.filter(Objects::nonNull)
-			.map(keyword -> normalizeText(keyword, MAX_KEYWORD_LENGTH))
-			.filter(Objects::nonNull)
-			.collect(
-				LinkedHashSet<String>::new,
-				LinkedHashSet::add,
-				LinkedHashSet::addAll
-			)
-			.stream()
-			.limit(MAX_KEYWORDS)
-			.toList();
 	}
 
 	private static String normalizeFeedback(String feedbackText) {

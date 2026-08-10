@@ -77,10 +77,6 @@ class LearningAnswerControllerTest {
 				"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.attemptNo").value(1))
-			.andExpect(jsonPath("$.data.matchedKeywords[0]").value(
-				"is running"
-			))
-			.andExpect(jsonPath("$.data.missingKeywords").isEmpty())
 			.andExpect(jsonPath("$.data.feedbackText").value(
 				"현재진행형을 정확하게 사용했어요!"
 			))
@@ -175,8 +171,6 @@ class LearningAnswerControllerTest {
 			50,
 			30,
 			20,
-			List.of("is running"),
-			List.of(),
 			"현재진행형을 정확하게 사용했어요!"
 		);
 		return new AnswerSubmissionResult(answer, assessment, false, 0);

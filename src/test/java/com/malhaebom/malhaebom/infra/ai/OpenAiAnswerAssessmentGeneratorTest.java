@@ -33,8 +33,6 @@ class OpenAiAnswerAssessmentGeneratorTest {
 			  "meaningScore": 48,
 			  "expressionScore": 27,
 			  "grammarScore": 18,
-			  "matchedKeywords": ["is running"],
-			  "missingKeywords": [],
 			  "feedbackText": "현재진행형을 자연스럽게 잘 사용했어요!"
 			}
 			""");
@@ -50,7 +48,6 @@ class OpenAiAnswerAssessmentGeneratorTest {
 
 		assertEquals(93, assessment.totalScore());
 		assertEquals(AnswerResult.CORRECT, assessment.result());
-		assertEquals(List.of("is running"), assessment.matchedKeywords());
 		assertTrue(chatModel.prompt().getContents().contains(
 			"학습자 답변: He is running."
 		));
