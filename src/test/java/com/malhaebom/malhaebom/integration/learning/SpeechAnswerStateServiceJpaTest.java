@@ -1,7 +1,7 @@
 package com.malhaebom.malhaebom.integration.learning;
 
+import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,10 +15,7 @@ import com.malhaebom.malhaebom.domain.learning.SpeechProcessingStatus;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
-import com.malhaebom.malhaebom.global.exception.CurrentQuestionMismatchException;
-import com.malhaebom.malhaebom.global.exception.SpeechAnswerNotFoundException;
-import com.malhaebom.malhaebom.global.exception.SpeechProcessingException;
-import com.malhaebom.malhaebom.global.exception.SpeechProcessingFailedException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 
@@ -112,8 +109,8 @@ class SpeechAnswerStateServiceJpaTest {
 		Long sessionQuestionId = currentQuestionId(session);
 		stateService.start(session.getId(), sessionQuestionId, REQUEST_KEY);
 
-		assertThrows(
-			SpeechProcessingException.class,
+		assertApiException(
+			ErrorCode.SPEECH_PROCESSING,
 			() -> stateService.start(
 				session.getId(),
 				sessionQuestionId,
@@ -134,8 +131,8 @@ class SpeechAnswerStateServiceJpaTest {
 		);
 		stateService.fail(started.getId(), "STT 처리 실패", STT_PROVIDER);
 
-		assertThrows(
-			SpeechProcessingFailedException.class,
+		assertApiException(
+			ErrorCode.STT_PROCESSING_FAILED,
 			() -> stateService.start(
 				session.getId(),
 				sessionQuestionId,
@@ -149,8 +146,8 @@ class SpeechAnswerStateServiceJpaTest {
 	void 현재_문제가_아니면_음성_답변을_저장하지_않는다() {
 		LearningSession session = saveSession();
 
-		assertThrows(
-			CurrentQuestionMismatchException.class,
+		assertApiException(
+			ErrorCode.CURRENT_QUESTION_MISMATCH,
 			() -> stateService.start(
 				session.getId(),
 				999L,
@@ -170,8 +167,8 @@ class SpeechAnswerStateServiceJpaTest {
 			REQUEST_KEY
 		);
 
-		assertThrows(
-			CurrentQuestionMismatchException.class,
+		assertApiException(
+			ErrorCode.CURRENT_QUESTION_MISMATCH,
 			() -> stateService.start(
 				secondSession.getId(),
 				currentQuestionId(secondSession),
@@ -183,8 +180,8 @@ class SpeechAnswerStateServiceJpaTest {
 
 	@Test
 	void 존재하지_않는_음성_답변은_전용_예외로_거부한다() {
-		assertThrows(
-			SpeechAnswerNotFoundException.class,
+		assertApiException(
+			ErrorCode.SPEECH_ANSWER_NOT_FOUND,
 			() -> stateService.complete(
 				999L,
 				"He is running.",

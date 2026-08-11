@@ -13,7 +13,8 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 
-import com.malhaebom.malhaebom.global.exception.UnauthorizedException;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 
 @Component
 public class JwtProvider {
@@ -52,7 +53,11 @@ public class JwtProvider {
 		} catch (ExpiredJwtException exception) {
 			throw exception;
 		} catch (JwtException | IllegalArgumentException exception) {
-			throw new UnauthorizedException("유효하지 않은 인증 정보입니다.", exception);
+			throw new ApiException(
+				ErrorCode.UNAUTHORIZED,
+				"유효하지 않은 인증 정보입니다.",
+				exception
+			);
 		}
 	}
 }

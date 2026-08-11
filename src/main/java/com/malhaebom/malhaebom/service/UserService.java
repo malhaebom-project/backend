@@ -6,7 +6,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.malhaebom.malhaebom.domain.User;
 import com.malhaebom.malhaebom.domain.repository.UserRepository;
-import com.malhaebom.malhaebom.global.exception.DuplicateEmailException;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 
@@ -20,7 +21,7 @@ public class UserService {
 	@Transactional
 	public User create(String name, String email, String password) {
 		if (userRepository.existsByEmail(email)) {
-			throw new DuplicateEmailException();
+			throw new ApiException(ErrorCode.EMAIL_ALREADY_EXISTS);
 		}
 
 		String encodedPassword = passwordEncoder.encode(password);

@@ -23,10 +23,7 @@ public class ApiExceptionHandler {
 			));
 	}
 
-	@ExceptionHandler({
-		IllegalArgumentException.class,
-		IllegalStateException.class
-	})
+	@ExceptionHandler(IllegalArgumentException.class)
 	public ResponseEntity<ApiResponse<Void>> handleBadRequest(
 		RuntimeException exception
 	) {

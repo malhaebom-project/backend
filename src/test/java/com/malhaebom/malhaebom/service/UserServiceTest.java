@@ -1,7 +1,7 @@
 package com.malhaebom.malhaebom.service;
 
+import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,7 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.malhaebom.malhaebom.domain.AccountRole;
 import com.malhaebom.malhaebom.domain.User;
 import com.malhaebom.malhaebom.domain.repository.UserRepository;
-import com.malhaebom.malhaebom.global.exception.DuplicateEmailException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -55,8 +55,10 @@ class UserServiceTest {
 		String email = "guardian@example.com";
 		when(userRepository.existsByEmail(email)).thenReturn(true);
 
-		assertThatThrownBy(() -> userService.create("Guardian", email, "password123"))
-			.isInstanceOf(DuplicateEmailException.class);
+		assertApiException(
+			ErrorCode.EMAIL_ALREADY_EXISTS,
+			() -> userService.create("Guardian", email, "password123")
+		);
 
 		verify(passwordEncoder, never()).encode(org.mockito.ArgumentMatchers.anyString());
 		verify(userRepository, never()).save(org.mockito.ArgumentMatchers.any(User.class));

@@ -1,5 +1,6 @@
 package com.malhaebom.malhaebom.integration.learning;
 
+import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -16,10 +17,8 @@ import com.malhaebom.malhaebom.domain.learning.SpeechProcessingStatus;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
-import com.malhaebom.malhaebom.global.exception.AiRequestLimitExceededException;
-import com.malhaebom.malhaebom.global.exception.SpeechNotRecognizedException;
-import com.malhaebom.malhaebom.global.exception.SpeechProcessingFailedException;
-import com.malhaebom.malhaebom.global.exception.SpeechTranscriptionTimeoutException;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
@@ -77,19 +76,19 @@ class SpeechAnswerServiceJpaTest {
 			STT_PROVIDER
 		));
 
-		assertThrows(SpeechNotRecognizedException.class, this::upload);
-
+		assertApiException(ErrorCode.SPEECH_NOT_RECOGNIZED, this::upload);
 		assertFailed("인식된 발화가 없습니다.");
 	}
 
 	@Test
 	void STT_타임아웃은_실패_상태를_저장하고_원래_예외를_유지한다() {
-		SpeechTranscriptionTimeoutException timeout =
-			new SpeechTranscriptionTimeoutException();
+		ApiException timeout = new ApiException(
+			ErrorCode.STT_PROCESSING_TIMEOUT
+		);
 		transcriber.willThrow(timeout);
 
-		SpeechTranscriptionTimeoutException thrown = assertThrows(
-			SpeechTranscriptionTimeoutException.class,
+		ApiException thrown = assertThrows(
+			ApiException.class,
 			this::upload
 		);
 
@@ -99,12 +98,13 @@ class SpeechAnswerServiceJpaTest {
 
 	@Test
 	void STT_요청_제한은_실패_상태를_저장하고_원래_예외를_유지한다() {
-		AiRequestLimitExceededException requestLimit =
-			new AiRequestLimitExceededException();
+		ApiException requestLimit = new ApiException(
+			ErrorCode.AI_REQUEST_LIMIT_EXCEEDED
+		);
 		transcriber.willThrow(requestLimit);
 
-		AiRequestLimitExceededException thrown = assertThrows(
-			AiRequestLimitExceededException.class,
+		ApiException thrown = assertThrows(
+			ApiException.class,
 			this::upload
 		);
 
@@ -119,8 +119,8 @@ class SpeechAnswerServiceJpaTest {
 		);
 		transcriber.willThrow(providerException);
 
-		SpeechProcessingFailedException thrown = assertThrows(
-			SpeechProcessingFailedException.class,
+		ApiException thrown = assertApiException(
+			ErrorCode.STT_PROCESSING_FAILED,
 			this::upload
 		);
 
@@ -130,14 +130,14 @@ class SpeechAnswerServiceJpaTest {
 
 	@Test
 	void 변환된_STT_실패_예외는_이중_래핑하지_않는다() {
-		SpeechProcessingFailedException processingFailed =
-			new SpeechProcessingFailedException(
-				new RuntimeException("provider response")
-			);
+		ApiException processingFailed = new ApiException(
+			ErrorCode.STT_PROCESSING_FAILED,
+			new RuntimeException("provider response")
+		);
 		transcriber.willThrow(processingFailed);
 
-		SpeechProcessingFailedException thrown = assertThrows(
-			SpeechProcessingFailedException.class,
+		ApiException thrown = assertThrows(
+			ApiException.class,
 			this::upload
 		);
 

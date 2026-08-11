@@ -13,7 +13,8 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.malhaebom.malhaebom.global.exception.InvalidAudioFileException;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.SpeechAnswerResponse;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
@@ -69,7 +70,8 @@ public class LearningSpeechController {
 				normalizeContentType(audio.getContentType())
 			);
 		} catch (IOException exception) {
-			throw new InvalidAudioFileException(
+			throw new ApiException(
+				ErrorCode.INVALID_AUDIO_FILE,
 				"음성 파일을 읽을 수 없습니다."
 			);
 		}
@@ -77,19 +79,22 @@ public class LearningSpeechController {
 
 	private void validateAudio(MultipartFile audio) {
 		if (audio == null || audio.isEmpty()) {
-			throw new InvalidAudioFileException(
+			throw new ApiException(
+				ErrorCode.INVALID_AUDIO_FILE,
 				"음성 파일은 비어 있을 수 없습니다."
 			);
 		}
 
 		if (audio.getSize() > MAX_AUDIO_FILE_SIZE) {
-			throw new InvalidAudioFileException(
+			throw new ApiException(
+				ErrorCode.INVALID_AUDIO_FILE,
 				"음성 파일은 5MB를 초과할 수 없습니다."
 			);
 		}
 
 		if (!isAllowedContentType(audio.getContentType())) {
-			throw new InvalidAudioFileException(
+			throw new ApiException(
+				ErrorCode.INVALID_AUDIO_FILE,
 				"지원하지 않는 음성 파일 형식입니다."
 			);
 		}

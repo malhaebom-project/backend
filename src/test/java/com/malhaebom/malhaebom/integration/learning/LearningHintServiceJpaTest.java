@@ -1,7 +1,7 @@
 package com.malhaebom.malhaebom.integration.learning;
 
+import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,8 +12,7 @@ import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
-import com.malhaebom.malhaebom.global.exception.CurrentQuestionMismatchException;
-import com.malhaebom.malhaebom.global.exception.LearningSessionNotFoundException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.LearningHintService;
 
@@ -46,8 +45,8 @@ class LearningHintServiceJpaTest {
 	void 현재_문제가_아니면_힌트_사용_횟수를_변경하지_않는다() {
 		LearningSession session = saveSession("He is ____ing.");
 
-		assertThrows(
-			CurrentQuestionMismatchException.class,
+		assertApiException(
+			ErrorCode.CURRENT_QUESTION_MISMATCH,
 			() -> learningHintService.request(session.getId(), 999L)
 		);
 		assertEquals(0, session.getCurrentQuestion().getHintUsedCount());
@@ -58,8 +57,8 @@ class LearningHintServiceJpaTest {
 		LearningSession session = saveSession(null);
 		Long questionId = session.getCurrentQuestion().getQuestion().getId();
 
-		assertThrows(
-			IllegalStateException.class,
+		assertApiException(
+			ErrorCode.INVALID_REQUEST,
 			() -> learningHintService.request(session.getId(), questionId)
 		);
 		assertEquals(0, session.getCurrentQuestion().getHintUsedCount());
@@ -67,8 +66,8 @@ class LearningHintServiceJpaTest {
 
 	@Test
 	void 존재하지_않는_세션은_전용_예외로_거부한다() {
-		assertThrows(
-			LearningSessionNotFoundException.class,
+		assertApiException(
+			ErrorCode.LEARNING_SESSION_NOT_FOUND,
 			() -> learningHintService.request(999L, 999L)
 		);
 	}

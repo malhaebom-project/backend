@@ -94,57 +94,60 @@ class ApiExceptionHandlerTest {
 	private static Stream<Arguments> apiExceptions() {
 		return Stream.of(
 			Arguments.of(
-				new UnauthorizedException("인증에 실패했습니다."),
+				new ApiException(
+					ErrorCode.UNAUTHORIZED,
+					"인증에 실패했습니다."
+				),
 				HttpStatus.UNAUTHORIZED,
 				ErrorCode.UNAUTHORIZED
 			),
 			Arguments.of(
-				new NotFoundException("요청한 리소스를 찾을 수 없습니다."),
+				new ApiException(ErrorCode.NOT_FOUND),
 				HttpStatus.NOT_FOUND,
 				ErrorCode.NOT_FOUND
 			),
 			Arguments.of(
-				new LearningSessionNotFoundException(),
+				new ApiException(ErrorCode.LEARNING_SESSION_NOT_FOUND),
 				HttpStatus.NOT_FOUND,
 				ErrorCode.LEARNING_SESSION_NOT_FOUND
 			),
 			Arguments.of(
-				new InvalidAudioFileException(),
+				new ApiException(ErrorCode.INVALID_AUDIO_FILE),
 				HttpStatus.BAD_REQUEST,
 				ErrorCode.INVALID_AUDIO_FILE
 			),
 			Arguments.of(
-				new CurrentQuestionMismatchException(),
+				new ApiException(ErrorCode.CURRENT_QUESTION_MISMATCH),
 				HttpStatus.BAD_REQUEST,
 				ErrorCode.CURRENT_QUESTION_MISMATCH
 			),
 			Arguments.of(
-				new SpeechAnswerNotFoundException(),
+				new ApiException(ErrorCode.SPEECH_ANSWER_NOT_FOUND),
 				HttpStatus.NOT_FOUND,
 				ErrorCode.SPEECH_ANSWER_NOT_FOUND
 			),
 			Arguments.of(
-				new SpeechProcessingException(),
+				new ApiException(ErrorCode.SPEECH_PROCESSING),
 				HttpStatus.CONFLICT,
 				ErrorCode.SPEECH_PROCESSING
 			),
 			Arguments.of(
-				new SpeechNotRecognizedException(),
+				new ApiException(ErrorCode.SPEECH_NOT_RECOGNIZED),
 				HttpStatus.UNPROCESSABLE_CONTENT,
 				ErrorCode.SPEECH_NOT_RECOGNIZED
 			),
 			Arguments.of(
-				new AiRequestLimitExceededException(),
+				new ApiException(ErrorCode.AI_REQUEST_LIMIT_EXCEEDED),
 				HttpStatus.TOO_MANY_REQUESTS,
 				ErrorCode.AI_REQUEST_LIMIT_EXCEEDED
 			),
 			Arguments.of(
-				new SpeechProcessingFailedException(),
+				new ApiException(ErrorCode.STT_PROCESSING_FAILED),
 				HttpStatus.INTERNAL_SERVER_ERROR,
 				ErrorCode.STT_PROCESSING_FAILED
 			),
 			Arguments.of(
-				new SpeechTranscriptionTimeoutException(),
+				new ApiException(ErrorCode.STT_PROCESSING_TIMEOUT),
 				HttpStatus.GATEWAY_TIMEOUT,
 				ErrorCode.STT_PROCESSING_TIMEOUT
 			)
@@ -153,8 +156,7 @@ class ApiExceptionHandlerTest {
 
 	private static Stream<RuntimeException> invalidRequestExceptions() {
 		return Stream.of(
-			new IllegalArgumentException("요청 값이 올바르지 않습니다."),
-			new IllegalStateException("요청 상태가 올바르지 않습니다.")
+			new IllegalArgumentException("요청 값이 올바르지 않습니다.")
 		);
 	}
 }

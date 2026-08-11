@@ -13,7 +13,8 @@ import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
-import com.malhaebom.malhaebom.global.exception.LearningSessionNotFoundException;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 
@@ -65,7 +66,8 @@ public class LearningSessionService {
 	public LearningSession complete(Long sessionId) {
 		LearningSession session = getSession(sessionId);
 		if (!session.isCompleted()) {
-			throw new IllegalStateException(
+			throw new ApiException(
+				ErrorCode.INVALID_REQUEST,
 				"모든 문제를 완료한 학습 세션이 아닙니다."
 			);
 		}
@@ -74,6 +76,8 @@ public class LearningSessionService {
 
 	private LearningSession getSession(Long sessionId) {
 		return learningSessionRepository.findWithQuestionsById(sessionId)
-			.orElseThrow(LearningSessionNotFoundException::new);
+			.orElseThrow(() -> new ApiException(
+				ErrorCode.LEARNING_SESSION_NOT_FOUND
+			));
 	}
 }

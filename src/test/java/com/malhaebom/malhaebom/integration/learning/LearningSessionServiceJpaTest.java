@@ -1,6 +1,6 @@
 package com.malhaebom.malhaebom.integration.learning;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Import;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.LearningSessionService;
 
@@ -32,8 +33,8 @@ class LearningSessionServiceJpaTest {
 			null
 		);
 
-		assertThrows(
-			IllegalStateException.class,
+		assertApiException(
+			ErrorCode.INVALID_REQUEST,
 			() -> learningSessionService.complete(session.getId())
 		);
 	}

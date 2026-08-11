@@ -11,8 +11,8 @@ import com.malhaebom.malhaebom.domain.LoginSession;
 import com.malhaebom.malhaebom.domain.User;
 import com.malhaebom.malhaebom.domain.repository.LoginSessionRepository;
 import com.malhaebom.malhaebom.domain.repository.UserRepository;
-import com.malhaebom.malhaebom.global.exception.NotFoundException;
-import com.malhaebom.malhaebom.global.exception.UnauthorizedException;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.auth.jwt.JwtProperties;
 import com.malhaebom.malhaebom.infra.auth.jwt.JwtProvider;
 import com.malhaebom.malhaebom.infra.auth.jwt.JwtUserPayload;
@@ -49,7 +49,8 @@ public class LoginService {
 	public TokenPair refresh(String refreshToken) {
 		LoginSession session = loginSessionRepository
 			.findByRefreshToken(refreshToken)
-			.orElseThrow(() -> new NotFoundException(
+			.orElseThrow(() -> new ApiException(
+				ErrorCode.NOT_FOUND,
 				"존재하지 않는 로그인 세션입니다."
 			));
 
@@ -58,7 +59,10 @@ public class LoginService {
 			jwtProperties.refresh().signingKey()
 		);
 		if (!session.getUser().getId().equals(payload.userId())) {
-			throw new UnauthorizedException("리프레시 토큰이 유효하지 않습니다.");
+			throw new ApiException(
+				ErrorCode.UNAUTHORIZED,
+				"리프레시 토큰이 유효하지 않습니다."
+			);
 		}
 
 		TokenPair tokens = createTokens(payload.userId());
@@ -75,7 +79,8 @@ public class LoginService {
 	public void logout(String refreshToken) {
 		LoginSession session = loginSessionRepository
 			.findByRefreshToken(refreshToken)
-			.orElseThrow(() -> new NotFoundException(
+			.orElseThrow(() -> new ApiException(
+				ErrorCode.NOT_FOUND,
 				"존재하지 않는 로그인 세션입니다."
 			));
 		loginSessionRepository.delete(session);
@@ -106,8 +111,9 @@ public class LoginService {
 		);
 	}
 
-	private UnauthorizedException invalidCredentials() {
-		return new UnauthorizedException(
+	private ApiException invalidCredentials() {
+		return new ApiException(
+			ErrorCode.UNAUTHORIZED,
 			"이메일 또는 비밀번호가 올바르지 않습니다."
 		);
 	}

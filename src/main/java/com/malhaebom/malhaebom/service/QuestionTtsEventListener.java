@@ -8,7 +8,8 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
-import com.malhaebom.malhaebom.global.exception.QuestionNotFoundException;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.service.dto.TtsAudio;
 import com.malhaebom.malhaebom.service.event.QuestionTtsRequestedEvent;
 import com.malhaebom.malhaebom.service.port.QuestionTtsStorage;
@@ -44,7 +45,9 @@ public class QuestionTtsEventListener {
 			);
 			Question question = questionRepository
 				.findByIdAndActiveTrue(event.questionId())
-				.orElseThrow(QuestionNotFoundException::new);
+				.orElseThrow(() -> new ApiException(
+					ErrorCode.QUESTION_NOT_FOUND
+				));
 			question.updateTtsUrl(audioUrl);
 			questionRepository.save(question);
 		} catch (RuntimeException exception) {

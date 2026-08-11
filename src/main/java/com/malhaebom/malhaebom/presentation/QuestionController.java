@@ -7,7 +7,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
-import com.malhaebom.malhaebom.global.exception.QuestionNotFoundException;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.QuestionTtsResponse;
 
@@ -26,7 +27,7 @@ public class QuestionController {
 	) {
 		Question question = questionRepository
 			.findByIdAndActiveTrue(questionId)
-			.orElseThrow(QuestionNotFoundException::new);
+			.orElseThrow(() -> new ApiException(ErrorCode.QUESTION_NOT_FOUND));
 
 		return ApiResponse.success(QuestionTtsResponse.from(question));
 	}

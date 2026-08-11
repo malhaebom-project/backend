@@ -9,7 +9,8 @@ import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
-import com.malhaebom.malhaebom.global.exception.UnauthorizedException;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.auth.jwt.JwtProperties;
 import com.malhaebom.malhaebom.infra.auth.jwt.JwtProvider;
 import com.malhaebom.malhaebom.infra.auth.jwt.JwtUserPayload;
@@ -51,7 +52,10 @@ public class AuthLoginUserArgumentResolver
 			accessToken,
 			properties.access().signingKey()
 		)) {
-			throw new UnauthorizedException("만료된 액세스 토큰입니다.");
+			throw new ApiException(
+				ErrorCode.UNAUTHORIZED,
+				"만료된 액세스 토큰입니다."
+			);
 		}
 
 		JwtUserPayload payload =
