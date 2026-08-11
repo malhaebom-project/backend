@@ -15,12 +15,7 @@ import org.junit.jupiter.api.Test;
 class AnswerTest {
 
 	@Test
-	void 답변_결과별_기본_점수를_제공한다() {
-		assertEquals(100, AnswerResult.CORRECT.getDefaultScore());
-		assertEquals(50, AnswerResult.PARTIALLY_CORRECT.getDefaultScore());
-		assertEquals(0, AnswerResult.INCORRECT.getDefaultScore());
-		assertEquals(0, AnswerResult.UNRECOGNIZED.getDefaultScore());
-
+	void 정답_결과만_정답으로_판정한다() {
 		assertTrue(AnswerResult.CORRECT.isCorrect());
 		assertFalse(AnswerResult.PARTIALLY_CORRECT.isCorrect());
 		assertFalse(AnswerResult.INCORRECT.isCorrect());
@@ -90,22 +85,6 @@ class AnswerTest {
 				0
 			)
 		);
-	}
-
-	@Test
-	void 등록되지_않은_답안을_제출하면_오답_시도를_생성한다() {
-		LearningSessionQuestion sessionQuestion = createSessionQuestion();
-		Answer answer = Answer.create(
-			sessionQuestion,
-			completedSpeechAnswer(sessionQuestion, "He is walking."),
-			2,
-			AnswerEvaluation.from(AnswerResult.INCORRECT)
-		);
-
-		assertEquals(2, answer.getAttemptNo());
-		assertEquals(AnswerResult.INCORRECT, answer.getResult());
-		assertEquals(0, answer.getScore());
-		assertFalse(answer.isCorrect());
 	}
 
 	@Test

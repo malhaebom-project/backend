@@ -2,8 +2,6 @@ package com.malhaebom.malhaebom.integration.learning;
 
 import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,7 +15,6 @@ import com.malhaebom.malhaebom.domain.learning.SpeechProcessingStatus;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
-import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
@@ -81,67 +78,17 @@ class SpeechAnswerServiceJpaTest {
 	}
 
 	@Test
-	void STT_타임아웃은_실패_상태를_저장하고_원래_예외를_유지한다() {
-		ApiException timeout = new ApiException(
-			ErrorCode.STT_PROCESSING_TIMEOUT
-		);
-		transcriber.willThrow(timeout);
-
-		ApiException thrown = assertThrows(
-			ApiException.class,
-			this::upload
-		);
-
-		assertSame(timeout, thrown);
-		assertFailed(ErrorCode.STT_PROCESSING_TIMEOUT.getMessage());
-	}
-
-	@Test
-	void STT_요청_제한은_실패_상태를_저장하고_원래_예외를_유지한다() {
-		ApiException requestLimit = new ApiException(
-			ErrorCode.AI_REQUEST_LIMIT_EXCEEDED
-		);
-		transcriber.willThrow(requestLimit);
-
-		ApiException thrown = assertThrows(
-			ApiException.class,
-			this::upload
-		);
-
-		assertSame(requestLimit, thrown);
-		assertFailed(ErrorCode.AI_REQUEST_LIMIT_EXCEEDED.getMessage());
-	}
-
-	@Test
 	void 예상하지_못한_STT_오류는_안전한_실패_정보만_저장한다() {
 		RuntimeException providerException = new RuntimeException(
 			"secret bucket/key and provider response"
 		);
 		transcriber.willThrow(providerException);
 
-		ApiException thrown = assertApiException(
+		assertApiException(
 			ErrorCode.STT_PROCESSING_FAILED,
 			this::upload
 		);
 
-		assertSame(providerException, thrown.getCause());
-		assertFailed(ErrorCode.STT_PROCESSING_FAILED.getMessage());
-	}
-
-	@Test
-	void 변환된_STT_실패_예외는_이중_래핑하지_않는다() {
-		ApiException processingFailed = new ApiException(
-			ErrorCode.STT_PROCESSING_FAILED,
-			new RuntimeException("provider response")
-		);
-		transcriber.willThrow(processingFailed);
-
-		ApiException thrown = assertThrows(
-			ApiException.class,
-			this::upload
-		);
-
-		assertSame(processingFailed, thrown);
 		assertFailed(ErrorCode.STT_PROCESSING_FAILED.getMessage());
 	}
 

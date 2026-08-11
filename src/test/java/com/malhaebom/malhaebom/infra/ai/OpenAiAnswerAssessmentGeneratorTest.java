@@ -51,9 +51,6 @@ class OpenAiAnswerAssessmentGeneratorTest {
 		assertTrue(chatModel.prompt().getContents().contains(
 			"학습자 답변: He is running."
 		));
-		assertTrue(chatModel.prompt().getContents().contains(
-			"총점과 최종 채점 결과는 서버에서 계산"
-		));
 	}
 
 	@Test

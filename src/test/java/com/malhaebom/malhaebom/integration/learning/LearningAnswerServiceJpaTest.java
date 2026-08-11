@@ -62,7 +62,7 @@ class LearningAnswerServiceJpaTest {
 	}
 
 	@Test
-	void 완료된_음성_답변을_채점하고_답변과_세션_결과를_저장한다() {
+	void 저장된_음성_답변의_transcript를_채점하고_결과를_저장한다() {
 		LearningSession session = saveSession();
 		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(session);
 		assessmentGenerator.willReturn(correctAssessment());
@@ -74,6 +74,7 @@ class LearningAnswerServiceJpaTest {
 		);
 
 		assertEquals(1, answerRepository.count());
+		assertEquals(ANSWER_TEXT, assessmentGenerator.answerText);
 		assertEquals(ANSWER_TEXT, result.answer().getAnswerText());
 		assertEquals(1, result.answer().getAttemptNo());
 		assertTrue(result.answer().isCorrect());
@@ -238,6 +239,7 @@ class LearningAnswerServiceJpaTest {
 		implements AnswerAssessmentGenerator {
 
 		private AnswerAssessment assessment;
+		private String answerText;
 		private int callCount;
 
 		void willReturn(AnswerAssessment assessment) {
@@ -250,6 +252,7 @@ class LearningAnswerServiceJpaTest {
 			String answerText
 		) {
 			callCount++;
+			this.answerText = answerText;
 			return assessment;
 		}
 	}
