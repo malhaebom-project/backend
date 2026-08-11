@@ -201,7 +201,7 @@ class LearningSpeechControllerJpaTest {
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"))
 			.andExpect(jsonPath("$.message").value(
-				"Idempotency-Key 헤더는 필수입니다."
+				"중복 요청 방지를 위한 요청 식별 키가 필요합니다."
 			));
 
 		assertNotProcessed();

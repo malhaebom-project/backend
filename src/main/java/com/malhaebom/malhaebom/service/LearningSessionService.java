@@ -33,7 +33,7 @@ public class LearningSessionService {
 		List<QuestionType> questionTypes,
 		int questionCount
 	) {
-		LearningTopic topic = LearningTopic.fromTopicId(topicId);
+		LearningTopic topic = getTopic(topicId);
 		List<Question> candidates =
 			questionRepository
 				.findAllByTopicAndDifficultyAndTypeInAndActiveTrueAndTtsUrlIsNotNullOrderByIdAsc(
@@ -43,7 +43,7 @@ public class LearningSessionService {
 			);
 
 		if (candidates.size() < questionCount) {
-			throw new IllegalArgumentException("요청한 개수만큼 문제를 구성할 수 없습니다.");
+			throw new ApiException(ErrorCode.INSUFFICIENT_QUESTIONS);
 		}
 
 		List<Question> selectedQuestions = candidates.subList(0, questionCount);
@@ -55,6 +55,7 @@ public class LearningSessionService {
 
 	public LearningSessionQuestion getNextQuestion(Long sessionId) {
 		LearningSession session = getSession(sessionId);
+		validateInProgress(session);
 		return session.getCurrentQuestion();
 	}
 
@@ -79,5 +80,24 @@ public class LearningSessionService {
 			.orElseThrow(() -> new ApiException(
 				ErrorCode.LEARNING_SESSION_NOT_FOUND
 			));
+	}
+
+	private LearningTopic getTopic(Long topicId) {
+		try {
+			return LearningTopic.fromTopicId(topicId);
+		} catch (IllegalArgumentException exception) {
+			throw new ApiException(
+				ErrorCode.LEARNING_TOPIC_NOT_FOUND,
+				exception
+			);
+		}
+	}
+
+	private void validateInProgress(LearningSession session) {
+		if (!session.isInProgress()) {
+			throw new ApiException(
+				ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS
+			);
+		}
 	}
 }

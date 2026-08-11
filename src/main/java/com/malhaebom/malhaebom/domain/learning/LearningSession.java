@@ -117,6 +117,10 @@ public class LearningSession extends BaseEntity {
 		return status == LearningSessionStatus.COMPLETED;
 	}
 
+	public boolean isInProgress() {
+		return status == LearningSessionStatus.IN_PROGRESS;
+	}
+
 	public void complete() {
 		validateInProgress();
 		markCompleted();

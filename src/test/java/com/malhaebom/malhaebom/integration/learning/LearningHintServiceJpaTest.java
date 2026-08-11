@@ -72,6 +72,18 @@ class LearningHintServiceJpaTest {
 		);
 	}
 
+	@Test
+	void 완료된_세션에서는_힌트를_요청할_수_없다() {
+		LearningSession session = saveSession("He is ____ing.");
+		Long questionId = session.getCurrentQuestion().getQuestion().getId();
+		session.complete();
+
+		assertApiException(
+			ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS,
+			() -> learningHintService.request(session.getId(), questionId)
+		);
+	}
+
 	private LearningSession saveSession(String hintText) {
 		return LearningJpaTestFixture.saveSession(
 			questionRepository,

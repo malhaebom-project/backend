@@ -34,6 +34,18 @@ public enum ErrorCode {
 		HttpStatus.NOT_FOUND,
 		"학습 세션을 찾을 수 없습니다."
 	),
+	LEARNING_TOPIC_NOT_FOUND(
+		HttpStatus.NOT_FOUND,
+		"학습 주제를 찾을 수 없습니다."
+	),
+	LEARNING_SESSION_NOT_IN_PROGRESS(
+		HttpStatus.CONFLICT,
+		"진행 중인 학습 세션이 아닙니다."
+	),
+	INSUFFICIENT_QUESTIONS(
+		HttpStatus.BAD_REQUEST,
+		"요청한 개수만큼 문제를 구성할 수 없습니다."
+	),
 	SPEECH_ANSWER_NOT_FOUND(
 		HttpStatus.NOT_FOUND,
 		"음성 답변을 찾을 수 없습니다."

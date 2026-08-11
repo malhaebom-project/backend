@@ -189,6 +189,23 @@ class LearningAnswerServiceJpaTest {
 		assertEquals(1, answerRepository.count());
 	}
 
+	@Test
+	void 완료된_세션에는_답변을_제출할_수_없다() {
+		LearningSession session = saveSession();
+		Long sessionQuestionId = session.getCurrentQuestion().getId();
+		session.complete();
+
+		assertApiException(
+			ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS,
+			() -> learningAnswerService.submit(
+				session.getId(),
+				sessionQuestionId,
+				999L
+			)
+		);
+		assertEquals(0, assessmentGenerator.callCount);
+	}
+
 	private LearningSession saveSession() {
 		return LearningJpaTestFixture.saveSession(
 			questionRepository,

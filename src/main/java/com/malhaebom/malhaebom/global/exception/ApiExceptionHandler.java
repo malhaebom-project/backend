@@ -23,17 +23,6 @@ public class ApiExceptionHandler {
 			));
 	}
 
-	@ExceptionHandler(IllegalArgumentException.class)
-	public ResponseEntity<ApiResponse<Void>> handleBadRequest(
-		RuntimeException exception
-	) {
-		return ResponseEntity.badRequest()
-			.body(ApiResponse.error(
-				exception.getMessage(),
-				ErrorCode.INVALID_REQUEST.name()
-			));
-	}
-
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ApiResponse<Void>> handleValidation(
 		MethodArgumentNotValidException exception

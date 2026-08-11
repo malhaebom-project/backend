@@ -15,6 +15,7 @@ import com.malhaebom.malhaebom.domain.learning.SpeechProcessingStatus;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
+import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
@@ -35,6 +36,32 @@ class SpeechAnswerStateServiceJpaTest {
 	private QuestionRepository questionRepository;
 	@Autowired
 	private SpeechAnswerRepository speechAnswerRepository;
+
+	@Test
+	void 요청_식별_키가_비어_있으면_요청을_거부한다() {
+		ApiException exception = assertApiException(
+			ErrorCode.INVALID_REQUEST,
+			() -> stateService.start(999L, 999L, " ")
+		);
+
+		assertEquals(
+			"중복 요청 방지를 위한 요청 식별 키가 필요합니다.",
+			exception.getMessage()
+		);
+	}
+
+	@Test
+	void 요청_식별_키가_100자를_초과하면_요청을_거부한다() {
+		ApiException exception = assertApiException(
+			ErrorCode.INVALID_REQUEST,
+			() -> stateService.start(999L, 999L, "a".repeat(101))
+		);
+
+		assertEquals(
+			"요청 식별 키는 100자를 초과할 수 없습니다.",
+			exception.getMessage()
+		);
+	}
 
 	@Test
 	void 현재_문제의_첫_음성_답변을_저장한다() {
@@ -189,6 +216,23 @@ class SpeechAnswerStateServiceJpaTest {
 				STT_PROVIDER
 			)
 		);
+	}
+
+	@Test
+	void 완료된_세션에서는_음성_답변을_시작할_수_없다() {
+		LearningSession session = saveSession();
+		Long sessionQuestionId = currentQuestionId(session);
+		session.complete();
+
+		assertApiException(
+			ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS,
+			() -> stateService.start(
+				session.getId(),
+				sessionQuestionId,
+				REQUEST_KEY
+			)
+		);
+		assertEquals(0, speechAnswerRepository.count());
 	}
 
 	private LearningSession saveSession() {

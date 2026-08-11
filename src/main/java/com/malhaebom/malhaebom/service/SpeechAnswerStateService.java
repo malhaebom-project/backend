@@ -36,6 +36,7 @@ public class SpeechAnswerStateService {
 			.orElseThrow(() -> new ApiException(
 				ErrorCode.LEARNING_SESSION_NOT_FOUND
 			));
+		validateInProgress(session);
 		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
 		validateCurrentQuestion(currentQuestion, sessionQuestionId);
 
@@ -44,6 +45,14 @@ public class SpeechAnswerStateService {
 			.orElseGet(
 				() -> create(currentQuestion, requestKey)
 			);
+	}
+
+	private void validateInProgress(LearningSession session) {
+		if (!session.isInProgress()) {
+			throw new ApiException(
+				ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS
+			);
+		}
 	}
 
 	@Transactional
@@ -141,12 +150,16 @@ public class SpeechAnswerStateService {
 
 	private void validateRequestKey(String requestKey) {
 		if (requestKey == null || requestKey.isBlank()) {
-			throw new IllegalArgumentException("멱등키는 비어 있을 수 없습니다.");
+			throw new ApiException(
+				ErrorCode.INVALID_REQUEST,
+				"중복 요청 방지를 위한 요청 식별 키가 필요합니다."
+			);
 		}
 
 		if (requestKey.length() > 100) {
-			throw new IllegalArgumentException(
-				"멱등키는 100자를 초과할 수 없습니다."
+			throw new ApiException(
+				ErrorCode.INVALID_REQUEST,
+				"요청 식별 키는 100자를 초과할 수 없습니다."
 			);
 		}
 	}

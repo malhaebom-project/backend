@@ -137,14 +137,16 @@ public class LearningSpeechController {
 
 	private void validateRequestKey(String requestKey) {
 		if (requestKey == null || requestKey.isBlank()) {
-			throw new IllegalArgumentException(
-				"Idempotency-Key 헤더는 필수입니다."
+			throw new ApiException(
+				ErrorCode.INVALID_REQUEST,
+				"중복 요청 방지를 위한 요청 식별 키가 필요합니다."
 			);
 		}
 
 		if (requestKey.length() > MAX_REQUEST_KEY_LENGTH) {
-			throw new IllegalArgumentException(
-				"멱등키는 100자를 초과할 수 없습니다."
+			throw new ApiException(
+				ErrorCode.INVALID_REQUEST,
+				"요청 식별 키는 100자를 초과할 수 없습니다."
 			);
 		}
 	}

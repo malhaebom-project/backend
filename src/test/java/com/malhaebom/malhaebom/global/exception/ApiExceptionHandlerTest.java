@@ -38,22 +38,6 @@ class ApiExceptionHandlerTest {
 		);
 	}
 
-	@ParameterizedTest
-	@MethodSource("invalidRequestExceptions")
-	void 잘못된_요청_예외를_INVALID_REQUEST로_변환한다(
-		RuntimeException exception
-	) {
-		ResponseEntity<ApiResponse<Void>> response =
-			handler.handleBadRequest(exception);
-
-		assertErrorResponse(
-			response,
-			HttpStatus.BAD_REQUEST,
-			exception.getMessage(),
-			ErrorCode.INVALID_REQUEST
-		);
-	}
-
 	@Test
 	void Validation_예외를_INVALID_REQUEST로_변환한다() {
 		BeanPropertyBindingResult bindingResult =
@@ -112,6 +96,21 @@ class ApiExceptionHandlerTest {
 				ErrorCode.LEARNING_SESSION_NOT_FOUND
 			),
 			Arguments.of(
+				new ApiException(ErrorCode.LEARNING_TOPIC_NOT_FOUND),
+				HttpStatus.NOT_FOUND,
+				ErrorCode.LEARNING_TOPIC_NOT_FOUND
+			),
+			Arguments.of(
+				new ApiException(ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS),
+				HttpStatus.CONFLICT,
+				ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS
+			),
+			Arguments.of(
+				new ApiException(ErrorCode.INSUFFICIENT_QUESTIONS),
+				HttpStatus.BAD_REQUEST,
+				ErrorCode.INSUFFICIENT_QUESTIONS
+			),
+			Arguments.of(
 				new ApiException(ErrorCode.INVALID_AUDIO_FILE),
 				HttpStatus.BAD_REQUEST,
 				ErrorCode.INVALID_AUDIO_FILE
@@ -151,12 +150,6 @@ class ApiExceptionHandlerTest {
 				HttpStatus.GATEWAY_TIMEOUT,
 				ErrorCode.STT_PROCESSING_TIMEOUT
 			)
-		);
-	}
-
-	private static Stream<RuntimeException> invalidRequestExceptions() {
-		return Stream.of(
-			new IllegalArgumentException("요청 값이 올바르지 않습니다.")
 		);
 	}
 }

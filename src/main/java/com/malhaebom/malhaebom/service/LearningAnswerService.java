@@ -41,6 +41,7 @@ public class LearningAnswerService {
 			.orElseThrow(() -> new ApiException(
 				ErrorCode.LEARNING_SESSION_NOT_FOUND
 			));
+		validateInProgress(session);
 		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
 		validateCurrentQuestion(currentQuestion, sessionQuestionId);
 		SpeechAnswer speechAnswer = getSpeechAnswer(speechAnswerId);
@@ -84,6 +85,14 @@ public class LearningAnswerService {
 			canRetry,
 			remainingAttempts
 		);
+	}
+
+	private void validateInProgress(LearningSession session) {
+		if (!session.isInProgress()) {
+			throw new ApiException(
+				ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS
+			);
+		}
 	}
 
 	private SpeechAnswer getSpeechAnswer(Long speechAnswerId) {

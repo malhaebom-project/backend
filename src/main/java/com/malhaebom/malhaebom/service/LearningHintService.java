@@ -27,12 +27,21 @@ public class LearningHintService {
 			.orElseThrow(() -> new ApiException(
 				ErrorCode.LEARNING_SESSION_NOT_FOUND
 			));
+		validateInProgress(session);
 		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
 		validateCurrentQuestion(currentQuestion, questionId);
 		validateHint(currentQuestion.getQuestion());
 
 		session.useHintOnCurrentQuestion();
 		return currentQuestion.getQuestion();
+	}
+
+	private void validateInProgress(LearningSession session) {
+		if (!session.isInProgress()) {
+			throw new ApiException(
+				ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS
+			);
+		}
 	}
 
 	private void validateCurrentQuestion(
