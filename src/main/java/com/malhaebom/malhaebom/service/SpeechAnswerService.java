@@ -44,10 +44,18 @@ public class SpeechAnswerService {
 			result = transcriber.transcribe(audio);
 			validateTranscript(result);
 		} catch (ApiException exception) {
-			recordFailure(started, provider, exception.getErrorCode());
+			stateService.fail(
+				started.getId(),
+				exception.getErrorCode().getMessage(),
+				provider
+			);
 			throw exception;
 		} catch (RuntimeException exception) {
-			recordFailure(started, provider, ErrorCode.STT_PROCESSING_FAILED);
+			stateService.fail(
+				started.getId(),
+				ErrorCode.STT_PROCESSING_FAILED.getMessage(),
+				provider
+			);
 			throw new ApiException(
 				ErrorCode.STT_PROCESSING_FAILED,
 				exception
@@ -71,20 +79,5 @@ public class SpeechAnswerService {
 		) {
 			throw new ApiException(ErrorCode.SPEECH_NOT_RECOGNIZED);
 		}
-	}
-
-	private void recordFailure(
-		SpeechAnswer started,
-		String provider,
-		ErrorCode errorCode
-	) {
-		String message = switch (errorCode) {
-			case SPEECH_NOT_RECOGNIZED -> "인식된 발화가 없습니다.";
-			case STT_PROCESSING_TIMEOUT -> "STT 처리 시간이 초과되었습니다.";
-			case AI_REQUEST_LIMIT_EXCEEDED -> "STT 요청 제한을 초과했습니다.";
-			default -> "STT 처리에 실패했습니다.";
-		};
-
-		stateService.fail(started.getId(), message, provider);
 	}
 }

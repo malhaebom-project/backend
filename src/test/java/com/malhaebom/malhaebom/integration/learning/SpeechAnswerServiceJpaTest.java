@@ -77,7 +77,7 @@ class SpeechAnswerServiceJpaTest {
 		));
 
 		assertApiException(ErrorCode.SPEECH_NOT_RECOGNIZED, this::upload);
-		assertFailed("인식된 발화가 없습니다.");
+		assertFailed(ErrorCode.SPEECH_NOT_RECOGNIZED.getMessage());
 	}
 
 	@Test
@@ -93,7 +93,7 @@ class SpeechAnswerServiceJpaTest {
 		);
 
 		assertSame(timeout, thrown);
-		assertFailed("STT 처리 시간이 초과되었습니다.");
+		assertFailed(ErrorCode.STT_PROCESSING_TIMEOUT.getMessage());
 	}
 
 	@Test
@@ -109,7 +109,7 @@ class SpeechAnswerServiceJpaTest {
 		);
 
 		assertSame(requestLimit, thrown);
-		assertFailed("STT 요청 제한을 초과했습니다.");
+		assertFailed(ErrorCode.AI_REQUEST_LIMIT_EXCEEDED.getMessage());
 	}
 
 	@Test
@@ -125,7 +125,7 @@ class SpeechAnswerServiceJpaTest {
 		);
 
 		assertSame(providerException, thrown.getCause());
-		assertFailed("STT 처리에 실패했습니다.");
+		assertFailed(ErrorCode.STT_PROCESSING_FAILED.getMessage());
 	}
 
 	@Test
@@ -142,7 +142,7 @@ class SpeechAnswerServiceJpaTest {
 		);
 
 		assertSame(processingFailed, thrown);
-		assertFailed("STT 처리에 실패했습니다.");
+		assertFailed(ErrorCode.STT_PROCESSING_FAILED.getMessage());
 	}
 
 	private SpeechAnswerResult upload() {
