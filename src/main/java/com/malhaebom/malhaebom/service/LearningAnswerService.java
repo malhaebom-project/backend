@@ -12,9 +12,8 @@ import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
-import com.malhaebom.malhaebom.global.exception.CurrentQuestionMismatchException;
-import com.malhaebom.malhaebom.global.exception.LearningSessionNotFoundException;
-import com.malhaebom.malhaebom.global.exception.SpeechAnswerNotFoundException;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 
@@ -39,7 +38,10 @@ public class LearningAnswerService {
 	) {
 		LearningSession session = learningSessionRepository
 			.findForUpdateById(sessionId)
-			.orElseThrow(LearningSessionNotFoundException::new);
+			.orElseThrow(() -> new ApiException(
+				ErrorCode.LEARNING_SESSION_NOT_FOUND
+			));
+		validateInProgress(session);
 		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
 		validateCurrentQuestion(currentQuestion, sessionQuestionId);
 		SpeechAnswer speechAnswer = getSpeechAnswer(speechAnswerId);
@@ -48,7 +50,10 @@ public class LearningAnswerService {
 
 		int attemptNo = getNextAttemptNo(sessionQuestionId);
 		if (attemptNo > MAX_ATTEMPT_COUNT) {
-			throw new IllegalStateException("답변 가능 횟수를 초과했습니다.");
+			throw new ApiException(
+				ErrorCode.INVALID_REQUEST,
+				"답변 가능 횟수를 초과했습니다."
+			);
 		}
 
 		AnswerAssessment assessment = answerAssessmentService.assess(
@@ -82,9 +87,19 @@ public class LearningAnswerService {
 		);
 	}
 
+	private void validateInProgress(LearningSession session) {
+		if (!session.isInProgress()) {
+			throw new ApiException(
+				ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS
+			);
+		}
+	}
+
 	private SpeechAnswer getSpeechAnswer(Long speechAnswerId) {
 		return speechAnswerRepository.findById(speechAnswerId)
-			.orElseThrow(SpeechAnswerNotFoundException::new);
+			.orElseThrow(() -> new ApiException(
+				ErrorCode.SPEECH_ANSWER_NOT_FOUND
+			));
 	}
 
 	private void validateSpeechAnswer(
@@ -92,19 +107,21 @@ public class LearningAnswerService {
 		LearningSessionQuestion currentQuestion
 	) {
 		if (!speechAnswer.isCompleted()) {
-			throw new IllegalStateException(
+			throw new ApiException(
+				ErrorCode.INVALID_REQUEST,
 				"처리가 완료되지 않은 음성 답변입니다."
 			);
 		}
 
 		if (!speechAnswer.isUsableFor(currentQuestion)) {
-			throw new CurrentQuestionMismatchException();
+			throw new ApiException(ErrorCode.CURRENT_QUESTION_MISMATCH);
 		}
 	}
 
 	private void validateSpeechAnswerNotUsed(Long speechAnswerId) {
 		if (answerRepository.existsBySpeechAnswer_Id(speechAnswerId)) {
-			throw new IllegalStateException(
+			throw new ApiException(
+				ErrorCode.INVALID_REQUEST,
 				"이미 답변 제출에 사용된 음성 답변입니다."
 			);
 		}
@@ -122,7 +139,7 @@ public class LearningAnswerService {
 		Long sessionQuestionId
 	) {
 		if (!Objects.equals(currentQuestion.getId(), sessionQuestionId)) {
-			throw new CurrentQuestionMismatchException();
+			throw new ApiException(ErrorCode.CURRENT_QUESTION_MISMATCH);
 		}
 	}
 }

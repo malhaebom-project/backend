@@ -201,7 +201,24 @@ class LearningSpeechControllerJpaTest {
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"))
 			.andExpect(jsonPath("$.message").value(
-				"Idempotency-Key 헤더는 필수입니다."
+				"중복 요청 방지를 위한 요청 식별 키가 필요합니다."
+			));
+
+		assertNotProcessed();
+	}
+
+	@Test
+	void 요청_식별_키가_100자를_초과하면_INVALID_REQUEST로_거부한다()
+		throws Exception {
+		mockMvc.perform(
+			multipart(ENDPOINT, session.getId(), sessionQuestionId)
+				.file(audio(new byte[] {1}, "audio/webm;codecs=opus"))
+				.header("Idempotency-Key", "a".repeat(101))
+		)
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"))
+			.andExpect(jsonPath("$.message").value(
+				"요청 식별 키는 100자를 초과할 수 없습니다."
 			));
 
 		assertNotProcessed();

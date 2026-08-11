@@ -2,7 +2,8 @@ package com.malhaebom.malhaebom.presentation.auth;
 
 import org.springframework.stereotype.Component;
 
-import com.malhaebom.malhaebom.global.exception.UnauthorizedException;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 
 @Component
 public class HeaderProvider {
@@ -17,6 +18,9 @@ public class HeaderProvider {
 			return authorizationHeader.substring(BEARER_PREFIX.length()).trim();
 		}
 
-		throw new UnauthorizedException("유효하지 않은 인증 정보입니다.");
+		throw new ApiException(
+			ErrorCode.UNAUTHORIZED,
+			"유효하지 않은 인증 정보입니다."
+		);
 	}
 }

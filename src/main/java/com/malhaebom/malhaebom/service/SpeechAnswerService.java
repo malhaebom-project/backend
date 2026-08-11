@@ -5,10 +5,8 @@ import java.util.Objects;
 import org.springframework.stereotype.Service;
 
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
-import com.malhaebom.malhaebom.global.exception.AiRequestLimitExceededException;
-import com.malhaebom.malhaebom.global.exception.SpeechNotRecognizedException;
-import com.malhaebom.malhaebom.global.exception.SpeechProcessingFailedException;
-import com.malhaebom.malhaebom.global.exception.SpeechTranscriptionTimeoutException;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
@@ -41,53 +39,36 @@ public class SpeechAnswerService {
 		}
 		String provider = transcriber.provider();
 
+		SpeechTranscriptionResult result;
 		try {
-			SpeechTranscriptionResult result = transcriber.transcribe(audio);
+			result = transcriber.transcribe(audio);
 			validateTranscript(result);
-
-			SpeechAnswer completed = stateService.complete(
-				started.getId(),
-				result.transcript(),
-				result.confidence(),
-				provider
-			);
-			return SpeechAnswerResult.from(completed);
-		} catch (SpeechNotRecognizedException exception) {
+		} catch (ApiException exception) {
 			stateService.fail(
 				started.getId(),
-				"인식된 발화가 없습니다.",
-				provider
-			);
-			throw exception;
-		} catch (SpeechTranscriptionTimeoutException exception) {
-			stateService.fail(
-				started.getId(),
-				"STT 처리 시간이 초과되었습니다.",
-				provider
-			);
-			throw exception;
-		} catch (AiRequestLimitExceededException exception) {
-			stateService.fail(
-				started.getId(),
-				"STT 요청 제한을 초과했습니다.",
-				provider
-			);
-			throw exception;
-		} catch (SpeechProcessingFailedException exception) {
-			stateService.fail(
-				started.getId(),
-				"STT 처리에 실패했습니다.",
+				exception.getErrorCode().getMessage(),
 				provider
 			);
 			throw exception;
 		} catch (RuntimeException exception) {
 			stateService.fail(
 				started.getId(),
-				"STT 처리에 실패했습니다.",
+				ErrorCode.STT_PROCESSING_FAILED.getMessage(),
 				provider
 			);
-			throw new SpeechProcessingFailedException(exception);
+			throw new ApiException(
+				ErrorCode.STT_PROCESSING_FAILED,
+				exception
+			);
 		}
+
+		SpeechAnswer completed = stateService.complete(
+			started.getId(),
+			result.transcript(),
+			result.confidence(),
+			provider
+		);
+		return SpeechAnswerResult.from(completed);
 	}
 
 	private void validateTranscript(SpeechTranscriptionResult result) {
@@ -96,7 +77,7 @@ public class SpeechAnswerService {
 				|| result.transcript() == null
 				|| result.transcript().isBlank()
 		) {
-			throw new SpeechNotRecognizedException();
+			throw new ApiException(ErrorCode.SPEECH_NOT_RECOGNIZED);
 		}
 	}
 }

@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 
-import com.google.api.gax.rpc.ApiException;
 import com.google.api.gax.rpc.StatusCode;
 import com.google.cloud.speech.v2.AutoDetectDecodingConfig;
 import com.google.cloud.speech.v2.RecognitionConfig;
@@ -14,10 +13,8 @@ import com.google.cloud.speech.v2.RecognizerName;
 import com.google.cloud.speech.v2.SpeechClient;
 import com.google.cloud.speech.v2.SpeechRecognitionAlternative;
 import com.google.protobuf.ByteString;
-import com.malhaebom.malhaebom.global.exception.AiRequestLimitExceededException;
-import com.malhaebom.malhaebom.global.exception.SpeechNotRecognizedException;
-import com.malhaebom.malhaebom.global.exception.SpeechProcessingFailedException;
-import com.malhaebom.malhaebom.global.exception.SpeechTranscriptionTimeoutException;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.gcp.GoogleCloudProperties;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
@@ -59,10 +56,13 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 		RecognizeResponse response;
 		try {
 			response = client.recognize(request);
-		} catch (ApiException exception) {
+		} catch (com.google.api.gax.rpc.ApiException exception) {
 			throw mapGoogleException(exception);
 		} catch (RuntimeException exception) {
-			throw new SpeechProcessingFailedException(exception);
+			throw new ApiException(
+				ErrorCode.STT_PROCESSING_FAILED,
+				exception
+			);
 		}
 
 		return normalize(response);
@@ -70,7 +70,7 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 
 	private SpeechTranscriptionResult normalize(RecognizeResponse response) {
 		if (response == null) {
-			throw new SpeechProcessingFailedException();
+			throw new ApiException(ErrorCode.STT_PROCESSING_FAILED);
 		}
 
 		List<SpeechRecognitionAlternative> alternatives = response
@@ -87,7 +87,7 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 			.orElse("");
 
 		if (transcript.isBlank()) {
-			throw new SpeechNotRecognizedException();
+			throw new ApiException(ErrorCode.SPEECH_NOT_RECOGNIZED);
 		}
 
 		return new SpeechTranscriptionResult(
@@ -114,19 +114,27 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 			.doubleValue();
 	}
 
-	private RuntimeException mapGoogleException(ApiException exception) {
+	private ApiException mapGoogleException(
+		com.google.api.gax.rpc.ApiException exception
+	) {
 		StatusCode statusCode = exception.getStatusCode();
 		StatusCode.Code code = statusCode == null
 			? null
 			: statusCode.getCode();
 
 		if (code == StatusCode.Code.RESOURCE_EXHAUSTED) {
-			return new AiRequestLimitExceededException(exception);
+			return new ApiException(
+				ErrorCode.AI_REQUEST_LIMIT_EXCEEDED,
+				exception
+			);
 		}
 		if (code == StatusCode.Code.DEADLINE_EXCEEDED) {
-			return new SpeechTranscriptionTimeoutException(exception);
+			return new ApiException(
+				ErrorCode.STT_PROCESSING_TIMEOUT,
+				exception
+			);
 		}
-		return new SpeechProcessingFailedException(exception);
+		return new ApiException(ErrorCode.STT_PROCESSING_FAILED, exception);
 	}
 
 	private static RecognitionConfig createRecognitionConfig(

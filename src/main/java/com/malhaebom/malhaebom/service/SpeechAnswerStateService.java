@@ -11,11 +11,8 @@ import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import com.malhaebom.malhaebom.domain.learning.SpeechProcessingStatus;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
-import com.malhaebom.malhaebom.global.exception.CurrentQuestionMismatchException;
-import com.malhaebom.malhaebom.global.exception.LearningSessionNotFoundException;
-import com.malhaebom.malhaebom.global.exception.SpeechAnswerNotFoundException;
-import com.malhaebom.malhaebom.global.exception.SpeechProcessingException;
-import com.malhaebom.malhaebom.global.exception.SpeechProcessingFailedException;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 
@@ -36,7 +33,10 @@ public class SpeechAnswerStateService {
 
 		LearningSession session = learningSessionRepository
 			.findForUpdateById(sessionId)
-			.orElseThrow(LearningSessionNotFoundException::new);
+			.orElseThrow(() -> new ApiException(
+				ErrorCode.LEARNING_SESSION_NOT_FOUND
+			));
+		validateInProgress(session);
 		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
 		validateCurrentQuestion(currentQuestion, sessionQuestionId);
 
@@ -45,6 +45,14 @@ public class SpeechAnswerStateService {
 			.orElseGet(
 				() -> create(currentQuestion, requestKey)
 			);
+	}
+
+	private void validateInProgress(LearningSession session) {
+		if (!session.isInProgress()) {
+			throw new ApiException(
+				ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS
+			);
+		}
 	}
 
 	@Transactional
@@ -93,7 +101,7 @@ public class SpeechAnswerStateService {
 		LearningSessionQuestion currentQuestion
 	) {
 		if (!isSameQuestion(existing.getSessionQuestion(), currentQuestion)) {
-			throw new CurrentQuestionMismatchException();
+			throw new ApiException(ErrorCode.CURRENT_QUESTION_MISMATCH);
 		}
 
 		if (existing.isCompleted()) {
@@ -104,15 +112,17 @@ public class SpeechAnswerStateService {
 			existing.getProcessingStatus()
 				== SpeechProcessingStatus.PROCESSING
 		) {
-			throw new SpeechProcessingException();
+			throw new ApiException(ErrorCode.SPEECH_PROCESSING);
 		}
 
-		throw new SpeechProcessingFailedException();
+		throw new ApiException(ErrorCode.STT_PROCESSING_FAILED);
 	}
 
 	private SpeechAnswer getSpeechAnswer(Long speechAnswerId) {
 		return speechAnswerRepository.findById(speechAnswerId)
-			.orElseThrow(SpeechAnswerNotFoundException::new);
+			.orElseThrow(() -> new ApiException(
+				ErrorCode.SPEECH_ANSWER_NOT_FOUND
+			));
 	}
 
 	private boolean isSameQuestion(
@@ -134,18 +144,22 @@ public class SpeechAnswerStateService {
 		Long sessionQuestionId
 	) {
 		if (!Objects.equals(currentQuestion.getId(), sessionQuestionId)) {
-			throw new CurrentQuestionMismatchException();
+			throw new ApiException(ErrorCode.CURRENT_QUESTION_MISMATCH);
 		}
 	}
 
 	private void validateRequestKey(String requestKey) {
 		if (requestKey == null || requestKey.isBlank()) {
-			throw new IllegalArgumentException("멱등키는 비어 있을 수 없습니다.");
+			throw new ApiException(
+				ErrorCode.INVALID_REQUEST,
+				"중복 요청 방지를 위한 요청 식별 키가 필요합니다."
+			);
 		}
 
 		if (requestKey.length() > 100) {
-			throw new IllegalArgumentException(
-				"멱등키는 100자를 초과할 수 없습니다."
+			throw new ApiException(
+				ErrorCode.INVALID_REQUEST,
+				"요청 식별 키는 100자를 초과할 수 없습니다."
 			);
 		}
 	}

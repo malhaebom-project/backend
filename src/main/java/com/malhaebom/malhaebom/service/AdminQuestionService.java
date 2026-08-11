@@ -10,8 +10,8 @@ import com.malhaebom.malhaebom.domain.User;
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.repository.UserRepository;
-import com.malhaebom.malhaebom.global.exception.ForbiddenException;
-import com.malhaebom.malhaebom.global.exception.QuestionNotFoundException;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.service.dto.AdminQuestionCommand;
 import com.malhaebom.malhaebom.service.event.QuestionTtsRequestedEvent;
 
@@ -102,17 +102,21 @@ public class AdminQuestionService {
 
 	private void validateAdmin(Long userId) {
 		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new ForbiddenException(
+			.orElseThrow(() -> new ApiException(
+				ErrorCode.FORBIDDEN,
 				"관리자 권한이 필요합니다."
 			));
 
 		if (!user.isAdmin()) {
-			throw new ForbiddenException("관리자 권한이 필요합니다.");
+			throw new ApiException(
+				ErrorCode.FORBIDDEN,
+				"관리자 권한이 필요합니다."
+			);
 		}
 	}
 
 	private Question getActiveQuestion(Long questionId) {
 		return questionRepository.findByIdAndActiveTrue(questionId)
-			.orElseThrow(QuestionNotFoundException::new);
+			.orElseThrow(() -> new ApiException(ErrorCode.QUESTION_NOT_FOUND));
 	}
 }

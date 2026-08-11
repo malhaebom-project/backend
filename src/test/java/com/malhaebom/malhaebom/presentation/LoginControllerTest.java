@@ -20,8 +20,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.malhaebom.malhaebom.domain.User;
+import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
-import com.malhaebom.malhaebom.global.exception.DuplicateEmailException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.presentation.cookie.RefreshCookieProvider;
 import com.malhaebom.malhaebom.service.LoginService;
 import com.malhaebom.malhaebom.service.UserService;
@@ -87,7 +88,7 @@ class LoginControllerTest {
 	@Test
 	void rejectsDuplicateEmail() throws Exception {
 		when(userService.create("Guardian", "guardian@example.com", "password123"))
-			.thenThrow(new DuplicateEmailException());
+			.thenThrow(new ApiException(ErrorCode.EMAIL_ALREADY_EXISTS));
 
 		mockMvc.perform(post(SIGNUP_ENDPOINT)
 				.contentType(MediaType.APPLICATION_JSON)

@@ -1,8 +1,8 @@
 package com.malhaebom.malhaebom.integration.learning;
 
+import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -22,8 +22,7 @@ import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
-import com.malhaebom.malhaebom.global.exception.CurrentQuestionMismatchException;
-import com.malhaebom.malhaebom.global.exception.SpeechAnswerNotFoundException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.AnswerAssessmentService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
@@ -112,8 +111,8 @@ class LearningAnswerServiceJpaTest {
 	void 존재하지_않는_음성_답변은_채점하지_않고_거부한다() {
 		LearningSession session = saveSession();
 
-		assertThrows(
-			SpeechAnswerNotFoundException.class,
+		assertApiException(
+			ErrorCode.SPEECH_ANSWER_NOT_FOUND,
 			() -> learningAnswerService.submit(
 				session.getId(),
 				session.getCurrentQuestion().getId(),
@@ -131,8 +130,8 @@ class LearningAnswerServiceJpaTest {
 			saveSession()
 		);
 
-		assertThrows(
-			CurrentQuestionMismatchException.class,
+		assertApiException(
+			ErrorCode.CURRENT_QUESTION_MISMATCH,
 			() -> learningAnswerService.submit(
 				currentSession.getId(),
 				currentSession.getCurrentQuestion().getId(),
@@ -154,8 +153,8 @@ class LearningAnswerServiceJpaTest {
 			)
 		);
 
-		assertThrows(
-			IllegalStateException.class,
+		assertApiException(
+			ErrorCode.INVALID_REQUEST,
 			() -> learningAnswerService.submit(
 				session.getId(),
 				session.getCurrentQuestion().getId(),
@@ -178,8 +177,8 @@ class LearningAnswerServiceJpaTest {
 			AnswerEvaluation.from(AnswerResult.INCORRECT)
 		));
 
-		assertThrows(
-			IllegalStateException.class,
+		assertApiException(
+			ErrorCode.INVALID_REQUEST,
 			() -> learningAnswerService.submit(
 				session.getId(),
 				sessionQuestion.getId(),
@@ -188,6 +187,23 @@ class LearningAnswerServiceJpaTest {
 		);
 		assertEquals(0, assessmentGenerator.callCount);
 		assertEquals(1, answerRepository.count());
+	}
+
+	@Test
+	void 완료된_세션에는_답변을_제출할_수_없다() {
+		LearningSession session = saveSession();
+		Long sessionQuestionId = session.getCurrentQuestion().getId();
+		session.complete();
+
+		assertApiException(
+			ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS,
+			() -> learningAnswerService.submit(
+				session.getId(),
+				sessionQuestionId,
+				999L
+			)
+		);
+		assertEquals(0, assessmentGenerator.callCount);
 	}
 
 	private LearningSession saveSession() {
