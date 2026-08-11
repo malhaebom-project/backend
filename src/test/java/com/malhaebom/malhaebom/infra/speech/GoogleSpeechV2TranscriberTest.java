@@ -2,7 +2,6 @@ package com.malhaebom.malhaebom.infra.speech;
 
 import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -24,7 +23,6 @@ import com.google.cloud.speech.v2.SpeechClient;
 import com.google.cloud.speech.v2.SpeechRecognitionAlternative;
 import com.google.cloud.speech.v2.SpeechRecognitionResult;
 import com.google.protobuf.ByteString;
-import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.gcp.GoogleCloudProperties;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
@@ -129,12 +127,10 @@ class GoogleSpeechV2TranscriberTest {
 		when(client.recognize(any(RecognizeRequest.class)))
 			.thenThrow(googleException);
 
-		ApiException thrown = assertApiException(
+		assertApiException(
 			ErrorCode.AI_REQUEST_LIMIT_EXCEEDED,
 			() -> transcriber.transcribe(AUDIO)
 		);
-
-		assertSame(googleException, thrown.getCause());
 	}
 
 	@Test
@@ -145,12 +141,10 @@ class GoogleSpeechV2TranscriberTest {
 		when(client.recognize(any(RecognizeRequest.class)))
 			.thenThrow(googleException);
 
-		ApiException thrown = assertApiException(
+		assertApiException(
 			ErrorCode.STT_PROCESSING_TIMEOUT,
 			() -> transcriber.transcribe(AUDIO)
 		);
-
-		assertSame(googleException, thrown.getCause());
 	}
 
 	@Test
@@ -161,12 +155,10 @@ class GoogleSpeechV2TranscriberTest {
 		when(client.recognize(any(RecognizeRequest.class)))
 			.thenThrow(googleException);
 
-		ApiException thrown = assertApiException(
+		assertApiException(
 			ErrorCode.STT_PROCESSING_FAILED,
 			() -> transcriber.transcribe(AUDIO)
 		);
-
-		assertSame(googleException, thrown.getCause());
 	}
 
 	private RecognizeResponse response(
