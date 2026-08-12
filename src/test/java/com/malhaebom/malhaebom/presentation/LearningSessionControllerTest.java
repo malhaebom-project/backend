@@ -18,6 +18,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.core.MethodParameter;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.support.WebDataBinderFactory;
+import org.springframework.web.context.request.NativeWebRequest;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.method.support.ModelAndViewContainer;
 
 import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
@@ -26,13 +32,16 @@ import com.malhaebom.malhaebom.domain.learning.LearningTopic;
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
+import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.infra.storage.image.QuestionImageProperties;
 import com.malhaebom.malhaebom.infra.storage.image.QuestionImageUrlResolver;
 import com.malhaebom.malhaebom.service.LearningSessionService;
+import com.malhaebom.malhaebom.service.dto.LoginUser;
 
 @ExtendWith(MockitoExtension.class)
 class LearningSessionControllerTest {
 
+	private static final Long USER_ID = 1L;
 	private static final Long SESSION_ID = 10L;
 	private static final String ENDPOINT =
 		"/api/v1/learning-sessions/{sessionId}/complete";
@@ -54,8 +63,47 @@ class LearningSessionControllerTest {
 				questionImageUrlResolver
 			)
 		)
+			.setCustomArgumentResolvers(loginUserResolver())
 			.setControllerAdvice(new ApiExceptionHandler())
 			.build();
+	}
+
+	@Test
+	void 로그인한_보호자의_프로필로_학습_세션을_생성한다() throws Exception {
+		LearningSession session = createSession();
+		ReflectionTestUtils.setField(session, "id", SESSION_ID);
+		when(learningSessionService.create(
+			USER_ID,
+			1L,
+			1L,
+			Difficulty.EASY,
+			List.of(QuestionType.SHORT_ANSWER),
+			1
+		)).thenReturn(session);
+
+		mockMvc.perform(post("/api/v1/learning-sessions")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "childId":1,
+					  "topicId":1,
+					  "difficulty":"EASY",
+					  "questionTypes":["SHORT_ANSWER"],
+					  "questionCount":1
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.childId").value(1))
+			.andExpect(jsonPath("$.data.sessionId").value(SESSION_ID));
+
+		verify(learningSessionService).create(
+			USER_ID,
+			1L,
+			1L,
+			Difficulty.EASY,
+			List.of(QuestionType.SHORT_ANSWER),
+			1
+		);
 	}
 
 	@Test
@@ -138,5 +186,25 @@ class LearningSessionControllerTest {
 			Difficulty.EASY,
 			List.of(question)
 		);
+	}
+
+	private HandlerMethodArgumentResolver loginUserResolver() {
+		return new HandlerMethodArgumentResolver() {
+			@Override
+			public boolean supportsParameter(MethodParameter parameter) {
+				return parameter.hasParameterAnnotation(Auth.class)
+					&& parameter.getParameterType().equals(LoginUser.class);
+			}
+
+			@Override
+			public Object resolveArgument(
+				MethodParameter parameter,
+				ModelAndViewContainer mavContainer,
+				NativeWebRequest webRequest,
+				WebDataBinderFactory binderFactory
+			) {
+				return new LoginUser(USER_ID);
+			}
+		};
 	}
 }

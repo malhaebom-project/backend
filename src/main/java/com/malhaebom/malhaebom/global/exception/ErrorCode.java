@@ -38,6 +38,18 @@ public enum ErrorCode {
 		HttpStatus.NOT_FOUND,
 		"학습 주제를 찾을 수 없습니다."
 	),
+	CHILD_PROFILE_NOT_FOUND(
+		HttpStatus.NOT_FOUND,
+		"어린이 프로필을 찾을 수 없습니다."
+	),
+	CHILD_ACCESS_DENIED(
+		HttpStatus.FORBIDDEN,
+		"어린이 프로필에 접근할 권한이 없습니다."
+	),
+	CHILD_NICKNAME_ALREADY_EXISTS(
+		HttpStatus.CONFLICT,
+		"이미 사용 중인 어린이 프로필 별명입니다."
+	),
 	LEARNING_SESSION_NOT_IN_PROGRESS(
 		HttpStatus.CONFLICT,
 		"진행 중인 학습 세션이 아닙니다."

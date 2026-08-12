@@ -5,21 +5,32 @@ import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiEx
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
+import com.malhaebom.malhaebom.domain.User;
+import com.malhaebom.malhaebom.domain.child.ChildLevel;
+import com.malhaebom.malhaebom.domain.child.ChildProfile;
+import com.malhaebom.malhaebom.domain.child.repository.ChildProfileRepository;
 import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
+import com.malhaebom.malhaebom.domain.repository.UserRepository;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.LearningSessionService;
+import com.malhaebom.malhaebom.service.ChildProfileService;
 
 @DataJpaTest
-@Import({LearningSessionService.class, JpaAuditingConfiguration.class})
+@Import({
+	LearningSessionService.class,
+	ChildProfileService.class,
+	JpaAuditingConfiguration.class
+})
 class LearningSessionServiceJpaTest {
 
 	@Autowired
@@ -28,13 +39,33 @@ class LearningSessionServiceJpaTest {
 	private LearningSessionRepository learningSessionRepository;
 	@Autowired
 	private QuestionRepository questionRepository;
+	@Autowired
+	private UserRepository userRepository;
+	@Autowired
+	private ChildProfileRepository childProfileRepository;
+
+	private Long userId;
+	private Long childId;
+
+	@BeforeEach
+	void setUpProfile() {
+		User user = userRepository.saveAndFlush(
+			User.create("Guardian", "guardian@example.com", "encoded-password")
+		);
+		ChildProfile profile = childProfileRepository.saveAndFlush(
+			ChildProfile.create(user, "민수", 10, 3, ChildLevel.BEGINNER)
+		);
+		userId = user.getId();
+		childId = profile.getId();
+	}
 
 	@Test
 	void 존재하지_않는_학습_주제로_세션을_만들_수_없다() {
 		assertApiException(
 			ErrorCode.LEARNING_TOPIC_NOT_FOUND,
 			() -> learningSessionService.create(
-				1L,
+				userId,
+				childId,
 				999L,
 				Difficulty.EASY,
 				List.of(QuestionType.PICTURE_DESCRIPTION),
@@ -48,7 +79,8 @@ class LearningSessionServiceJpaTest {
 		assertApiException(
 			ErrorCode.INSUFFICIENT_QUESTIONS,
 			() -> learningSessionService.create(
-				1L,
+				userId,
+				childId,
 				3L,
 				Difficulty.EASY,
 				List.of(QuestionType.PICTURE_DESCRIPTION),
