@@ -19,6 +19,13 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
 		Collection<QuestionType> types
 	);
 
+	List<Question>
+	findAllByTopicAndDifficultyAndTypeInAndActiveTrue(
+			LearningTopic topic,
+			Difficulty difficulty,
+			Collection<QuestionType> types
+	);
+
 	List<Question> findAllByActiveTrueOrderByIdDesc();
 
 	java.util.Optional<Question> findByIdAndActiveTrue(Long id);

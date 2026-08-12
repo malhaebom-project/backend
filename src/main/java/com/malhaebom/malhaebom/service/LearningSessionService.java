@@ -1,5 +1,7 @@
 package com.malhaebom.malhaebom.service;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -35,8 +37,7 @@ public class LearningSessionService {
 	) {
 		LearningTopic topic = getTopic(topicId);
 		List<Question> candidates =
-			questionRepository
-				.findAllByTopicAndDifficultyAndTypeInAndActiveTrueAndTtsUrlIsNotNullOrderByIdAsc(
+			questionRepository.findAllByTopicAndDifficultyAndTypeInAndActiveTrue(
 				topic,
 				difficulty,
 				questionTypes
@@ -46,7 +47,9 @@ public class LearningSessionService {
 			throw new ApiException(ErrorCode.INSUFFICIENT_QUESTIONS);
 		}
 
-		List<Question> selectedQuestions = candidates.subList(0, questionCount);
+		List<Question> shuffledCandidates = new ArrayList<>(candidates);
+		Collections.shuffle(shuffledCandidates);
+		List<Question> selectedQuestions = List.copyOf(shuffledCandidates.subList(0, questionCount));
 		LearningSession session =
 			LearningSession.create(childId, topic, difficulty, selectedQuestions);
 
