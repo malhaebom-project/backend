@@ -44,6 +44,39 @@ class OpenAiAnswerAssessmentGeneratorLiveTest {
 	private OpenAiAnswerAssessmentGenerator generator;
 
 	@Test
+	void STT_표기_차이는_감점하거나_피드백하지_않는다() {
+		Question elephantQuestion = question(
+			LearningTopic.ANIMAL,
+			QuestionType.SHORT_ANSWER,
+			"Is the elephant big?",
+			"코끼리는 큰가요?",
+			"Yes, it is.",
+			Set.of("Yes.")
+		);
+
+		for (String answerText : List.of("yes", "Yes.", "YES!")) {
+			AnswerAssessment assessment = generator.generate(
+				elephantQuestion,
+				answerText
+			);
+
+			assertEquals(
+				AnswerResult.CORRECT,
+				assessment.result(),
+				() -> answerText + ": " + assessment
+			);
+			assertTrue(
+				assessment.grammarScore() >= 18,
+				() -> answerText + ": " + assessment
+			);
+			assertTrue(
+				!containsSttFormattingAdvice(assessment.feedbackText()),
+				() -> answerText + ": " + assessment
+			);
+		}
+	}
+
+	@Test
 	void 대표_문제와_답안을_실제_AI로_평가한다() {
 		for (LiveCase liveCase : liveCases()) {
 			AnswerAssessment assessment = generator.generate(
@@ -200,6 +233,19 @@ class OpenAiAnswerAssessmentGeneratorLiveTest {
 			null,
 			null
 		);
+	}
+
+	private boolean containsSttFormattingAdvice(String feedbackText) {
+		return List.of(
+			"대문자",
+			"소문자",
+			"문장부호",
+			"마침표",
+			"쉼표",
+			"물음표",
+			"느낌표",
+			"아포스트로피"
+		).stream().anyMatch(feedbackText::contains);
 	}
 
 	private record LiveCase(
