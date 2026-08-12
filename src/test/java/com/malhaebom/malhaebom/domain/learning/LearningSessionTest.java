@@ -61,6 +61,39 @@ class LearningSessionTest {
 	}
 
 	@Test
+	void 오답_후_재시도를_건너뛰면_오답_횟수를_늘리지_않고_다음_문제로_이동한다() {
+		List<Question> questions = createQuestions();
+		LearningSession session = createSession(questions);
+		LearningSessionQuestion skippedQuestion = session.getCurrentQuestion();
+		session.recordWrongAnswerAttempt();
+
+		session.skipRetryOnCurrentQuestion();
+
+		assertTrue(skippedQuestion.isCompleted());
+		assertFalse(skippedQuestion.isCorrect());
+		assertEquals(1, skippedQuestion.getWrongAnswerCount());
+		assertEquals(1, session.getCurrentQuestionIndex());
+		assertSame(questions.get(1), session.getCurrentQuestion().getQuestion());
+	}
+
+	@Test
+	void 마지막_문제의_재시도를_건너뛰면_세션이_완료된다() {
+		LearningSession session = LearningSession.create(
+			1L,
+			LearningTopic.ANIMAL,
+			Difficulty.EASY,
+			List.of(createQuestions().get(0))
+		);
+		session.recordWrongAnswerAttempt();
+
+		session.skipRetryOnCurrentQuestion();
+
+		assertTrue(session.isCompleted());
+		assertEquals(1, session.getCurrentQuestionIndex());
+		assertNotNull(session.getCompletedAt());
+	}
+
+	@Test
 	void 현재_문제에서_힌트를_사용할_수_있다() {
 		LearningSession session = createSession(createQuestions());
 
