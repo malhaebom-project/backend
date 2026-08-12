@@ -37,4 +37,13 @@ public class LearningAnswerController {
 			SubmitAnswerResponse.from(submission)
 		);
 	}
+
+	@PostMapping("/{sessionId}/questions/{sessionQuestionId}/skip-retry")
+	public ApiResponse<Void> skipRetry(
+		@PathVariable Long sessionId,
+		@PathVariable Long sessionQuestionId
+	) {
+		learningAnswerService.skipRetry(sessionId, sessionQuestionId);
+		return ApiResponse.success(null);
+	}
 }

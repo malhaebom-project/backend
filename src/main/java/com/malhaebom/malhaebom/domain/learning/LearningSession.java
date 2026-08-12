@@ -90,6 +90,15 @@ public class LearningSession extends BaseEntity {
 		questions.recordWrongAnswerAttempt();
 	}
 
+	public void skipRetryOnCurrentQuestion() {
+		validateInProgress();
+		questions.skipRetryOnCurrentQuestion();
+
+		if (questions.isCompleted()) {
+			complete();
+		}
+	}
+
 	public void useHintOnCurrentQuestion() {
 		validateInProgress();
 		questions.useHintOnCurrentQuestion();

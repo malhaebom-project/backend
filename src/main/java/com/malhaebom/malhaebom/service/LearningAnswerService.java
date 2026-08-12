@@ -87,6 +87,34 @@ public class LearningAnswerService {
 		);
 	}
 
+	@Transactional
+	public void skipRetry(Long sessionId, Long sessionQuestionId) {
+		LearningSession session = learningSessionRepository
+			.findForUpdateById(sessionId)
+			.orElseThrow(() -> new ApiException(
+				ErrorCode.LEARNING_SESSION_NOT_FOUND
+			));
+		validateInProgress(session);
+		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
+		validateCurrentQuestion(currentQuestion, sessionQuestionId);
+
+		Answer latestAnswer = answerRepository
+			.findFirstBySessionQuestion_IdOrderByAttemptNoDesc(sessionQuestionId)
+			.orElseThrow(() -> new ApiException(
+				ErrorCode.INVALID_REQUEST,
+				"오답 제출 후에만 재시도를 건너뛸 수 있습니다."
+			));
+		if (latestAnswer.isCorrect()
+			|| latestAnswer.getAttemptNo() >= MAX_ATTEMPT_COUNT) {
+			throw new ApiException(
+				ErrorCode.INVALID_REQUEST,
+				"재시도 가능한 오답이 아닙니다."
+			);
+		}
+
+		session.skipRetryOnCurrentQuestion();
+	}
+
 	private void validateInProgress(LearningSession session) {
 		if (!session.isInProgress()) {
 			throw new ApiException(

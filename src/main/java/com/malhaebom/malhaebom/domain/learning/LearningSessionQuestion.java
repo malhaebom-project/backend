@@ -93,6 +93,19 @@ public class LearningSessionQuestion extends BaseEntity {
 		wrongAnswerCount++;
 	}
 
+	void skipRetry() {
+		if (isCompleted()) {
+			throw new IllegalStateException("이미 완료한 문제입니다.");
+		}
+
+		if (wrongAnswerCount < 1) {
+			throw new IllegalStateException("오답 시도 후에만 재시도를 건너뛸 수 있습니다.");
+		}
+
+		correct = false;
+		answeredAt = LocalDateTime.now();
+	}
+
 	void useHint() {
 		if (isCompleted()) {
 			throw new IllegalStateException("완료한 문제에서는 힌트를 사용할 수 없습니다.");

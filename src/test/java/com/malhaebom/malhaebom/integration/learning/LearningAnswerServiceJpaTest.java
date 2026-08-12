@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
+import java.util.Set;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,9 +17,12 @@ import org.springframework.context.annotation.Import;
 import com.malhaebom.malhaebom.domain.learning.Answer;
 import com.malhaebom.malhaebom.domain.learning.AnswerEvaluation;
 import com.malhaebom.malhaebom.domain.learning.AnswerResult;
+import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
+import com.malhaebom.malhaebom.domain.learning.LearningTopic;
 import com.malhaebom.malhaebom.domain.learning.Question;
+import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
@@ -207,6 +213,112 @@ class LearningAnswerServiceJpaTest {
 		assertEquals(0, assessmentGenerator.callCount);
 	}
 
+	@Test
+	void 첫_오답의_재시도를_건너뛰면_오답_횟수를_유지하고_다음_문제로_이동한다() {
+		LearningSession session = saveSessionWithTwoQuestions();
+		LearningSessionQuestion skippedQuestion = session.getCurrentQuestion();
+		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(session);
+		assessmentGenerator.willReturn(incorrectAssessment());
+		learningAnswerService.submit(
+			session.getId(),
+			skippedQuestion.getId(),
+			speechAnswer.getId()
+		);
+
+		learningAnswerService.skipRetry(
+			session.getId(),
+			skippedQuestion.getId()
+		);
+
+		assertTrue(skippedQuestion.isCompleted());
+		assertFalse(skippedQuestion.isCorrect());
+		assertEquals(1, skippedQuestion.getWrongAnswerCount());
+		assertEquals(1, session.getCurrentQuestionIndex());
+		assertEquals(1, session.getCurrentQuestion().getQuestionIndex());
+		assertTrue(session.isInProgress());
+	}
+
+	@Test
+	void 마지막_문제의_재시도를_건너뛰면_세션이_완료된다() {
+		LearningSession session = saveSession();
+		LearningSessionQuestion question = session.getCurrentQuestion();
+		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(session);
+		assessmentGenerator.willReturn(incorrectAssessment());
+		learningAnswerService.submit(
+			session.getId(),
+			question.getId(),
+			speechAnswer.getId()
+		);
+
+		learningAnswerService.skipRetry(session.getId(), question.getId());
+
+		assertTrue(session.isCompleted());
+		assertEquals(1, session.getCurrentQuestionIndex());
+	}
+
+	@Test
+	void 답변_이력이_없는_문제의_재시도는_건너뛸_수_없다() {
+		LearningSession session = saveSession();
+
+		assertApiException(
+			ErrorCode.INVALID_REQUEST,
+			() -> learningAnswerService.skipRetry(
+				session.getId(),
+				session.getCurrentQuestion().getId()
+			)
+		);
+	}
+
+	@Test
+	void 정답_이력만_있는_문제의_재시도는_건너뛸_수_없다() {
+		LearningSession session = saveSession();
+		LearningSessionQuestion question = session.getCurrentQuestion();
+		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(session);
+		answerRepository.saveAndFlush(Answer.create(
+			question,
+			speechAnswer,
+			1,
+			AnswerEvaluation.from(AnswerResult.CORRECT)
+		));
+
+		assertApiException(
+			ErrorCode.INVALID_REQUEST,
+			() -> learningAnswerService.skipRetry(
+				session.getId(),
+				question.getId()
+			)
+		);
+	}
+
+	@Test
+	void 현재_문제가_아닌_문제의_재시도는_건너뛸_수_없다() {
+		LearningSession session = saveSession();
+
+		assertApiException(
+			ErrorCode.CURRENT_QUESTION_MISMATCH,
+			() -> learningAnswerService.skipRetry(session.getId(), 999L)
+		);
+	}
+
+	@Test
+	void 완료된_세션의_재시도는_건너뛸_수_없다() {
+		LearningSession session = saveSession();
+		session.complete();
+
+		assertApiException(
+			ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS,
+			() -> learningAnswerService.skipRetry(session.getId(), 999L)
+		);
+	}
+
+	@Test
+	void 존재하지_않는_세션의_재시도는_건너뛸_수_없다() {
+		assertApiException(
+			ErrorCode.LEARNING_SESSION_NOT_FOUND,
+			() -> learningAnswerService.skipRetry(999L, 999L)
+		);
+	}
+
 	private LearningSession saveSession() {
 		return LearningJpaTestFixture.saveSession(
 			questionRepository,
@@ -225,6 +337,35 @@ class LearningAnswerServiceJpaTest {
 		return speechAnswerRepository.saveAndFlush(speechAnswer);
 	}
 
+	private LearningSession saveSessionWithTwoQuestions() {
+		Question first = createQuestion("What is the boy doing?");
+		Question second = createQuestion("What is the girl doing?");
+		questionRepository.saveAllAndFlush(List.of(first, second));
+		return learningSessionRepository.saveAndFlush(
+			LearningSession.create(
+				1L,
+				LearningTopic.DAILY_LIFE,
+				Difficulty.EASY,
+				List.of(first, second)
+			)
+		);
+	}
+
+	private Question createQuestion(String questionText) {
+		return Question.create(
+			LearningTopic.DAILY_LIFE,
+			Difficulty.EASY,
+			QuestionType.PICTURE_DESCRIPTION,
+			questionText,
+			"무엇을 하고 있나요?",
+			null,
+			"The child is running.",
+			Set.of("The child is running."),
+			null,
+			null
+		);
+	}
+
 	private AnswerAssessment correctAssessment() {
 		return new AnswerAssessment(
 			true,
@@ -232,6 +373,16 @@ class LearningAnswerServiceJpaTest {
 			30,
 			20,
 			"현재진행형을 정확하게 사용했어요!"
+		);
+	}
+
+	private AnswerAssessment incorrectAssessment() {
+		return new AnswerAssessment(
+			true,
+			10,
+			10,
+			10,
+			"다시 말해 보세요."
 		);
 	}
 
