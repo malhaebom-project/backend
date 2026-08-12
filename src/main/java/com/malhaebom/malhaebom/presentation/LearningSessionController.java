@@ -10,11 +10,13 @@ import org.springframework.web.bind.annotation.RestController;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
 import com.malhaebom.malhaebom.infra.storage.image.QuestionImageUrlResolver;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
+import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.CreateLearningSessionRequest;
 import com.malhaebom.malhaebom.presentation.dto.CreateLearningSessionResponse;
 import com.malhaebom.malhaebom.presentation.dto.LearningSessionResponse;
 import com.malhaebom.malhaebom.presentation.dto.NextQuestionResponse;
 import com.malhaebom.malhaebom.service.LearningSessionService;
+import com.malhaebom.malhaebom.service.dto.LoginUser;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,11 +31,13 @@ public class LearningSessionController {
 
 	@PostMapping
 	public ApiResponse<CreateLearningSessionResponse> create(
+		@Auth LoginUser loginUser,
 		@Valid @RequestBody CreateLearningSessionRequest request
 	) {
 		return ApiResponse.success(
 			CreateLearningSessionResponse.from(
 				learningSessionService.create(
+					loginUser.userId(),
 					request.childId(),
 					request.topicId(),
 					request.difficulty(),

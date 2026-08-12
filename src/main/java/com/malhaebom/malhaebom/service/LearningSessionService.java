@@ -26,15 +26,18 @@ public class LearningSessionService {
 
 	private final LearningSessionRepository learningSessionRepository;
 	private final QuestionRepository questionRepository;
+	private final ChildProfileService childProfileService;
 
 	@Transactional
 	public LearningSession create(
+		Long userId,
 		Long childId,
 		Long topicId,
 		Difficulty difficulty,
 		List<QuestionType> questionTypes,
 		int questionCount
 	) {
+		childProfileService.getOwnedActive(userId, childId);
 		LearningTopic topic = getTopic(topicId);
 		List<Question> candidates =
 			questionRepository.findAllByTopicAndDifficultyAndTypeInAndActiveTrue(
