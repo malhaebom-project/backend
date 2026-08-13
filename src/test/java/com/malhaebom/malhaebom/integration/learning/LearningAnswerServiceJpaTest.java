@@ -14,6 +14,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
+import jakarta.persistence.EntityManager;
+
 import com.malhaebom.malhaebom.domain.learning.Answer;
 import com.malhaebom.malhaebom.domain.learning.AnswerEvaluation;
 import com.malhaebom.malhaebom.domain.learning.AnswerResult;
@@ -50,6 +52,8 @@ class LearningAnswerServiceJpaTest {
 	private SpeechAnswerRepository speechAnswerRepository;
 	@Autowired
 	private AnswerRepository answerRepository;
+	@Autowired
+	private EntityManager entityManager;
 
 	private TestAnswerAssessmentGenerator assessmentGenerator;
 	private LearningAnswerService learningAnswerService;
@@ -87,6 +91,15 @@ class LearningAnswerServiceJpaTest {
 		assertTrue(session.isCompleted());
 		assertFalse(result.canRetry());
 		assertEquals(0, result.remainingAttempts());
+
+		answerRepository.flush();
+		entityManager.clear();
+		Answer savedAnswer = answerRepository.findById(result.answer().getId())
+			.orElseThrow();
+		assertEquals(
+			"현재진행형을 정확하게 사용했어요!",
+			savedAnswer.getFeedbackText()
+		);
 	}
 
 	@Test
@@ -181,7 +194,8 @@ class LearningAnswerServiceJpaTest {
 			sessionQuestion,
 			speechAnswer,
 			1,
-			AnswerEvaluation.from(AnswerResult.INCORRECT)
+			AnswerEvaluation.from(AnswerResult.INCORRECT),
+			"다시 말해 보세요."
 		));
 
 		assertApiException(
@@ -278,7 +292,8 @@ class LearningAnswerServiceJpaTest {
 			question,
 			speechAnswer,
 			1,
-			AnswerEvaluation.from(AnswerResult.CORRECT)
+			AnswerEvaluation.from(AnswerResult.CORRECT),
+			"정확하게 잘 말했어요!"
 		));
 
 		assertApiException(

@@ -36,6 +36,8 @@ import com.malhaebom.malhaebom.domain.BaseEntity;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Answer extends BaseEntity {
 
+	private static final int MAX_FEEDBACK_LENGTH = 300;
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -70,6 +72,9 @@ public class Answer extends BaseEntity {
 	@Column(nullable = false, length = 1000)
 	private String modelAnswerSnapshot;
 
+	@Column(length = MAX_FEEDBACK_LENGTH)
+	private String feedbackText;
+
 	@Column(nullable = false)
 	private LocalDateTime submittedAt;
 
@@ -77,13 +82,15 @@ public class Answer extends BaseEntity {
 		LearningSessionQuestion sessionQuestion,
 		SpeechAnswer speechAnswer,
 		int attemptNo,
-		AnswerEvaluation evaluation
+		AnswerEvaluation evaluation,
+		String feedbackText
 	) {
 		validateCreation(
 			sessionQuestion,
 			speechAnswer,
 			attemptNo,
-			evaluation
+			evaluation,
+			feedbackText
 		);
 
 		Answer answer = new Answer();
@@ -98,6 +105,7 @@ public class Answer extends BaseEntity {
 		answer.modelAnswerSnapshot = sessionQuestion
 			.getQuestion()
 			.getModelAnswer();
+		answer.feedbackText = feedbackText;
 		answer.submittedAt = LocalDateTime.now();
 		return answer;
 	}
@@ -114,7 +122,8 @@ public class Answer extends BaseEntity {
 		LearningSessionQuestion sessionQuestion,
 		SpeechAnswer speechAnswer,
 		int attemptNo,
-		AnswerEvaluation evaluation
+		AnswerEvaluation evaluation,
+		String feedbackText
 	) {
 		if (sessionQuestion == null) {
 			throw new IllegalArgumentException("세션 문제는 null일 수 없습니다.");
@@ -145,6 +154,16 @@ public class Answer extends BaseEntity {
 
 		if (evaluation == null) {
 			throw new IllegalArgumentException("채점 결과는 null일 수 없습니다.");
+		}
+
+		if (feedbackText == null || feedbackText.isBlank()) {
+			throw new IllegalArgumentException("피드백은 비어 있을 수 없습니다.");
+		}
+
+		if (feedbackText.length() > MAX_FEEDBACK_LENGTH) {
+			throw new IllegalArgumentException(
+				"피드백은 " + MAX_FEEDBACK_LENGTH + "자를 초과할 수 없습니다."
+			);
 		}
 	}
 }

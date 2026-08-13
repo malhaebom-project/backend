@@ -2,7 +2,6 @@ package com.malhaebom.malhaebom.presentation.dto;
 
 import com.malhaebom.malhaebom.domain.learning.Answer;
 import com.malhaebom.malhaebom.domain.learning.AnswerResult;
-import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 
 public record SubmitAnswerResponse(
@@ -20,7 +19,6 @@ public record SubmitAnswerResponse(
 ) {
 	public static SubmitAnswerResponse from(AnswerSubmissionResult submission) {
 		Answer answer = submission.answer();
-		AnswerAssessment assessment = submission.assessment();
 
 		return new SubmitAnswerResponse(
 			answer.getId(),
@@ -30,7 +28,7 @@ public record SubmitAnswerResponse(
 			answer.getResult(),
 			answer.getScore(),
 			answer.getModelAnswerSnapshot(),
-			assessment.feedbackText(),
+			answer.getFeedbackText(),
 			null,
 			submission.canRetry(),
 			submission.remainingAttempts()

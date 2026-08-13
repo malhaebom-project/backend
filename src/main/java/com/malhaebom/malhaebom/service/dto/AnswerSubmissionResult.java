@@ -4,7 +4,6 @@ import com.malhaebom.malhaebom.domain.learning.Answer;
 
 public record AnswerSubmissionResult(
 	Answer answer,
-	AnswerAssessment assessment,
 	boolean canRetry,
 	int remainingAttempts
 ) {

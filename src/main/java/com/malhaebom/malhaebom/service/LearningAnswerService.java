@@ -64,7 +64,8 @@ public class LearningAnswerService {
 			currentQuestion,
 			speechAnswer,
 			attemptNo,
-			assessment.toEvaluation()
+			assessment.toEvaluation(),
+			assessment.feedbackText()
 		);
 		answerRepository.save(answer);
 
@@ -81,7 +82,6 @@ public class LearningAnswerService {
 			: 0;
 		return new AnswerSubmissionResult(
 			answer,
-			assessment,
 			canRetry,
 			remainingAttempts
 		);

@@ -20,7 +20,6 @@ import com.malhaebom.malhaebom.domain.learning.LearningTopic;
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
-import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 
 class SubmitAnswerResponseTest {
@@ -38,18 +37,12 @@ class SubmitAnswerResponseTest {
 			sessionQuestion,
 			speechAnswer,
 			1,
-			AnswerEvaluation.from(AnswerResult.CORRECT)
+			AnswerEvaluation.from(AnswerResult.CORRECT),
+			"현재진행형을 정확하게 사용했어요!"
 		);
 		ReflectionTestUtils.setField(answer, "id", 40L);
 		AnswerSubmissionResult submission = new AnswerSubmissionResult(
 			answer,
-			new AnswerAssessment(
-				true,
-				50,
-				30,
-				20,
-				"현재진행형을 정확하게 사용했어요!"
-			),
 			false,
 			0
 		);
