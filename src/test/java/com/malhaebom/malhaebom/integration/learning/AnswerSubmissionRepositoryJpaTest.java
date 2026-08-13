@@ -1,7 +1,10 @@
 package com.malhaebom.malhaebom.integration.learning;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,11 +14,15 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import jakarta.persistence.EntityManager;
 
+import com.malhaebom.malhaebom.domain.learning.Answer;
+import com.malhaebom.malhaebom.domain.learning.AnswerEvaluation;
+import com.malhaebom.malhaebom.domain.learning.AnswerResult;
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmission;
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionStatus;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
+import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerSubmissionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
@@ -28,6 +35,8 @@ class AnswerSubmissionRepositoryJpaTest {
 
 	@Autowired
 	private AnswerSubmissionRepository answerSubmissionRepository;
+	@Autowired
+	private AnswerRepository answerRepository;
 	@Autowired
 	private LearningSessionRepository learningSessionRepository;
 	@Autowired
@@ -115,6 +124,47 @@ class AnswerSubmissionRepositoryJpaTest {
 				AnswerSubmission.reserve(question, second, 1)
 			)
 		);
+	}
+
+	@Test
+	void 잠근_예약의_처리와_완료_상태를_저장한다() {
+		LearningSessionQuestion question = saveSession().getCurrentQuestion();
+		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(question, 1);
+		Long submissionId = answerSubmissionRepository.saveAndFlush(
+			AnswerSubmission.reserve(question, speechAnswer, 1)
+		).getId();
+		String processingToken = "215bf1ca-03dc-4a7a-af56-09ad0cc26a24";
+		Instant claimedAt = Instant.parse("2026-08-13T07:00:00Z");
+
+		AnswerSubmission processing = answerSubmissionRepository
+			.findForUpdateById(submissionId)
+			.orElseThrow();
+		processing.claim(
+			processingToken,
+			claimedAt,
+			claimedAt.plusSeconds(60)
+		);
+		answerSubmissionRepository.flush();
+
+		Answer answer = answerRepository.saveAndFlush(Answer.create(
+			question,
+			speechAnswer,
+			1,
+			AnswerEvaluation.from(AnswerResult.CORRECT),
+			"현재진행형을 정확하게 사용했어요!"
+		));
+		processing.complete(processingToken, answer);
+		answerSubmissionRepository.flush();
+		entityManager.clear();
+
+		AnswerSubmission completed = answerSubmissionRepository.findById(
+			submissionId
+		).orElseThrow();
+		assertEquals(AnswerSubmissionStatus.COMPLETED, completed.getStatus());
+		assertEquals(answer.getId(), completed.getAnswer().getId());
+		assertNull(completed.getProcessingToken());
+		assertNull(completed.getLeaseExpiresAt());
+		assertNull(completed.getFailureMessage());
 	}
 
 	private LearningSession saveSession() {

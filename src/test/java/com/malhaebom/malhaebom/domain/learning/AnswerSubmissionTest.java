@@ -1,16 +1,25 @@
 package com.malhaebom.malhaebom.domain.learning;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
 class AnswerSubmissionTest {
+	private static final String PROCESSING_TOKEN =
+		"215bf1ca-03dc-4a7a-af56-09ad0cc26a24";
+	private static final Instant CLAIMED_AT =
+		Instant.parse("2026-08-13T07:00:00Z");
+	private static final Instant LEASE_EXPIRES_AT =
+		Instant.parse("2026-08-13T07:01:00Z");
 
 	@Test
 	void 완료된_음성_답변의_제출을_예약하고_채점_입력을_복사한다() {
@@ -125,6 +134,136 @@ class AnswerSubmissionTest {
 				completedSpeechAnswer(sessionQuestion),
 				0
 			)
+		);
+	}
+
+	@Test
+	void 대기_중인_예약을_처리_토큰과_임대_만료_시각으로_선점한다() {
+		AnswerSubmission submission = createSubmission();
+
+		submission.claim(PROCESSING_TOKEN, CLAIMED_AT, LEASE_EXPIRES_AT);
+
+		assertEquals(AnswerSubmissionStatus.PROCESSING, submission.getStatus());
+		assertEquals(PROCESSING_TOKEN, submission.getProcessingToken());
+		assertEquals(LEASE_EXPIRES_AT, submission.getLeaseExpiresAt());
+		assertNull(submission.getFailureMessage());
+		assertFalse(submission.isLeaseExpiredAt(CLAIMED_AT));
+		assertTrue(submission.isLeaseExpiredAt(LEASE_EXPIRES_AT));
+	}
+
+	@Test
+	void 임대가_유효한_처리_중_예약은_다시_선점할_수_없다() {
+		AnswerSubmission submission = createSubmission();
+		submission.claim(PROCESSING_TOKEN, CLAIMED_AT, LEASE_EXPIRES_AT);
+
+		assertThrows(
+			IllegalStateException.class,
+			() -> submission.claim(
+				"3cbafaf0-fd5b-47aa-8d2d-18c7c2a47f0a",
+				CLAIMED_AT.plusSeconds(30),
+				LEASE_EXPIRES_AT.plusSeconds(30)
+			)
+		);
+	}
+
+	@Test
+	void 임대가_만료된_처리_중_예약은_새_토큰으로_재선점한다() {
+		AnswerSubmission submission = createSubmission();
+		String newToken = "3cbafaf0-fd5b-47aa-8d2d-18c7c2a47f0a";
+		submission.claim(PROCESSING_TOKEN, CLAIMED_AT, LEASE_EXPIRES_AT);
+
+		submission.claim(
+			newToken,
+			LEASE_EXPIRES_AT,
+			LEASE_EXPIRES_AT.plusSeconds(60)
+		);
+
+		assertEquals(AnswerSubmissionStatus.PROCESSING, submission.getStatus());
+		assertEquals(newToken, submission.getProcessingToken());
+		assertEquals(
+			LEASE_EXPIRES_AT.plusSeconds(60),
+			submission.getLeaseExpiresAt()
+		);
+	}
+
+	@Test
+	void 처리_토큰이_일치하면_예약을_완료한다() {
+		AnswerSubmission submission = createSubmission();
+		submission.claim(PROCESSING_TOKEN, CLAIMED_AT, LEASE_EXPIRES_AT);
+		Answer answer = createAnswer(submission);
+
+		submission.complete(PROCESSING_TOKEN, answer);
+
+		assertEquals(AnswerSubmissionStatus.COMPLETED, submission.getStatus());
+		assertSame(answer, submission.getAnswer());
+		assertNull(submission.getProcessingToken());
+		assertNull(submission.getLeaseExpiresAt());
+		assertNull(submission.getFailureMessage());
+	}
+
+	@Test
+	void 재선점_전의_처리_토큰으로는_예약을_완료할_수_없다() {
+		AnswerSubmission submission = createSubmission();
+		String newToken = "3cbafaf0-fd5b-47aa-8d2d-18c7c2a47f0a";
+		submission.claim(PROCESSING_TOKEN, CLAIMED_AT, LEASE_EXPIRES_AT);
+		submission.claim(
+			newToken,
+			LEASE_EXPIRES_AT,
+			LEASE_EXPIRES_AT.plusSeconds(60)
+		);
+
+		assertThrows(
+			IllegalStateException.class,
+			() -> submission.complete(
+				PROCESSING_TOKEN,
+				createAnswer(submission)
+			)
+		);
+	}
+
+	@Test
+	void 처리_토큰이_일치하면_예약을_실패_처리한다() {
+		AnswerSubmission submission = createSubmission();
+		submission.claim(PROCESSING_TOKEN, CLAIMED_AT, LEASE_EXPIRES_AT);
+
+		submission.fail(PROCESSING_TOKEN, "OpenAI 요청 시간이 초과되었습니다.");
+
+		assertEquals(AnswerSubmissionStatus.FAILED, submission.getStatus());
+		assertNull(submission.getAnswer());
+		assertNull(submission.getProcessingToken());
+		assertNull(submission.getLeaseExpiresAt());
+		assertEquals(
+			"OpenAI 요청 시간이 초과되었습니다.",
+			submission.getFailureMessage()
+		);
+	}
+
+	@Test
+	void 임대_만료_시각은_선점_시각보다_이후여야_한다() {
+		AnswerSubmission submission = createSubmission();
+
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> submission.claim(PROCESSING_TOKEN, CLAIMED_AT, CLAIMED_AT)
+		);
+	}
+
+	private AnswerSubmission createSubmission() {
+		LearningSessionQuestion sessionQuestion = createSessionQuestion();
+		return AnswerSubmission.reserve(
+			sessionQuestion,
+			completedSpeechAnswer(sessionQuestion),
+			1
+		);
+	}
+
+	private Answer createAnswer(AnswerSubmission submission) {
+		return Answer.create(
+			submission.getSessionQuestion(),
+			submission.getSpeechAnswer(),
+			submission.getAttemptNo(),
+			AnswerEvaluation.from(AnswerResult.CORRECT),
+			"현재진행형을 정확하게 사용했어요!"
 		);
 	}
 

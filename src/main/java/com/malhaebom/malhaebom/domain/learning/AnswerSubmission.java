@@ -53,6 +53,9 @@ import com.malhaebom.malhaebom.domain.BaseEntity;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AnswerSubmission extends BaseEntity {
 
+	private static final int MAX_PROCESSING_TOKEN_LENGTH = 36;
+	private static final int MAX_FAILURE_MESSAGE_LENGTH = 1000;
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -133,6 +136,110 @@ public class AnswerSubmission extends BaseEntity {
 		return Collections.unmodifiableSet(acceptedAnswersSnapshot);
 	}
 
+	public void claim(
+		String processingToken,
+		Instant claimedAt,
+		Instant leaseExpiresAt
+	) {
+		validateClaim(processingToken, claimedAt, leaseExpiresAt);
+
+		status = AnswerSubmissionStatus.PROCESSING;
+		this.processingToken = processingToken;
+		this.leaseExpiresAt = leaseExpiresAt;
+		failureMessage = null;
+	}
+
+	public void complete(String processingToken, Answer answer) {
+		validateProcessingToken(processingToken);
+		validateCompletedAnswer(answer);
+
+		status = AnswerSubmissionStatus.COMPLETED;
+		this.answer = answer;
+		this.processingToken = null;
+		leaseExpiresAt = null;
+		failureMessage = null;
+	}
+
+	public void fail(String processingToken, String failureMessage) {
+		validateProcessingToken(processingToken);
+		validateText(
+			failureMessage,
+			MAX_FAILURE_MESSAGE_LENGTH,
+			"실패 사유"
+		);
+
+		status = AnswerSubmissionStatus.FAILED;
+		this.processingToken = null;
+		leaseExpiresAt = null;
+		this.failureMessage = failureMessage;
+	}
+
+	public boolean isLeaseExpiredAt(Instant instant) {
+		Objects.requireNonNull(instant, "기준 시각은 null일 수 없습니다.");
+		return status == AnswerSubmissionStatus.PROCESSING
+			&& leaseExpiresAt != null
+			&& !leaseExpiresAt.isAfter(instant);
+	}
+
+	private void validateClaim(
+		String processingToken,
+		Instant claimedAt,
+		Instant leaseExpiresAt
+	) {
+		validateText(
+			processingToken,
+			MAX_PROCESSING_TOKEN_LENGTH,
+			"처리 토큰"
+		);
+		Objects.requireNonNull(claimedAt, "선점 시각은 null일 수 없습니다.");
+		Objects.requireNonNull(
+			leaseExpiresAt,
+			"처리 임대 만료 시각은 null일 수 없습니다."
+		);
+
+		boolean pending = status == AnswerSubmissionStatus.PENDING;
+		boolean expiredProcessing = isLeaseExpiredAt(claimedAt);
+		if (!pending && !expiredProcessing) {
+			throw new IllegalStateException("선점 가능한 답변 제출 예약이 아닙니다.");
+		}
+
+		if (!leaseExpiresAt.isAfter(claimedAt)) {
+			throw new IllegalArgumentException(
+				"처리 임대 만료 시각은 선점 시각보다 이후여야 합니다."
+			);
+		}
+	}
+
+	private void validateProcessingToken(String processingToken) {
+		validateText(
+			processingToken,
+			MAX_PROCESSING_TOKEN_LENGTH,
+			"처리 토큰"
+		);
+
+		if (status != AnswerSubmissionStatus.PROCESSING) {
+			throw new IllegalStateException("처리 중인 답변 제출 예약이 아닙니다.");
+		}
+
+		if (!Objects.equals(this.processingToken, processingToken)) {
+			throw new IllegalStateException("답변 제출 예약의 처리 토큰이 일치하지 않습니다.");
+		}
+	}
+
+	private void validateCompletedAnswer(Answer answer) {
+		if (answer == null) {
+			throw new IllegalArgumentException("완료 답변은 null일 수 없습니다.");
+		}
+
+		if (!isSameQuestion(answer.getSessionQuestion(), sessionQuestion)
+			|| !isSameSpeechAnswer(answer.getSpeechAnswer(), speechAnswer)
+			|| answer.getAttemptNo() != attemptNo) {
+			throw new IllegalArgumentException(
+				"예약된 제출과 일치하는 답변만 완료 처리할 수 있습니다."
+			);
+		}
+	}
+
 	private static void validateReservation(
 		LearningSessionQuestion sessionQuestion,
 		SpeechAnswer speechAnswer,
@@ -180,5 +287,35 @@ public class AnswerSubmission extends BaseEntity {
 		return first.getId() != null
 			&& second.getId() != null
 			&& Objects.equals(first.getId(), second.getId());
+	}
+
+	private static boolean isSameSpeechAnswer(
+		SpeechAnswer first,
+		SpeechAnswer second
+	) {
+		if (first == second) {
+			return true;
+		}
+
+		return first != null
+			&& second != null
+			&& first.getId() != null
+			&& Objects.equals(first.getId(), second.getId());
+	}
+
+	private static void validateText(
+		String value,
+		int maximumLength,
+		String fieldName
+	) {
+		if (value == null || value.isBlank()) {
+			throw new IllegalArgumentException(fieldName + "은/는 비어 있을 수 없습니다.");
+		}
+
+		if (value.length() > maximumLength) {
+			throw new IllegalArgumentException(
+				fieldName + "은/는 " + maximumLength + "자를 초과할 수 없습니다."
+			);
+		}
 	}
 }
