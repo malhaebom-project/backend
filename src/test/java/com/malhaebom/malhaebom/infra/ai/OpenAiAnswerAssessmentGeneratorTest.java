@@ -22,6 +22,7 @@ import com.malhaebom.malhaebom.domain.learning.LearningTopic;
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
 
 class OpenAiAnswerAssessmentGeneratorTest {
 
@@ -42,8 +43,7 @@ class OpenAiAnswerAssessmentGeneratorTest {
 			);
 
 		AnswerAssessment assessment = generator.generate(
-			createQuestion(),
-			"He is running."
+			assessmentInput("He is running.")
 		);
 
 		assertEquals(93, assessment.totalScore());
@@ -63,9 +63,20 @@ class OpenAiAnswerAssessmentGeneratorTest {
 
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> generator.generate(createQuestion(), " ")
+			() -> generator.generate(assessmentInput(" "))
 		);
 		assertNull(chatModel.prompt());
+	}
+
+	private AnswerAssessmentInput assessmentInput(String answerText) {
+		Question question = createQuestion();
+		return new AnswerAssessmentInput(
+			question.getQuestionText(),
+			question.getQuestionTextKo(),
+			question.getModelAnswer(),
+			question.getAcceptedAnswers(),
+			answerText
+		);
 	}
 
 	private Question createQuestion() {

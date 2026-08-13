@@ -239,6 +239,28 @@ class AnswerSubmissionTest {
 	}
 
 	@Test
+	void 실패한_예약은_같은_예약을_대기_상태로_되돌려_재시도한다() {
+		AnswerSubmission submission = createSubmission();
+		submission.claim(PROCESSING_TOKEN, CLAIMED_AT, LEASE_EXPIRES_AT);
+		submission.fail(PROCESSING_TOKEN, "OpenAI 요청 시간이 초과되었습니다.");
+
+		submission.retry();
+
+		assertEquals(AnswerSubmissionStatus.PENDING, submission.getStatus());
+		assertNull(submission.getAnswer());
+		assertNull(submission.getProcessingToken());
+		assertNull(submission.getLeaseExpiresAt());
+		assertNull(submission.getFailureMessage());
+	}
+
+	@Test
+	void 실패하지_않은_예약은_재시도_상태로_되돌릴_수_없다() {
+		AnswerSubmission submission = createSubmission();
+
+		assertThrows(IllegalStateException.class, submission::retry);
+	}
+
+	@Test
 	void 임대_만료_시각은_선점_시각보다_이후여야_한다() {
 		AnswerSubmission submission = createSubmission();
 

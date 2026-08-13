@@ -1,9 +1,9 @@
 package com.malhaebom.malhaebom.service.port;
 
-import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
 
 public interface AnswerAssessmentGenerator {
 
-	AnswerAssessment generate(Question question, String answerText);
+	AnswerAssessment generate(AnswerAssessmentInput input);
 }

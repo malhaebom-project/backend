@@ -5,8 +5,8 @@ import java.util.Objects;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Component;
 
-import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
 import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 
 @Component
@@ -68,23 +68,20 @@ public class OpenAiAnswerAssessmentGenerator
 	}
 
 	@Override
-	public AnswerAssessment generate(Question question, String answerText) {
-		Objects.requireNonNull(question, "문제는 null일 수 없습니다.");
-		if (answerText == null || answerText.isBlank()) {
-			throw new IllegalArgumentException("답변은 비어 있을 수 없습니다.");
-		}
+	public AnswerAssessment generate(AnswerAssessmentInput input) {
+		Objects.requireNonNull(input, "채점 입력은 null일 수 없습니다.");
 
 		return chatClient.prompt()
 			.user(user -> user
 				.text(USER_PROMPT)
-				.param("questionText", question.getQuestionText())
-				.param("questionTextKo", question.getQuestionTextKo())
-				.param("modelAnswer", question.getModelAnswer())
+				.param("questionText", input.questionText())
+				.param("questionTextKo", input.questionTextKo())
+				.param("modelAnswer", input.modelAnswer())
 				.param(
 					"acceptedAnswers",
-					String.join(" | ", question.getAcceptedAnswers())
+					String.join(" | ", input.acceptedAnswers())
 				)
-				.param("answerText", answerText))
+				.param("answerText", input.answerText()))
 			.call()
 			.entity(
 				AnswerAssessment.class,

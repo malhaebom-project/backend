@@ -23,6 +23,7 @@ import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.infra.ai.OpenAiAnswerAssessmentGenerator;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 
 /**
@@ -56,8 +57,7 @@ class OpenAiAnswerAssessmentGeneratorLiveTest {
 
 		for (String answerText : List.of("yes", "Yes.", "YES!")) {
 			AnswerAssessment assessment = generator.generate(
-				elephantQuestion,
-				answerText
+				assessmentInput(elephantQuestion, answerText)
 			);
 
 			assertEquals(
@@ -80,8 +80,10 @@ class OpenAiAnswerAssessmentGeneratorLiveTest {
 	void 대표_문제와_답안을_실제_AI로_평가한다() {
 		for (LiveCase liveCase : liveCases()) {
 			AnswerAssessment assessment = generator.generate(
-				liveCase.question(),
-				liveCase.answerText()
+				assessmentInput(
+					liveCase.question(),
+					liveCase.answerText()
+				)
 			);
 
 			assertEquals(
@@ -232,6 +234,19 @@ class OpenAiAnswerAssessmentGeneratorLiveTest {
 			acceptedAnswers,
 			null,
 			null
+		);
+	}
+
+	private AnswerAssessmentInput assessmentInput(
+		Question question,
+		String answerText
+	) {
+		return new AnswerAssessmentInput(
+			question.getQuestionText(),
+			question.getQuestionTextKo(),
+			question.getModelAnswer(),
+			question.getAcceptedAnswers(),
+			answerText
 		);
 	}
 

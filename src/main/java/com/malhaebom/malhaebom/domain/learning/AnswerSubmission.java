@@ -174,6 +174,31 @@ public class AnswerSubmission extends BaseEntity {
 		this.failureMessage = failureMessage;
 	}
 
+	public void retry() {
+		if (status != AnswerSubmissionStatus.FAILED) {
+			throw new IllegalStateException("실패한 답변 제출 예약만 재시도할 수 있습니다.");
+		}
+
+		status = AnswerSubmissionStatus.PENDING;
+		answer = null;
+		processingToken = null;
+		leaseExpiresAt = null;
+		failureMessage = null;
+	}
+
+	public boolean isCompleted() {
+		return status == AnswerSubmissionStatus.COMPLETED;
+	}
+
+	public boolean isProcessing() {
+		return status == AnswerSubmissionStatus.PROCESSING;
+	}
+
+	public boolean isProcessingWithToken(String processingToken) {
+		return isProcessing()
+			&& Objects.equals(this.processingToken, processingToken);
+	}
+
 	public boolean isLeaseExpiredAt(Instant instant) {
 		Objects.requireNonNull(instant, "기준 시각은 null일 수 없습니다.");
 		return status == AnswerSubmissionStatus.PROCESSING

@@ -110,6 +110,37 @@ public class Answer extends BaseEntity {
 		return answer;
 	}
 
+	public static Answer create(
+		AnswerSubmission submission,
+		AnswerEvaluation evaluation,
+		String feedbackText
+	) {
+		if (submission == null) {
+			throw new IllegalArgumentException("답변 제출 예약은 null일 수 없습니다.");
+		}
+		validateCreation(
+			submission.getSessionQuestion(),
+			submission.getSpeechAnswer(),
+			submission.getAttemptNo(),
+			evaluation,
+			feedbackText
+		);
+
+		Answer answer = new Answer();
+		answer.sessionQuestion = submission.getSessionQuestion();
+		answer.speechAnswer = submission.getSpeechAnswer();
+		answer.attemptNo = submission.getAttemptNo();
+		answer.answerText = submission.getAnswerTextSnapshot();
+		answer.result = evaluation.result();
+		answer.meaningScore = evaluation.meaningScore();
+		answer.expressionScore = evaluation.expressionScore();
+		answer.grammarScore = evaluation.grammarScore();
+		answer.modelAnswerSnapshot = submission.getModelAnswerSnapshot();
+		answer.feedbackText = feedbackText;
+		answer.submittedAt = LocalDateTime.now();
+		return answer;
+	}
+
 	public boolean isCorrect() {
 		return result.isCorrect();
 	}

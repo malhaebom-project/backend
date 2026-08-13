@@ -1,0 +1,38 @@
+package com.malhaebom.malhaebom.service.dto;
+
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+public record AnswerAssessmentInput(
+	String questionText,
+	String questionTextKo,
+	String modelAnswer,
+	Set<String> acceptedAnswers,
+	String answerText
+) {
+
+	public AnswerAssessmentInput {
+		validateText(questionText, "영문 문제");
+		validateText(questionTextKo, "한글 문제");
+		validateText(modelAnswer, "모범 답안");
+		validateText(answerText, "학습자 답변");
+		if (acceptedAnswers == null) {
+			throw new IllegalArgumentException("허용 답안 목록은 null일 수 없습니다.");
+		}
+		if (acceptedAnswers.stream().anyMatch(
+			answer -> answer == null || answer.isBlank()
+		)) {
+			throw new IllegalArgumentException("허용 답안은 비어 있을 수 없습니다.");
+		}
+		acceptedAnswers = Collections.unmodifiableSet(
+			new LinkedHashSet<>(acceptedAnswers)
+		);
+	}
+
+	private static void validateText(String value, String fieldName) {
+		if (value == null || value.isBlank()) {
+			throw new IllegalArgumentException(fieldName + "은/는 비어 있을 수 없습니다.");
+		}
+	}
+}
