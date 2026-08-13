@@ -10,7 +10,9 @@ import com.google.cloud.speech.v2.RecognitionConfig;
 import com.google.cloud.speech.v2.RecognizeRequest;
 import com.google.cloud.speech.v2.RecognizeResponse;
 import com.google.cloud.speech.v2.RecognizerName;
+import com.google.cloud.speech.v2.PhraseSet;
 import com.google.cloud.speech.v2.SpeechClient;
+import com.google.cloud.speech.v2.SpeechAdaptation;
 import com.google.cloud.speech.v2.SpeechRecognitionAlternative;
 import com.google.protobuf.ByteString;
 import com.malhaebom.malhaebom.global.exception.ApiException;
@@ -25,10 +27,13 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 	public static final String PROVIDER = "GOOGLE_CLOUD_STT_V2";
 
 	private static final int CONFIDENCE_SCALE = 4;
+	private static final int MAX_ADAPTATION_PHRASES = 1_200;
+	private static final int MAX_PHRASE_LENGTH = 100;
 
 	private final SpeechClient client;
 	private final RecognitionConfig recognitionConfig;
 	private final String recognizer;
+	private final float adaptationBoost;
 
 	public GoogleSpeechV2Transcriber(
 		SpeechClient client,
@@ -38,6 +43,7 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 		this.client = client;
 		this.recognitionConfig = createRecognitionConfig(properties);
 		this.recognizer = createRecognizerName(properties, cloudProperties);
+		this.adaptationBoost = properties.adaptationBoost();
 	}
 
 	@Override
@@ -46,10 +52,13 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 	}
 
 	@Override
-	public SpeechTranscriptionResult transcribe(SpeechAudio audio) {
+	public SpeechTranscriptionResult transcribe(
+		SpeechAudio audio,
+		List<String> adaptationPhrases
+	) {
 		RecognizeRequest request = RecognizeRequest.newBuilder()
 			.setRecognizer(recognizer)
-			.setConfig(recognitionConfig)
+			.setConfig(createRequestConfig(adaptationPhrases))
 			.setContent(ByteString.copyFrom(audio.content()))
 			.build();
 
@@ -66,6 +75,38 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 		}
 
 		return normalize(response);
+	}
+
+	private RecognitionConfig createRequestConfig(
+		List<String> adaptationPhrases
+	) {
+		List<String> phrases = adaptationPhrases.stream()
+			.filter(phrase -> phrase != null && !phrase.isBlank())
+			.map(String::strip)
+			.filter(phrase -> phrase.length() <= MAX_PHRASE_LENGTH)
+			.distinct()
+			.limit(MAX_ADAPTATION_PHRASES)
+			.toList();
+		if (phrases.isEmpty()) {
+			return recognitionConfig;
+		}
+
+		PhraseSet.Builder phraseSet = PhraseSet.newBuilder();
+		phrases.stream()
+			.map(phrase -> PhraseSet.Phrase.newBuilder()
+				.setValue(phrase)
+				.setBoost(adaptationBoost)
+				.build())
+			.forEach(phraseSet::addPhrases);
+		SpeechAdaptation adaptation = SpeechAdaptation.newBuilder()
+			.addPhraseSets(
+				SpeechAdaptation.AdaptationPhraseSet.newBuilder()
+					.setInlinePhraseSet(phraseSet)
+			)
+			.build();
+		return recognitionConfig.toBuilder()
+			.setAdaptation(adaptation)
+			.build();
 	}
 
 	private SpeechTranscriptionResult normalize(RecognizeResponse response) {

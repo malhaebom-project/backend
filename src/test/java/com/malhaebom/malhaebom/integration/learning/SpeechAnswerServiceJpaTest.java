@@ -3,6 +3,9 @@ package com.malhaebom.malhaebom.integration.learning;
 import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.List;
+import java.util.Set;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,6 +77,10 @@ class SpeechAnswerServiceJpaTest {
 		));
 
 		assertApiException(ErrorCode.SPEECH_NOT_RECOGNIZED, this::upload);
+		assertEquals(
+			Set.of("He is running.", "He's running."),
+			Set.copyOf(transcriber.adaptationPhrases)
+		);
 		assertFailed(ErrorCode.SPEECH_NOT_RECOGNIZED.getMessage());
 	}
 
@@ -115,6 +122,7 @@ class SpeechAnswerServiceJpaTest {
 
 		private SpeechTranscriptionResult result;
 		private RuntimeException exception;
+		private List<String> adaptationPhrases;
 
 		void willReturn(SpeechTranscriptionResult result) {
 			this.result = result;
@@ -132,7 +140,11 @@ class SpeechAnswerServiceJpaTest {
 		}
 
 		@Override
-		public SpeechTranscriptionResult transcribe(SpeechAudio audio) {
+		public SpeechTranscriptionResult transcribe(
+			SpeechAudio audio,
+			List<String> adaptationPhrases
+		) {
+			this.adaptationPhrases = List.copyOf(adaptationPhrases);
 			if (exception != null) {
 				throw exception;
 			}

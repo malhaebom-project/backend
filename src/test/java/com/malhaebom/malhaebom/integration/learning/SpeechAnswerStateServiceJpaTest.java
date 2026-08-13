@@ -3,6 +3,8 @@ package com.malhaebom.malhaebom.integration.learning;
 import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -18,6 +20,7 @@ import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
 
 @DataJpaTest
 @Import({SpeechAnswerStateService.class, JpaAuditingConfiguration.class})
@@ -57,13 +60,18 @@ class SpeechAnswerStateServiceJpaTest {
 		LearningSession session = saveSession();
 		Long sessionQuestionId = currentQuestionId(session);
 
-		SpeechAnswer started = stateService.start(
+		SpeechAnswerStartResult startResult = stateService.start(
 			session.getId(),
 			sessionQuestionId,
 			REQUEST_KEY
 		);
+		SpeechAnswer started = startResult.speechAnswer();
 
 		assertEquals(1, started.getRecordingNo());
+		assertEquals(
+			List.of("He is running.", "He's running."),
+			startResult.adaptationPhrases().stream().sorted().toList()
+		);
 		assertEquals(
 			SpeechProcessingStatus.PROCESSING,
 			started.getProcessingStatus()
@@ -79,14 +87,14 @@ class SpeechAnswerStateServiceJpaTest {
 			session.getId(),
 			sessionQuestionId,
 			"first-request-key"
-		);
+		).speechAnswer();
 		stateService.fail(first.getId(), "인식 실패", STT_PROVIDER);
 
 		SpeechAnswer second = stateService.start(
 			session.getId(),
 			sessionQuestionId,
 			"second-request-key"
-		);
+		).speechAnswer();
 
 		assertEquals(2, second.getRecordingNo());
 		assertEquals(2, speechAnswerRepository.count());
@@ -100,7 +108,7 @@ class SpeechAnswerStateServiceJpaTest {
 			session.getId(),
 			sessionQuestionId,
 			REQUEST_KEY
-		);
+		).speechAnswer();
 		stateService.complete(
 			started.getId(),
 			"He is running.",
@@ -112,7 +120,7 @@ class SpeechAnswerStateServiceJpaTest {
 			session.getId(),
 			sessionQuestionId,
 			REQUEST_KEY
-		);
+		).speechAnswer();
 
 		assertEquals(started.getId(), resolved.getId());
 		assertEquals(SpeechProcessingStatus.COMPLETED, resolved.getProcessingStatus());
@@ -144,7 +152,7 @@ class SpeechAnswerStateServiceJpaTest {
 			session.getId(),
 			sessionQuestionId,
 			REQUEST_KEY
-		);
+		).speechAnswer();
 		stateService.fail(started.getId(), "STT 처리 실패", STT_PROVIDER);
 
 		assertApiException(

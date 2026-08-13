@@ -6,6 +6,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 
 @Validated
@@ -15,7 +17,9 @@ public record GoogleSpeechV2Properties(
 	@NotNull Duration timeout,
 	@NotBlank String location,
 	@NotBlank String recognizerId,
-	@NotBlank String model
+	@NotBlank String model,
+	@DecimalMin(value = "0.0", inclusive = false) @DecimalMax("20.0")
+	float adaptationBoost
 ) {
 
 	public GoogleSpeechV2Properties {
