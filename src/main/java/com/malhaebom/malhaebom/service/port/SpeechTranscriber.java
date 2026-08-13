@@ -1,5 +1,7 @@
 package com.malhaebom.malhaebom.service.port;
 
+import java.util.List;
+
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 
@@ -7,5 +9,8 @@ public interface SpeechTranscriber {
 
 	String provider();
 
-	SpeechTranscriptionResult transcribe(SpeechAudio audio);
+	SpeechTranscriptionResult transcribe(
+		SpeechAudio audio,
+		List<String> adaptationPhrases
+	);
 }

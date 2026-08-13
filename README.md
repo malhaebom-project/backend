@@ -101,6 +101,7 @@ google:
     location: global
     recognizer-id: _
     model: short
+    adaptation-boost: 5
   tts:
     language-code: en-US
     voice-name: en-US-Standard-C
@@ -167,6 +168,10 @@ macOS 및 Linux:
 준비됩니다. 로컬 프로필은 `config/google-credentials.json`, 운영 프로필은
 `/app/config/google-credentials.json`을 읽습니다. 경로 설정을 제거하면 Google Cloud
 Java 라이브러리의 ADC를 사용합니다.
+
+음성 답변 인식 요청에는 현재 문제의 허용 답안 목록이 inline PhraseSet으로
+포함됩니다. `google.stt.adaptation-boost`는 `0`보다 크고 `20` 이하여야 하며,
+기본 로컬·운영 설정은 기본값 `5`를 사용합니다.
 
 ## 테스트
 

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,7 +52,8 @@ class GoogleSpeechV2TranscriberTest {
 			Duration.ofSeconds(15),
 			"global",
 			"_",
-			"short"
+			"short",
+			5.0f
 		);
 		GoogleCloudProperties cloudProperties = new GoogleCloudProperties(
 			"malhaebom-504606",
@@ -72,7 +74,10 @@ class GoogleSpeechV2TranscriberTest {
 				alternative("running.", 0.86f)
 			));
 
-		SpeechTranscriptionResult result = transcriber.transcribe(AUDIO);
+		SpeechTranscriptionResult result = transcriber.transcribe(
+			AUDIO,
+			List.of("He is running.", "He's running.")
+		);
 
 		ArgumentCaptor<RecognizeRequest> requestCaptor =
 			ArgumentCaptor.forClass(RecognizeRequest.class);
@@ -89,6 +94,22 @@ class GoogleSpeechV2TranscriberTest {
 		assertThat(request.getConfig().getLanguageCodesList())
 			.containsExactly("en-US");
 		assertThat(request.getConfig().getModel()).isEqualTo("short");
+		assertThat(request.getConfig().hasAdaptation()).isTrue();
+		assertThat(
+			request.getConfig()
+				.getAdaptation()
+				.getPhraseSets(0)
+				.getInlinePhraseSet()
+				.getPhrasesList()
+		)
+			.extracting(
+				com.google.cloud.speech.v2.PhraseSet.Phrase::getValue,
+				com.google.cloud.speech.v2.PhraseSet.Phrase::getBoost
+			)
+			.containsExactly(
+				org.assertj.core.groups.Tuple.tuple("He is running.", 5.0f),
+				org.assertj.core.groups.Tuple.tuple("He's running.", 5.0f)
+			);
 		assertThat(result.transcript()).isEqualTo("He is running.");
 		assertThat(result.confidence()).isEqualTo(0.9);
 		assertThat(result.provider()).isEqualTo("GOOGLE_CLOUD_STT_V2");
@@ -102,10 +123,81 @@ class GoogleSpeechV2TranscriberTest {
 		when(client.recognize(any(RecognizeRequest.class)))
 			.thenReturn(response(alternative("Hello.", 0.0f)));
 
-		SpeechTranscriptionResult result = transcriber.transcribe(AUDIO);
+		SpeechTranscriptionResult result = transcriber.transcribe(
+			AUDIO,
+			List.of()
+		);
 
 		assertThat(result.transcript()).isEqualTo("Hello.");
 		assertThat(result.confidence()).isNull();
+	}
+
+	@Test
+	void 유효한_적응_문구가_없으면_adaptation을_설정하지_않는다() {
+		when(client.recognize(any(RecognizeRequest.class)))
+			.thenReturn(response(alternative("Hello.", 0.9f)));
+
+		transcriber.transcribe(AUDIO, List.of());
+
+		ArgumentCaptor<RecognizeRequest> requestCaptor =
+			ArgumentCaptor.forClass(RecognizeRequest.class);
+		verify(client).recognize(requestCaptor.capture());
+		assertThat(requestCaptor.getValue().getConfig().hasAdaptation())
+			.isFalse();
+	}
+
+	@Test
+	void 잘못된_문구와_중복을_제외하고_적응_문구를_구성한다() {
+		when(client.recognize(any(RecognizeRequest.class)))
+			.thenReturn(response(alternative("Hello.", 0.9f)));
+
+		transcriber.transcribe(
+			AUDIO,
+			java.util.Arrays.asList(
+				"  Hello world  ",
+				"Hello world",
+				" ",
+				null,
+				"a".repeat(101)
+			)
+		);
+
+		ArgumentCaptor<RecognizeRequest> requestCaptor =
+			ArgumentCaptor.forClass(RecognizeRequest.class);
+		verify(client).recognize(requestCaptor.capture());
+		assertThat(
+			requestCaptor.getValue()
+				.getConfig()
+				.getAdaptation()
+				.getPhraseSets(0)
+				.getInlinePhraseSet()
+				.getPhrasesList()
+		)
+			.extracting(com.google.cloud.speech.v2.PhraseSet.Phrase::getValue)
+			.containsExactly("Hello world");
+	}
+
+	@Test
+	void 적응_문구는_PhraseSet_한도까지만_사용한다() {
+		when(client.recognize(any(RecognizeRequest.class)))
+			.thenReturn(response(alternative("Hello.", 0.9f)));
+		List<String> phrases = java.util.stream.IntStream.range(0, 1_201)
+			.mapToObj(index -> "phrase " + index)
+			.toList();
+
+		transcriber.transcribe(AUDIO, phrases);
+
+		ArgumentCaptor<RecognizeRequest> requestCaptor =
+			ArgumentCaptor.forClass(RecognizeRequest.class);
+		verify(client).recognize(requestCaptor.capture());
+		assertThat(
+			requestCaptor.getValue()
+				.getConfig()
+				.getAdaptation()
+				.getPhraseSets(0)
+				.getInlinePhraseSet()
+				.getPhrasesCount()
+		).isEqualTo(1_200);
 	}
 
 	@Test
@@ -115,7 +207,7 @@ class GoogleSpeechV2TranscriberTest {
 
 		assertApiException(
 			ErrorCode.SPEECH_NOT_RECOGNIZED,
-			() -> transcriber.transcribe(AUDIO)
+			() -> transcriber.transcribe(AUDIO, List.of())
 		);
 	}
 
@@ -129,7 +221,7 @@ class GoogleSpeechV2TranscriberTest {
 
 		assertApiException(
 			ErrorCode.AI_REQUEST_LIMIT_EXCEEDED,
-			() -> transcriber.transcribe(AUDIO)
+			() -> transcriber.transcribe(AUDIO, List.of())
 		);
 	}
 
@@ -143,7 +235,7 @@ class GoogleSpeechV2TranscriberTest {
 
 		assertApiException(
 			ErrorCode.STT_PROCESSING_TIMEOUT,
-			() -> transcriber.transcribe(AUDIO)
+			() -> transcriber.transcribe(AUDIO, List.of())
 		);
 	}
 
@@ -157,7 +249,7 @@ class GoogleSpeechV2TranscriberTest {
 
 		assertApiException(
 			ErrorCode.STT_PROCESSING_FAILED,
-			() -> transcriber.transcribe(AUDIO)
+			() -> transcriber.transcribe(AUDIO, List.of())
 		);
 	}
 

@@ -45,6 +45,7 @@ google:
     location: global
     recognizer-id: _
     model: short
+    adaptation-boost: 5
   tts:
     enabled: false
     language-code: en-US

@@ -13,6 +13,7 @@ import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionReposit
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
 
 import lombok.RequiredArgsConstructor;
 
@@ -24,7 +25,7 @@ public class SpeechAnswerStateService {
 	private final SpeechAnswerRepository speechAnswerRepository;
 
 	@Transactional
-	public SpeechAnswer start(
+	public SpeechAnswerStartResult start(
 		Long sessionId,
 		Long sessionQuestionId,
 		String requestKey
@@ -40,11 +41,16 @@ public class SpeechAnswerStateService {
 		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
 		validateCurrentQuestion(currentQuestion, sessionQuestionId);
 
-		return speechAnswerRepository.findByRequestKey(requestKey)
+		SpeechAnswer speechAnswer = speechAnswerRepository
+			.findByRequestKey(requestKey)
 			.map(existing -> resolveExisting(existing, currentQuestion))
 			.orElseGet(
 				() -> create(currentQuestion, requestKey)
 			);
+		return new SpeechAnswerStartResult(
+			speechAnswer,
+			currentQuestion.getQuestion().getAcceptedAnswers().stream().toList()
+		);
 	}
 
 	private void validateInProgress(LearningSession session) {

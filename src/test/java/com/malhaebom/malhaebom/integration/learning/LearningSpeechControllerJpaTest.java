@@ -116,6 +116,10 @@ class LearningSpeechControllerJpaTest {
 		assertEquals(1, transcriber.callCount);
 		assertArrayEquals(audioContent, transcriber.audio.content());
 		assertEquals(
+			Set.of("He is running.", "He's running."),
+			Set.copyOf(transcriber.adaptationPhrases)
+		);
+		assertEquals(
 			"audio/webm;codecs=opus",
 			transcriber.audio.contentType()
 		);
@@ -261,11 +265,23 @@ class LearningSpeechControllerJpaTest {
 			"He is ____ing.",
 			null
 		));
+		Question otherQuestion = questionRepository.saveAndFlush(Question.create(
+			LearningTopic.DAILY_LIFE,
+			Difficulty.EASY,
+			QuestionType.PICTURE_DESCRIPTION,
+			"What is the girl doing?",
+			"여자아이는 무엇을 하고 있나요?",
+			null,
+			"The girl is sleeping.",
+			Set.of("She is sleeping.", "She's sleeping."),
+			"She is ____ing.",
+			null
+		));
 		return learningSessionRepository.saveAndFlush(LearningSession.create(
 			1L,
 			LearningTopic.DAILY_LIFE,
 			Difficulty.EASY,
-			List.of(question)
+			List.of(question, otherQuestion)
 		));
 	}
 
@@ -274,6 +290,7 @@ class LearningSpeechControllerJpaTest {
 
 		private int callCount;
 		private SpeechAudio audio;
+		private List<String> adaptationPhrases;
 
 		@Override
 		public String provider() {
@@ -281,9 +298,13 @@ class LearningSpeechControllerJpaTest {
 		}
 
 		@Override
-		public SpeechTranscriptionResult transcribe(SpeechAudio audio) {
+		public SpeechTranscriptionResult transcribe(
+			SpeechAudio audio,
+			List<String> adaptationPhrases
+		) {
 			callCount++;
 			this.audio = audio;
+			this.adaptationPhrases = List.copyOf(adaptationPhrases);
 			return new SpeechTranscriptionResult(
 				"He is running.",
 				0.94,

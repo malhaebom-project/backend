@@ -8,6 +8,7 @@ import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
@@ -29,11 +30,12 @@ public class SpeechAnswerService {
 	) {
 		Objects.requireNonNull(audio, "음성 파일은 null일 수 없습니다.");
 
-		SpeechAnswer started = stateService.start(
+		SpeechAnswerStartResult startResult = stateService.start(
 			sessionId,
 			sessionQuestionId,
 			requestKey
 		);
+		SpeechAnswer started = startResult.speechAnswer();
 		if (started.isCompleted()) {
 			return SpeechAnswerResult.from(started);
 		}
@@ -41,7 +43,10 @@ public class SpeechAnswerService {
 
 		SpeechTranscriptionResult result;
 		try {
-			result = transcriber.transcribe(audio);
+			result = transcriber.transcribe(
+				audio,
+				startResult.adaptationPhrases()
+			);
 			validateTranscript(result);
 		} catch (ApiException exception) {
 			stateService.fail(
