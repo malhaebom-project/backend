@@ -3,18 +3,22 @@ package com.malhaebom.malhaebom.service;
 import java.util.Objects;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.malhaebom.malhaebom.domain.learning.Answer;
+import com.malhaebom.malhaebom.domain.learning.AnswerAttemptPolicy;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
-import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
+import com.malhaebom.malhaebom.domain.learning.repository.AnswerSubmissionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
+import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation;
+import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation.Completed;
+import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation.Processing;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 
 import lombok.RequiredArgsConstructor;
@@ -23,67 +27,68 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class LearningAnswerService {
 
-	private static final int MAX_ATTEMPT_COUNT = 2;
-
 	private final LearningSessionRepository learningSessionRepository;
 	private final AnswerRepository answerRepository;
-	private final SpeechAnswerRepository speechAnswerRepository;
+	private final AnswerSubmissionRepository answerSubmissionRepository;
 	private final AnswerAssessmentService answerAssessmentService;
+	private final AnswerSubmissionTransactionService submissionTransactionService;
 
-	@Transactional
+	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public AnswerSubmissionResult submit(
 		Long sessionId,
 		Long sessionQuestionId,
 		Long speechAnswerId
 	) {
-		LearningSession session = learningSessionRepository
-			.findForUpdateById(sessionId)
-			.orElseThrow(() -> new ApiException(
-				ErrorCode.LEARNING_SESSION_NOT_FOUND
-			));
-		validateInProgress(session);
-		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
-		validateCurrentQuestion(currentQuestion, sessionQuestionId);
-		SpeechAnswer speechAnswer = getSpeechAnswer(speechAnswerId);
-		validateSpeechAnswer(speechAnswer, currentQuestion);
-		validateSpeechAnswerNotUsed(speechAnswerId);
+		AnswerSubmissionPreparation preparation = submissionTransactionService
+			.prepare(sessionId, sessionQuestionId, speechAnswerId);
+		return switch (preparation) {
+			case Completed completed -> completed.result();
+			case Processing processing -> assessAndComplete(processing);
+		};
+	}
 
-		int attemptNo = getNextAttemptNo(sessionQuestionId);
-		if (attemptNo > MAX_ATTEMPT_COUNT) {
+	private AnswerSubmissionResult assessAndComplete(Processing processing) {
+		AnswerAssessment assessment = assess(processing);
+		return complete(processing, assessment);
+	}
+
+	private AnswerAssessment assess(Processing processing) {
+		AnswerAssessment assessment;
+		try {
+			assessment = answerAssessmentService.assess(
+				processing.assessmentInput()
+			);
+		} catch (RuntimeException exception) {
+			fail(processing, exception);
 			throw new ApiException(
-				ErrorCode.INVALID_REQUEST,
-				"답변 가능 횟수를 초과했습니다."
+				ErrorCode.ANSWER_ASSESSMENT_FAILED,
+				exception
 			);
 		}
+		return assessment;
+	}
 
-		AnswerAssessment assessment = answerAssessmentService.assess(
-			currentQuestion.getQuestion(),
-			speechAnswer.getTranscript()
-		);
-		Answer answer = Answer.create(
-			currentQuestion,
-			speechAnswer,
-			attemptNo,
-			assessment.toEvaluation()
-		);
-		answerRepository.save(answer);
-
-		boolean canRetry = !answer.isCorrect()
-			&& attemptNo < MAX_ATTEMPT_COUNT;
-		if (canRetry) {
-			session.recordWrongAnswerAttempt();
-		} else {
-			session.completeCurrentQuestion(answer.isCorrect());
+	private AnswerSubmissionResult complete(
+		Processing processing,
+		AnswerAssessment assessment
+	) {
+		try {
+			return submissionTransactionService.complete(
+				processing.submissionId(),
+				processing.processingToken(),
+				assessment
+			);
+		} catch (RuntimeException exception) {
+			fail(processing, exception);
+			throw exception;
 		}
+	}
 
-		int remainingAttempts = canRetry
-			? MAX_ATTEMPT_COUNT - attemptNo
-			: 0;
-		return new AnswerSubmissionResult(
-			answer,
-			assessment,
-			canRetry,
-			remainingAttempts
+	private void fail(Processing processing, RuntimeException exception) {
+		submissionTransactionService.fail(
+			processing.submissionId(),
+			processing.processingToken(),
+			exception
 		);
 	}
 
@@ -97,6 +102,7 @@ public class LearningAnswerService {
 		validateInProgress(session);
 		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
 		validateCurrentQuestion(currentQuestion, sessionQuestionId);
+		validateNoConflictingSubmission(sessionQuestionId);
 
 		Answer latestAnswer = answerRepository
 			.findFirstBySessionQuestion_IdOrderByAttemptNoDesc(sessionQuestionId)
@@ -104,8 +110,7 @@ public class LearningAnswerService {
 				ErrorCode.INVALID_REQUEST,
 				"오답 제출 후에만 재시도를 건너뛸 수 있습니다."
 			));
-		if (latestAnswer.isCorrect()
-			|| latestAnswer.getAttemptNo() >= MAX_ATTEMPT_COUNT) {
+		if (!AnswerAttemptPolicy.canRetry(latestAnswer)) {
 			throw new ApiException(
 				ErrorCode.INVALID_REQUEST,
 				"재시도 가능한 오답이 아닙니다."
@@ -123,43 +128,11 @@ public class LearningAnswerService {
 		}
 	}
 
-	private SpeechAnswer getSpeechAnswer(Long speechAnswerId) {
-		return speechAnswerRepository.findById(speechAnswerId)
-			.orElseThrow(() -> new ApiException(
-				ErrorCode.SPEECH_ANSWER_NOT_FOUND
-			));
-	}
-
-	private void validateSpeechAnswer(
-		SpeechAnswer speechAnswer,
-		LearningSessionQuestion currentQuestion
-	) {
-		if (!speechAnswer.isCompleted()) {
-			throw new ApiException(
-				ErrorCode.INVALID_REQUEST,
-				"처리가 완료되지 않은 음성 답변입니다."
-			);
+	private void validateNoConflictingSubmission(Long sessionQuestionId) {
+		if (answerSubmissionRepository
+			.existsUnfinishedBySessionQuestionId(sessionQuestionId)) {
+			throw new ApiException(ErrorCode.ANSWER_SUBMISSION_CONFLICT);
 		}
-
-		if (!speechAnswer.isUsableFor(currentQuestion)) {
-			throw new ApiException(ErrorCode.CURRENT_QUESTION_MISMATCH);
-		}
-	}
-
-	private void validateSpeechAnswerNotUsed(Long speechAnswerId) {
-		if (answerRepository.existsBySpeechAnswer_Id(speechAnswerId)) {
-			throw new ApiException(
-				ErrorCode.INVALID_REQUEST,
-				"이미 답변 제출에 사용된 음성 답변입니다."
-			);
-		}
-	}
-
-	private int getNextAttemptNo(Long sessionQuestionId) {
-		return answerRepository
-			.findFirstBySessionQuestion_IdOrderByAttemptNoDesc(sessionQuestionId)
-			.map(answer -> answer.getAttemptNo() + 1)
-			.orElse(1);
 	}
 
 	private void validateCurrentQuestion(

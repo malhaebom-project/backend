@@ -74,6 +74,22 @@ public enum ErrorCode {
 		HttpStatus.CONFLICT,
 		"음성 답변을 처리하고 있습니다."
 	),
+	ANSWER_SUBMISSION_NOT_FOUND(
+		HttpStatus.NOT_FOUND,
+		"답변 제출 예약을 찾을 수 없습니다."
+	),
+	ANSWER_SUBMISSION_PROCESSING(
+		HttpStatus.CONFLICT,
+		"답변 제출을 처리하고 있습니다."
+	),
+	ANSWER_SUBMISSION_CONFLICT(
+		HttpStatus.CONFLICT,
+		"처리 중이거나 재시도할 답변 제출이 이미 있습니다."
+	),
+	ANSWER_ASSESSMENT_FAILED(
+		HttpStatus.BAD_GATEWAY,
+		"답변 채점에 실패했습니다. 잠시 후 다시 시도해 주세요."
+	),
 	SPEECH_NOT_RECOGNIZED(
 		HttpStatus.UNPROCESSABLE_CONTENT,
 		"음성을 인식하지 못했습니다."

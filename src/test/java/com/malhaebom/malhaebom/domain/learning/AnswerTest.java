@@ -14,6 +14,9 @@ import org.junit.jupiter.api.Test;
 
 class AnswerTest {
 
+	private static final String FEEDBACK_TEXT =
+		"현재진행형을 정확하게 사용했어요!";
+
 	@Test
 	void 정답_결과만_정답으로_판정한다() {
 		assertTrue(AnswerResult.CORRECT.isCorrect());
@@ -34,7 +37,8 @@ class AnswerTest {
 			sessionQuestion,
 			speechAnswer,
 			1,
-			AnswerEvaluation.from(AnswerResult.CORRECT)
+			AnswerEvaluation.from(AnswerResult.CORRECT),
+			FEEDBACK_TEXT
 		);
 
 		assertSame(sessionQuestion, answer.getSessionQuestion());
@@ -47,6 +51,7 @@ class AnswerTest {
 		assertEquals(30, answer.getExpressionScore());
 		assertEquals(20, answer.getGrammarScore());
 		assertEquals("The boy is running.", answer.getModelAnswerSnapshot());
+		assertEquals(FEEDBACK_TEXT, answer.getFeedbackText());
 		assertNotNull(answer.getSubmittedAt());
 		assertTrue(answer.isCorrect());
 	}
@@ -63,7 +68,8 @@ class AnswerTest {
 				40,
 				23,
 				15
-			)
+			),
+			FEEDBACK_TEXT
 		);
 
 		assertEquals(AnswerResult.PARTIALLY_CORRECT, answer.getResult());
@@ -101,7 +107,8 @@ class AnswerTest {
 				null,
 				speechAnswer,
 				1,
-				AnswerEvaluation.from(AnswerResult.CORRECT)
+				AnswerEvaluation.from(AnswerResult.CORRECT),
+				FEEDBACK_TEXT
 			)
 		);
 	}
@@ -121,7 +128,8 @@ class AnswerTest {
 				sessionQuestion,
 				speechAnswer,
 				2,
-				AnswerEvaluation.from(AnswerResult.CORRECT)
+				AnswerEvaluation.from(AnswerResult.CORRECT),
+				FEEDBACK_TEXT
 			)
 		);
 	}
@@ -141,7 +149,8 @@ class AnswerTest {
 				sessionQuestion,
 				speechAnswer,
 				1,
-				AnswerEvaluation.from(AnswerResult.INCORRECT)
+				AnswerEvaluation.from(AnswerResult.INCORRECT),
+				FEEDBACK_TEXT
 			)
 		);
 	}
@@ -161,7 +170,8 @@ class AnswerTest {
 				currentQuestion,
 				speechAnswer,
 				1,
-				AnswerEvaluation.from(AnswerResult.CORRECT)
+				AnswerEvaluation.from(AnswerResult.CORRECT),
+				FEEDBACK_TEXT
 			)
 		);
 	}
@@ -178,7 +188,8 @@ class AnswerTest {
 					"The boy is running."
 				),
 				0,
-				AnswerEvaluation.from(AnswerResult.CORRECT)
+				AnswerEvaluation.from(AnswerResult.CORRECT),
+				FEEDBACK_TEXT
 			)
 		);
 	}
@@ -195,7 +206,8 @@ class AnswerTest {
 					"The boy is running."
 				),
 				1,
-				null
+				null,
+				FEEDBACK_TEXT
 			)
 		);
 	}
@@ -208,7 +220,46 @@ class AnswerTest {
 				createSessionQuestion(),
 				null,
 				1,
-				AnswerEvaluation.from(AnswerResult.CORRECT)
+				AnswerEvaluation.from(AnswerResult.CORRECT),
+				FEEDBACK_TEXT
+			)
+		);
+	}
+
+	@Test
+	void 피드백_없이_답변을_생성할_수_없다() {
+		LearningSessionQuestion sessionQuestion = createSessionQuestion();
+
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> Answer.create(
+				sessionQuestion,
+				completedSpeechAnswer(
+					sessionQuestion,
+					"The boy is running."
+				),
+				1,
+				AnswerEvaluation.from(AnswerResult.CORRECT),
+				" "
+			)
+		);
+	}
+
+	@Test
+	void 피드백은_300자를_초과할_수_없다() {
+		LearningSessionQuestion sessionQuestion = createSessionQuestion();
+
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> Answer.create(
+				sessionQuestion,
+				completedSpeechAnswer(
+					sessionQuestion,
+					"The boy is running."
+				),
+				1,
+				AnswerEvaluation.from(AnswerResult.CORRECT),
+				"가".repeat(301)
 			)
 		);
 	}

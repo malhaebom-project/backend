@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
@@ -14,9 +15,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
+import jakarta.persistence.EntityManager;
+
 import com.malhaebom.malhaebom.domain.learning.Answer;
 import com.malhaebom.malhaebom.domain.learning.AnswerEvaluation;
 import com.malhaebom.malhaebom.domain.learning.AnswerResult;
+import com.malhaebom.malhaebom.domain.learning.AnswerSubmission;
+import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionStatus;
 import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
@@ -25,14 +30,17 @@ import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
+import com.malhaebom.malhaebom.domain.learning.repository.AnswerSubmissionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.AnswerAssessmentService;
+import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 
@@ -50,8 +58,13 @@ class LearningAnswerServiceJpaTest {
 	private SpeechAnswerRepository speechAnswerRepository;
 	@Autowired
 	private AnswerRepository answerRepository;
+	@Autowired
+	private AnswerSubmissionRepository answerSubmissionRepository;
+	@Autowired
+	private EntityManager entityManager;
 
 	private TestAnswerAssessmentGenerator assessmentGenerator;
+	private AnswerSubmissionTransactionService submissionTransactionService;
 	private LearningAnswerService learningAnswerService;
 
 	@BeforeEach
@@ -59,11 +72,18 @@ class LearningAnswerServiceJpaTest {
 		assessmentGenerator = new TestAnswerAssessmentGenerator();
 		AnswerAssessmentService assessmentService =
 			new AnswerAssessmentService(assessmentGenerator);
+		submissionTransactionService = new AnswerSubmissionTransactionService(
+			learningSessionRepository,
+			speechAnswerRepository,
+			answerRepository,
+			answerSubmissionRepository
+		);
 		learningAnswerService = new LearningAnswerService(
 			learningSessionRepository,
 			answerRepository,
-			speechAnswerRepository,
-			assessmentService
+			answerSubmissionRepository,
+			assessmentService,
+			submissionTransactionService
 		);
 	}
 
@@ -87,6 +107,15 @@ class LearningAnswerServiceJpaTest {
 		assertTrue(session.isCompleted());
 		assertFalse(result.canRetry());
 		assertEquals(0, result.remainingAttempts());
+
+		answerRepository.flush();
+		entityManager.clear();
+		Answer savedAnswer = answerRepository.findById(result.answer().getId())
+			.orElseThrow();
+		assertEquals(
+			"현재진행형을 정확하게 사용했어요!",
+			savedAnswer.getFeedbackText()
+		);
 	}
 
 	@Test
@@ -181,7 +210,8 @@ class LearningAnswerServiceJpaTest {
 			sessionQuestion,
 			speechAnswer,
 			1,
-			AnswerEvaluation.from(AnswerResult.INCORRECT)
+			AnswerEvaluation.from(AnswerResult.INCORRECT),
+			"다시 말해 보세요."
 		));
 
 		assertApiException(
@@ -194,6 +224,190 @@ class LearningAnswerServiceJpaTest {
 		);
 		assertEquals(0, assessmentGenerator.callCount);
 		assertEquals(1, answerRepository.count());
+	}
+
+	@Test
+	void 완료된_동일_제출은_다시_채점하지_않고_기존_결과를_반환한다() {
+		LearningSession session = saveSession();
+		LearningSessionQuestion question = session.getCurrentQuestion();
+		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(session);
+		assessmentGenerator.willReturn(correctAssessment());
+
+		AnswerSubmissionResult first = learningAnswerService.submit(
+			session.getId(),
+			question.getId(),
+			speechAnswer.getId()
+		);
+		AnswerSubmissionResult retried = learningAnswerService.submit(
+			session.getId(),
+			question.getId(),
+			speechAnswer.getId()
+		);
+
+		assertEquals(first.answer().getId(), retried.answer().getId());
+		assertEquals(1, assessmentGenerator.callCount);
+		assertEquals(1, answerRepository.count());
+		assertEquals(1, answerSubmissionRepository.count());
+		assertEquals(
+			AnswerSubmissionStatus.COMPLETED,
+			answerSubmissionRepository.findBySpeechAnswer_Id(
+				speechAnswer.getId()
+			).orElseThrow().getStatus()
+		);
+	}
+
+	@Test
+	void 채점_실패한_동일_제출은_기존_예약으로_재시도한다() {
+		LearningSession session = saveSession();
+		LearningSessionQuestion question = session.getCurrentQuestion();
+		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(session);
+		assessmentGenerator.willThrow(
+			new IllegalStateException("OpenAI timeout")
+		);
+
+		assertApiException(
+			ErrorCode.ANSWER_ASSESSMENT_FAILED,
+			() -> learningAnswerService.submit(
+				session.getId(),
+				question.getId(),
+				speechAnswer.getId()
+			)
+		);
+		AnswerSubmission failed = answerSubmissionRepository
+			.findBySpeechAnswer_Id(speechAnswer.getId())
+			.orElseThrow();
+		assertEquals(AnswerSubmissionStatus.FAILED, failed.getStatus());
+		assertEquals("OpenAI timeout", failed.getFailureMessage());
+		assertEquals(0, answerRepository.count());
+
+		assessmentGenerator.willReturn(correctAssessment());
+		AnswerSubmissionResult retried = learningAnswerService.submit(
+			session.getId(),
+			question.getId(),
+			speechAnswer.getId()
+		);
+
+		AnswerSubmission completed = answerSubmissionRepository
+			.findBySpeechAnswer_Id(speechAnswer.getId())
+			.orElseThrow();
+		assertEquals(failed.getId(), completed.getId());
+		assertEquals(AnswerSubmissionStatus.COMPLETED, completed.getStatus());
+		assertEquals(retried.answer().getId(), completed.getAnswer().getId());
+		assertEquals(2, assessmentGenerator.callCount);
+		assertEquals(1, answerRepository.count());
+		assertEquals(1, answerSubmissionRepository.count());
+	}
+
+	@Test
+	void 처리_중인_동일_제출은_중복_채점을_거부한다() {
+		LearningSession session = saveSession();
+		LearningSessionQuestion question = session.getCurrentQuestion();
+		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(session);
+		submissionTransactionService.prepare(
+			session.getId(),
+			question.getId(),
+			speechAnswer.getId()
+		);
+
+		assertApiException(
+			ErrorCode.ANSWER_SUBMISSION_PROCESSING,
+			() -> learningAnswerService.submit(
+				session.getId(),
+				question.getId(),
+				speechAnswer.getId()
+			)
+		);
+		assertEquals(0, assessmentGenerator.callCount);
+		assertEquals(0, answerRepository.count());
+	}
+
+	@Test
+	void 처리_임대가_만료된_동일_제출은_새_토큰으로_재시도한다() {
+		LearningSession session = saveSession();
+		LearningSessionQuestion question = session.getCurrentQuestion();
+		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(session);
+		AnswerSubmission submission = AnswerSubmission.reserve(
+			question,
+			speechAnswer,
+			1
+		);
+		Instant expiredAt = Instant.now().minusSeconds(1);
+		submission.claim(
+			"215bf1ca-03dc-4a7a-af56-09ad0cc26a24",
+			expiredAt.minusSeconds(60),
+			expiredAt
+		);
+		answerSubmissionRepository.saveAndFlush(submission);
+		assessmentGenerator.willReturn(correctAssessment());
+
+		AnswerSubmissionResult result = learningAnswerService.submit(
+			session.getId(),
+			question.getId(),
+			speechAnswer.getId()
+		);
+
+		assertTrue(result.answer().isCorrect());
+		assertEquals(1, assessmentGenerator.callCount);
+		assertEquals(
+			AnswerSubmissionStatus.COMPLETED,
+			answerSubmissionRepository.findById(submission.getId())
+				.orElseThrow()
+				.getStatus()
+		);
+	}
+
+	@Test
+	void 처리_중인_문제에_다른_음성_답변을_제출하면_충돌한다() {
+		LearningSession session = saveSession();
+		LearningSessionQuestion question = session.getCurrentQuestion();
+		SpeechAnswer first = saveCompletedSpeechAnswer(session, 1);
+		SpeechAnswer second = saveCompletedSpeechAnswer(session, 2);
+		submissionTransactionService.prepare(
+			session.getId(),
+			question.getId(),
+			first.getId()
+		);
+
+		assertApiException(
+			ErrorCode.ANSWER_SUBMISSION_CONFLICT,
+			() -> learningAnswerService.submit(
+				session.getId(),
+				question.getId(),
+				second.getId()
+			)
+		);
+		assertEquals(0, assessmentGenerator.callCount);
+		assertEquals(1, answerSubmissionRepository.count());
+	}
+
+	@Test
+	void 실패한_제출이_있으면_다른_음성_답변으로_시도_번호를_대체할_수_없다() {
+		LearningSession session = saveSession();
+		LearningSessionQuestion question = session.getCurrentQuestion();
+		SpeechAnswer first = saveCompletedSpeechAnswer(session, 1);
+		SpeechAnswer second = saveCompletedSpeechAnswer(session, 2);
+		assessmentGenerator.willThrow(
+			new IllegalStateException("OpenAI timeout")
+		);
+		assertApiException(
+			ErrorCode.ANSWER_ASSESSMENT_FAILED,
+			() -> learningAnswerService.submit(
+				session.getId(),
+				question.getId(),
+				first.getId()
+			)
+		);
+
+		assertApiException(
+			ErrorCode.ANSWER_SUBMISSION_CONFLICT,
+			() -> learningAnswerService.submit(
+				session.getId(),
+				question.getId(),
+				second.getId()
+			)
+		);
+		assertEquals(1, assessmentGenerator.callCount);
+		assertEquals(1, answerSubmissionRepository.count());
 	}
 
 	@Test
@@ -278,7 +492,8 @@ class LearningAnswerServiceJpaTest {
 			question,
 			speechAnswer,
 			1,
-			AnswerEvaluation.from(AnswerResult.CORRECT)
+			AnswerEvaluation.from(AnswerResult.CORRECT),
+			"정확하게 잘 말했어요!"
 		));
 
 		assertApiException(
@@ -328,10 +543,17 @@ class LearningAnswerServiceJpaTest {
 	}
 
 	private SpeechAnswer saveCompletedSpeechAnswer(LearningSession session) {
+		return saveCompletedSpeechAnswer(session, 1);
+	}
+
+	private SpeechAnswer saveCompletedSpeechAnswer(
+		LearningSession session,
+		int recordingNo
+	) {
 		SpeechAnswer speechAnswer = SpeechAnswer.start(
 			session.getCurrentQuestion(),
-			"request-key-" + session.getId(),
-			1
+			"request-key-" + session.getId() + "-" + recordingNo,
+			recordingNo
 		);
 		speechAnswer.complete(ANSWER_TEXT, 0.94, "TEST_STT");
 		return speechAnswerRepository.saveAndFlush(speechAnswer);
@@ -390,20 +612,27 @@ class LearningAnswerServiceJpaTest {
 		implements AnswerAssessmentGenerator {
 
 		private AnswerAssessment assessment;
+		private RuntimeException exception;
 		private String answerText;
 		private int callCount;
 
 		void willReturn(AnswerAssessment assessment) {
 			this.assessment = assessment;
+			exception = null;
+		}
+
+		void willThrow(RuntimeException exception) {
+			this.exception = exception;
+			assessment = null;
 		}
 
 		@Override
-		public AnswerAssessment generate(
-			Question question,
-			String answerText
-		) {
+		public AnswerAssessment generate(AnswerAssessmentInput input) {
 			callCount++;
-			this.answerText = answerText;
+			answerText = input.answerText();
+			if (exception != null) {
+				throw exception;
+			}
 			return assessment;
 		}
 	}
