@@ -3,13 +3,14 @@ package com.malhaebom.malhaebom.service;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.malhaebom.malhaebom.domain.learning.Answer;
+import com.malhaebom.malhaebom.domain.learning.AnswerAttemptPolicy;
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmission;
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionStatus;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
@@ -32,31 +33,24 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AnswerSubmissionTransactionService {
 
-	private static final int MAX_ATTEMPT_COUNT = 2;
 	private static final Duration PROCESSING_LEASE = Duration.ofSeconds(60);
-	private static final Set<AnswerSubmissionStatus> BLOCKING_STATUSES = Set.of(
-		AnswerSubmissionStatus.PENDING,
-		AnswerSubmissionStatus.PROCESSING,
-		AnswerSubmissionStatus.FAILED
-	);
 
 	private final LearningSessionRepository learningSessionRepository;
 	private final SpeechAnswerRepository speechAnswerRepository;
 	private final AnswerRepository answerRepository;
 	private final AnswerSubmissionRepository answerSubmissionRepository;
 
-	@Transactional
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public AnswerSubmissionPreparation prepare(
 		Long sessionId,
 		Long sessionQuestionId,
 		Long speechAnswerId
 	) {
-		AnswerSubmission existing = answerSubmissionRepository
-			.findBySpeechAnswer_Id(speechAnswerId)
-			.orElse(null);
-		if (existing != null) {
-			validateRequestPath(existing, sessionId, sessionQuestionId);
-		}
+		answerSubmissionRepository
+				.findBySpeechAnswer_Id(speechAnswerId)
+				.ifPresent(existing ->
+						validateRequestPath(existing, sessionId, sessionQuestionId)
+				);
 
 		LearningSession session = getSessionForUpdate(sessionId);
 		AnswerSubmission lockedExisting = answerSubmissionRepository
@@ -87,7 +81,7 @@ public class AnswerSubmissionTransactionService {
 		return claim(submission, Instant.now());
 	}
 
-	@Transactional
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public AnswerSubmissionResult complete(
 		Long submissionId,
 		String processingToken,
@@ -110,8 +104,7 @@ public class AnswerSubmissionTransactionService {
 			assessment.toEvaluation(),
 			assessment.feedbackText()
 		));
-		boolean canRetry = !answer.isCorrect()
-			&& submission.getAttemptNo() < MAX_ATTEMPT_COUNT;
+		boolean canRetry = AnswerAttemptPolicy.canRetry(answer);
 		if (canRetry) {
 			session.recordWrongAnswerAttempt();
 		} else {
@@ -119,10 +112,10 @@ public class AnswerSubmissionTransactionService {
 		}
 		submission.complete(processingToken, answer);
 
-		return toResult(answer);
+		return AnswerSubmissionResult.from(answer);
 	}
 
-	@Transactional
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void fail(
 		Long submissionId,
 		String processingToken,
@@ -152,7 +145,7 @@ public class AnswerSubmissionTransactionService {
 		if (submission.isCompleted()) {
 			return AnswerSubmissionPreparation.completed(
 				submission.getId(),
-				toResult(submission.getAnswer())
+				AnswerSubmissionResult.from(submission.getAnswer())
 			);
 		}
 
@@ -185,29 +178,7 @@ public class AnswerSubmissionTransactionService {
 		return AnswerSubmissionPreparation.processing(
 			submission.getId(),
 			processingToken,
-			new AnswerAssessmentInput(
-				submission.getQuestionTextSnapshot(),
-				submission.getQuestionTextKoSnapshot(),
-				submission.getModelAnswerSnapshot(),
-				submission.getAcceptedAnswersSnapshot(),
-				submission.getAnswerTextSnapshot()
-			)
-		);
-	}
-
-	private AnswerSubmissionResult toResult(Answer answer) {
-		if (answer == null) {
-			throw new IllegalStateException("완료된 답변 제출에 답변 결과가 없습니다.");
-		}
-		boolean canRetry = !answer.isCorrect()
-			&& answer.getAttemptNo() < MAX_ATTEMPT_COUNT;
-		int remainingAttempts = canRetry
-			? MAX_ATTEMPT_COUNT - answer.getAttemptNo()
-			: 0;
-		return new AnswerSubmissionResult(
-			answer,
-			canRetry,
-			remainingAttempts
+			AnswerAssessmentInput.from(submission)
 		);
 	}
 
@@ -225,10 +196,7 @@ public class AnswerSubmissionTransactionService {
 
 	private void validateNoConflictingSubmission(Long sessionQuestionId) {
 		if (answerSubmissionRepository
-			.existsBySessionQuestion_IdAndStatusIn(
-				sessionQuestionId,
-				BLOCKING_STATUSES
-			)) {
+			.existsUnfinishedBySessionQuestionId(sessionQuestionId)) {
 			throw new ApiException(ErrorCode.ANSWER_SUBMISSION_CONFLICT);
 		}
 	}
@@ -243,7 +211,7 @@ public class AnswerSubmissionTransactionService {
 	}
 
 	private void validateAttemptCount(int attemptNo) {
-		if (attemptNo > MAX_ATTEMPT_COUNT) {
+		if (!AnswerAttemptPolicy.isAllowed(attemptNo)) {
 			throw new ApiException(
 				ErrorCode.INVALID_REQUEST,
 				"답변 가능 횟수를 초과했습니다."

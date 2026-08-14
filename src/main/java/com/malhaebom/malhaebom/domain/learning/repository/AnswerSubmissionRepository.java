@@ -1,6 +1,5 @@
 package com.malhaebom.malhaebom.domain.learning.repository;
 
-import java.util.Collection;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,10 +17,19 @@ public interface AnswerSubmissionRepository
 
 	Optional<AnswerSubmission> findBySpeechAnswer_Id(Long speechAnswerId);
 
-	boolean existsBySessionQuestion_IdAndStatusIn(
+	boolean existsBySessionQuestion_IdAndStatusNot(
 		Long sessionQuestionId,
-		Collection<AnswerSubmissionStatus> statuses
+		AnswerSubmissionStatus status
 	);
+
+	default boolean existsUnfinishedBySessionQuestionId(
+		Long sessionQuestionId
+	) {
+		return existsBySessionQuestion_IdAndStatusNot(
+			sessionQuestionId,
+			AnswerSubmissionStatus.COMPLETED
+		);
+	}
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("""
