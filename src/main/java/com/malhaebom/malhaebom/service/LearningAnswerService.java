@@ -17,6 +17,8 @@ import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation;
+import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation.Completed;
+import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation.Processing;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 
 import lombok.RequiredArgsConstructor;
@@ -46,41 +48,55 @@ public class LearningAnswerService {
 	) {
 		AnswerSubmissionPreparation preparation = submissionTransactionService
 			.prepare(sessionId, sessionQuestionId, speechAnswerId);
-		if (!preparation.requiresAssessment()) {
-			return preparation.completedResult();
-		}
+		return switch (preparation) {
+			case Completed completed -> completed.result();
+			case Processing processing -> assessAndComplete(processing);
+		};
+	}
 
+	private AnswerSubmissionResult assessAndComplete(Processing processing) {
+		AnswerAssessment assessment = assess(processing);
+		return complete(processing, assessment);
+	}
+
+	private AnswerAssessment assess(Processing processing) {
 		AnswerAssessment assessment;
 		try {
 			assessment = answerAssessmentService.assess(
-				preparation.assessmentInput()
+				processing.assessmentInput()
 			);
 		} catch (RuntimeException exception) {
-			submissionTransactionService.fail(
-				preparation.submissionId(),
-				preparation.processingToken(),
-				exception
-			);
+			fail(processing, exception);
 			throw new ApiException(
 				ErrorCode.ANSWER_ASSESSMENT_FAILED,
 				exception
 			);
 		}
+		return assessment;
+	}
 
+	private AnswerSubmissionResult complete(
+		Processing processing,
+		AnswerAssessment assessment
+	) {
 		try {
 			return submissionTransactionService.complete(
-				preparation.submissionId(),
-				preparation.processingToken(),
+				processing.submissionId(),
+				processing.processingToken(),
 				assessment
 			);
 		} catch (RuntimeException exception) {
-			submissionTransactionService.fail(
-				preparation.submissionId(),
-				preparation.processingToken(),
-				exception
-			);
+			fail(processing, exception);
 			throw exception;
 		}
+	}
+
+	private void fail(Processing processing, RuntimeException exception) {
+		submissionTransactionService.fail(
+			processing.submissionId(),
+			processing.processingToken(),
+			exception
+		);
 	}
 
 	@Transactional

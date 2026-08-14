@@ -3,6 +3,7 @@ package com.malhaebom.malhaebom.integration.learning;
 import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -41,7 +42,7 @@ import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
-import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation;
+import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation.Processing;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 
@@ -173,24 +174,28 @@ class LearningAnswerConcurrencyJpaTest {
 		LearningSession session = saveSession();
 		LearningSessionQuestion question = session.getCurrentQuestion();
 		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(question, 1);
-		AnswerSubmissionPreparation expired = submissionTransactionService
-			.prepare(
+		Processing expired = assertInstanceOf(
+			Processing.class,
+			submissionTransactionService.prepare(
 				session.getId(),
 				question.getId(),
 				speechAnswer.getId()
-			);
+			)
+		);
 		int updatedRows = jdbcTemplate.update(
 			"update answer_submissions set lease_expires_at = ? where id = ?",
 			Timestamp.from(Instant.now().minusSeconds(1)),
 			expired.submissionId()
 		);
 
-		AnswerSubmissionPreparation reclaimed = submissionTransactionService
-			.prepare(
+		Processing reclaimed = assertInstanceOf(
+			Processing.class,
+			submissionTransactionService.prepare(
 				session.getId(),
 				question.getId(),
 				speechAnswer.getId()
-			);
+			)
+		);
 
 		assertEquals(1, updatedRows);
 		assertEquals(expired.submissionId(), reclaimed.submissionId());

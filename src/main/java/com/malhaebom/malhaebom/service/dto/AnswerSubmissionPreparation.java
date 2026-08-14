@@ -1,54 +1,55 @@
 package com.malhaebom.malhaebom.service.dto;
 
-public record AnswerSubmissionPreparation(
-	Long submissionId,
-	String processingToken,
-	AnswerAssessmentInput assessmentInput,
-	AnswerSubmissionResult completedResult
-) {
+import java.util.Objects;
 
-	public AnswerSubmissionPreparation {
-		boolean processing = submissionId != null
-			&& processingToken != null
-			&& assessmentInput != null
-			&& completedResult == null;
-		boolean completed = submissionId != null
-			&& processingToken == null
-			&& assessmentInput == null
-			&& completedResult != null;
-		if (!processing && !completed) {
-			throw new IllegalArgumentException(
-				"처리 작업 또는 완료 결과 중 하나만 필요합니다."
-			);
-		}
-	}
+public sealed interface AnswerSubmissionPreparation
+	permits AnswerSubmissionPreparation.Processing,
+	AnswerSubmissionPreparation.Completed {
 
-	public static AnswerSubmissionPreparation processing(
+	Long submissionId();
+
+	static Processing processing(
 		Long submissionId,
 		String processingToken,
 		AnswerAssessmentInput assessmentInput
 	) {
-		return new AnswerSubmissionPreparation(
+		return new Processing(
 			submissionId,
 			processingToken,
-			assessmentInput,
-			null
+			assessmentInput
 		);
 	}
 
-	public static AnswerSubmissionPreparation completed(
+	static Completed completed(
 		Long submissionId,
-		AnswerSubmissionResult completedResult
+		AnswerSubmissionResult result
 	) {
-		return new AnswerSubmissionPreparation(
-			submissionId,
-			null,
-			null,
-			completedResult
-		);
+		return new Completed(submissionId, result);
 	}
 
-	public boolean requiresAssessment() {
-		return assessmentInput != null;
+	record Processing(
+		Long submissionId,
+		String processingToken,
+		AnswerAssessmentInput assessmentInput
+	) implements AnswerSubmissionPreparation {
+
+		public Processing {
+			Objects.requireNonNull(submissionId, "답변 제출 예약 ID는 null일 수 없습니다.");
+			if (processingToken == null || processingToken.isBlank()) {
+				throw new IllegalArgumentException("처리 토큰은 비어 있을 수 없습니다.");
+			}
+			Objects.requireNonNull(assessmentInput, "채점 입력은 null일 수 없습니다.");
+		}
+	}
+
+	record Completed(
+		Long submissionId,
+		AnswerSubmissionResult result
+	) implements AnswerSubmissionPreparation {
+
+		public Completed {
+			Objects.requireNonNull(submissionId, "답변 제출 예약 ID는 null일 수 없습니다.");
+			Objects.requireNonNull(result, "완료된 답변 결과는 null일 수 없습니다.");
+		}
 	}
 }
