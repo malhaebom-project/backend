@@ -8,14 +8,14 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
 import com.google.api.gax.core.CredentialsProvider;
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.speech.v2.SpeechClient;
 import com.google.cloud.speech.v2.SpeechSettings;
-import com.malhaebom.malhaebom.infra.gcp.GoogleCloudProperties;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnProperty(
-	prefix = "google.stt",
+	prefix = "gcp.stt",
 	name = "enabled",
 	havingValue = "true"
 )
@@ -50,12 +50,14 @@ public class GoogleSpeechV2Configuration {
 	SpeechTranscriber googleSpeechV2Transcriber(
 		SpeechClient client,
 		GoogleSpeechV2Properties properties,
-		GoogleCloudProperties cloudProperties
-	) {
+		CredentialsProvider credentialsProvider
+	) throws IOException {
+		GoogleCredentials credentials = (GoogleCredentials)
+			credentialsProvider.getCredentials();
 		return new GoogleSpeechV2Transcriber(
 			client,
 			properties,
-			cloudProperties
+			credentials.getProjectId()
 		);
 	}
 }

@@ -14,7 +14,7 @@ import com.google.cloud.texttospeech.v1.TextToSpeechSettings;
 @Configuration
 @EnableConfigurationProperties(GoogleTextToSpeechProperties.class)
 @ConditionalOnProperty(
-	prefix = "google.tts",
+	prefix = "gcp.tts",
 	name = "enabled",
 	havingValue = "true"
 )

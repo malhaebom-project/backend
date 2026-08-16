@@ -11,7 +11,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 
 @Validated
-@ConfigurationProperties(prefix = "google.stt")
+@ConfigurationProperties(prefix = "gcp.stt")
 public record GoogleSpeechV2Properties(
 	@NotBlank String languageCode,
 	@NotNull Duration timeout,

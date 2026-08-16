@@ -3,7 +3,7 @@ malhaebom:
     jwt:
       secret-base64: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
 
-google:
+gcp:
   stt:
     enabled: false
 
