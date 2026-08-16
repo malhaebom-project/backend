@@ -2,7 +2,7 @@ package com.malhaebom.malhaebom.infra.tts;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "google.tts")
+@ConfigurationProperties(prefix = "gcp.tts")
 public record GoogleTextToSpeechProperties(
 	String languageCode,
 	String voiceName,

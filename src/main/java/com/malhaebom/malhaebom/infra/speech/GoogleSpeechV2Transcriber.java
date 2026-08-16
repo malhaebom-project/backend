@@ -17,7 +17,6 @@ import com.google.cloud.speech.v2.SpeechRecognitionAlternative;
 import com.google.protobuf.ByteString;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.infra.gcp.GoogleCloudProperties;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
@@ -38,11 +37,11 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 	public GoogleSpeechV2Transcriber(
 		SpeechClient client,
 		GoogleSpeechV2Properties properties,
-		GoogleCloudProperties cloudProperties
+		String projectId
 	) {
 		this.client = client;
 		this.recognitionConfig = createRecognitionConfig(properties);
-		this.recognizer = createRecognizerName(properties, cloudProperties);
+		this.recognizer = createRecognizerName(properties, projectId);
 		this.adaptationBoost = properties.adaptationBoost();
 	}
 
@@ -192,10 +191,10 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 
 	private static String createRecognizerName(
 		GoogleSpeechV2Properties properties,
-		GoogleCloudProperties cloudProperties
+		String projectId
 	) {
 		return RecognizerName.of(
-			cloudProperties.projectId(),
+			projectId,
 			properties.location(),
 			properties.recognizerId()
 		).toString();

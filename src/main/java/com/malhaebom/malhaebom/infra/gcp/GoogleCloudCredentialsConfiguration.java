@@ -14,7 +14,7 @@ import com.google.api.gax.core.GoogleCredentialsProvider;
 import com.google.auth.oauth2.GoogleCredentials;
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(GoogleCloudProperties.class)
+@EnableConfigurationProperties(GcpCredentialsProperties.class)
 public class GoogleCloudCredentialsConfiguration {
 
 	private static final List<String> CLOUD_PLATFORM_SCOPE = List.of(
@@ -23,18 +23,15 @@ public class GoogleCloudCredentialsConfiguration {
 
 	@Bean
 	CredentialsProvider googleCloudCredentialsProvider(
-		GoogleCloudProperties properties
+		GcpCredentialsProperties properties
 	) throws IOException {
-		if (properties.credentials() == null
-			|| properties.credentials().location() == null) {
+		if (properties.credentials() == null) {
 			return GoogleCredentialsProvider.newBuilder()
 				.setScopesToApply(CLOUD_PLATFORM_SCOPE)
 				.build();
 		}
 
-		try (InputStream input = properties.credentials()
-			.location()
-			.getInputStream()) {
+		try (InputStream input = properties.credentials().getInputStream()) {
 			GoogleCredentials credentials = GoogleCredentials.fromStream(input)
 				.createScoped(CLOUD_PLATFORM_SCOPE);
 			return FixedCredentialsProvider.create(credentials);

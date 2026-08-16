@@ -25,7 +25,6 @@ import com.google.cloud.speech.v2.SpeechRecognitionAlternative;
 import com.google.cloud.speech.v2.SpeechRecognitionResult;
 import com.google.protobuf.ByteString;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.infra.gcp.GoogleCloudProperties;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 
@@ -55,14 +54,10 @@ class GoogleSpeechV2TranscriberTest {
 			"short",
 			5.0f
 		);
-		GoogleCloudProperties cloudProperties = new GoogleCloudProperties(
-			"malhaebom-504606",
-			null
-		);
 		transcriber = new GoogleSpeechV2Transcriber(
 			client,
 			properties,
-			cloudProperties
+			"malhaebom-504606"
 		);
 	}
 
