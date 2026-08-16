@@ -9,10 +9,6 @@ spring:
     hibernate:
       ddl-auto: update
 
-cookie:
-  refresh-token:
-    domain:
-
 malhaebom:
   cors:
     allowed-origins: https://frontend-eight-psi-26.vercel.app
