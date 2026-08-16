@@ -41,9 +41,9 @@ google:
     enabled: true
     language-code: en-US
     timeout: 15s
-    location: global
+    location: us
     recognizer-id: _
-    model: short
+    model: chirp_3
     adaptation-boost: 5
   tts:
     enabled: false
