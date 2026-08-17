@@ -58,6 +58,7 @@ class OpenAiAnswerAssessmentGeneratorLiveTest {
 		for (String answerText : List.of("yes", "Yes.", "YES!")) {
 			AnswerAssessment assessment = generator
 				.generateAsync(assessmentInput(elephantQuestion, answerText))
+				.result()
 				.toCompletableFuture()
 				.join();
 
@@ -85,6 +86,7 @@ class OpenAiAnswerAssessmentGeneratorLiveTest {
 					liveCase.question(),
 					liveCase.answerText()
 				))
+				.result()
 				.toCompletableFuture()
 				.join();
 

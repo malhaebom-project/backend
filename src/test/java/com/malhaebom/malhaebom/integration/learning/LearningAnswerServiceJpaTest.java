@@ -47,6 +47,7 @@ import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 import com.malhaebom.malhaebom.service.policy.AnswerSubmissionPolicyProperties;
@@ -79,6 +80,7 @@ class LearningAnswerServiceJpaTest {
 		assessmentGenerator = new TestAnswerAssessmentGenerator();
 		AnswerAssessmentService assessmentService =
 			new AnswerAssessmentService(assessmentGenerator);
+		Clock clock = Clock.systemUTC();
 		submissionTransactionService = new AnswerSubmissionTransactionService(
 			learningSessionRepository,
 			speechAnswerRepository,
@@ -88,14 +90,15 @@ class LearningAnswerServiceJpaTest {
 				Duration.ofSeconds(25),
 				Duration.ofSeconds(60)
 			),
-			Clock.systemUTC()
+			clock
 		);
 		learningAnswerService = new LearningAnswerService(
 			learningSessionRepository,
 			answerRepository,
 			answerSubmissionRepository,
 			assessmentService,
-			submissionTransactionService
+			submissionTransactionService,
+			clock
 		);
 	}
 
@@ -708,12 +711,15 @@ class LearningAnswerServiceJpaTest {
 		}
 
 		@Override
-		public CompletionStage<AnswerAssessment> generateAsync(
+		public AnswerAssessmentTask generateAsync(
 			AnswerAssessmentInput input
 		) {
 			callCount++;
 			answerText = input.answerText();
-			return stage;
+			return new AnswerAssessmentTask(
+				stage,
+				() -> stage.toCompletableFuture().cancel(true)
+			);
 		}
 	}
 }

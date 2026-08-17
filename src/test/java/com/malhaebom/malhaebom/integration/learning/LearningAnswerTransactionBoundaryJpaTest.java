@@ -24,6 +24,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,11 +48,15 @@ import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 
 @DataJpaTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
+@TestPropertySource(properties =
+	"malhaebom.answer-submission.processing-timeout=1s"
+)
 @Import({
 	JpaAuditingConfiguration.class,
 	LearningAnswerService.class,
@@ -224,6 +229,53 @@ class LearningAnswerTransactionBoundaryJpaTest {
 	}
 
 	@Test
+	void 작업_기한이_만료되면_채점을_취소하고_예약을_실패시킨다() {
+		LearningSession session = LearningJpaTestFixture.saveSession(
+			questionRepository,
+			learningSessionRepository,
+			"He is ____ing."
+		);
+		LearningSessionQuestion question = session.getCurrentQuestion();
+		SpeechAnswer speechAnswer = SpeechAnswer.start(
+			question,
+			"timeout-cancellation-request",
+			1
+		);
+		speechAnswer.complete("He is running.", 0.94, "TEST_STT");
+		speechAnswerRepository.saveAndFlush(speechAnswer);
+		CompletableFuture<AnswerAssessment> assessment =
+			new CompletableFuture<>();
+		assessmentGenerator.willReturn(assessment);
+
+		CompletionStage<AnswerSubmissionResult> submission =
+			learningAnswerService.submitAsync(
+				session.getId(),
+				question.getId(),
+				speechAnswer.getId()
+			);
+		assertFalse(submission.toCompletableFuture().isDone());
+
+		assertApiException(
+			ErrorCode.ANSWER_SUBMISSION_TIMEOUT,
+			() -> await(submission)
+		);
+
+		AnswerSubmission failed = answerSubmissionRepository
+			.findBySpeechAnswer_Id(speechAnswer.getId())
+			.orElseThrow();
+		assertTrue(assessment.isCancelled());
+		assertEquals(1, assessmentGenerator.cancellationCount);
+		assertEquals(AnswerSubmissionStatus.FAILED, failed.getStatus());
+		assertEquals(
+			ErrorCode.ANSWER_SUBMISSION_TIMEOUT.getMessage(),
+			failed.getFailureMessage()
+		);
+		assertFalse(answerRepository.existsBySpeechAnswer_Id(
+			speechAnswer.getId()
+		));
+	}
+
+	@Test
 	void 상위_트랜잭션에서_호출해도_채점_구간은_트랜잭션을_중단한다() {
 		LearningSession session = LearningJpaTestFixture.saveSession(
 			questionRepository,
@@ -291,12 +343,16 @@ class LearningAnswerTransactionBoundaryJpaTest {
 		Long sessionQuestionId,
 		Long speechAnswerId
 	) {
+		return await(learningAnswerService.submitAsync(
+			sessionId,
+			sessionQuestionId,
+			speechAnswerId
+		));
+	}
+
+	private <T> T await(CompletionStage<T> stage) {
 		try {
-			return learningAnswerService.submitAsync(
-				sessionId,
-				sessionQuestionId,
-				speechAnswerId
-			).toCompletableFuture().join();
+			return stage.toCompletableFuture().join();
 		} catch (CompletionException exception) {
 			if (exception.getCause() instanceof RuntimeException cause) {
 				throw cause;
@@ -326,17 +382,30 @@ class LearningAnswerTransactionBoundaryJpaTest {
 		private AnswerAssessment assessment;
 		private RuntimeException exception;
 		private Runnable afterGenerate;
+		private CompletionStage<AnswerAssessment> stage;
+		private int cancellationCount;
 
 		void reset() {
 			transactionStates.clear();
 			assessment = null;
 			exception = null;
+			stage = null;
+			cancellationCount = 0;
 			afterGenerate = () -> {
 			};
 		}
 
 		void willReturn(AnswerAssessment assessment) {
 			this.assessment = assessment;
+			exception = null;
+			stage = null;
+			afterGenerate = () -> {
+			};
+		}
+
+		void willReturn(CompletionStage<AnswerAssessment> stage) {
+			this.stage = stage;
+			assessment = null;
 			exception = null;
 			afterGenerate = () -> {
 			};
@@ -345,27 +414,35 @@ class LearningAnswerTransactionBoundaryJpaTest {
 		void willReturnThen(AnswerAssessment assessment, Runnable afterGenerate) {
 			this.assessment = assessment;
 			exception = null;
+			stage = null;
 			this.afterGenerate = afterGenerate;
 		}
 
 		void willThrow(RuntimeException exception) {
 			this.exception = exception;
 			assessment = null;
+			stage = null;
 			afterGenerate = () -> {
 			};
 		}
 
 		@Override
-		public CompletionStage<AnswerAssessment> generateAsync(
+		public AnswerAssessmentTask generateAsync(
 			AnswerAssessmentInput input
 		) {
 			transactionStates.add(TransactionSynchronizationManager
 				.isActualTransactionActive());
 			if (exception != null) {
-				return CompletableFuture.failedFuture(exception);
+				stage = CompletableFuture.failedFuture(exception);
+			} else if (stage == null) {
+				afterGenerate.run();
+				stage = CompletableFuture.completedFuture(assessment);
 			}
-			afterGenerate.run();
-			return CompletableFuture.completedFuture(assessment);
+			CompletionStage<AnswerAssessment> taskStage = stage;
+			return new AnswerAssessmentTask(taskStage, () -> {
+				cancellationCount++;
+				return taskStage.toCompletableFuture().cancel(true);
+			});
 		}
 	}
 

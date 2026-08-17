@@ -37,6 +37,7 @@ import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 
 class OpenAiAnswerAssessmentGeneratorTest {
 
@@ -47,6 +48,7 @@ class OpenAiAnswerAssessmentGeneratorTest {
 
 		CompletableFuture<AnswerAssessment> assessmentFuture = generator
 			.generateAsync(assessmentInput("He is running."))
+			.result()
 			.toCompletableFuture();
 
 		assertFalse(assessmentFuture.isDone());
@@ -74,6 +76,7 @@ class OpenAiAnswerAssessmentGeneratorTest {
 
 		CompletableFuture<AnswerAssessment> assessmentFuture = generator
 			.generateAsync(assessmentInput("He is running."))
+			.result()
 			.toCompletableFuture();
 		fixture.response().completeExceptionally(failure);
 
@@ -106,9 +109,11 @@ class OpenAiAnswerAssessmentGeneratorTest {
 
 		CompletableFuture<AnswerAssessment> first = generator
 			.generateAsync(assessmentInput("He is running."))
+			.result()
 			.toCompletableFuture();
 		CompletableFuture<AnswerAssessment> rejected = generator
 			.generateAsync(assessmentInput("He is running."))
+			.result()
 			.toCompletableFuture();
 
 		CompletionException exception = assertThrows(
@@ -130,8 +135,30 @@ class OpenAiAnswerAssessmentGeneratorTest {
 		fixture.response().complete(chatCompletion());
 		first.join();
 		generator.generateAsync(assessmentInput("He is running."))
+			.result()
 			.toCompletableFuture()
 			.join();
+		verify(fixture.completions(), times(2)).create(
+			any(ChatCompletionCreateParams.class)
+		);
+	}
+
+	@Test
+	void 채점_작업을_취소하면_OpenAI_HTTP_요청을_취소하고_자리를_반환한다() {
+		AsyncClientFixture fixture = asyncClientFixture();
+		OpenAiAnswerAssessmentGenerator generator = generator(
+			fixture.client(),
+			1
+		);
+		AnswerAssessmentTask task = generator.generateAsync(
+			assessmentInput("He is running.")
+		);
+
+		assertTrue(task.cancel());
+		assertTrue(fixture.response().isCancelled());
+		assertTrue(task.result().toCompletableFuture().isCompletedExceptionally());
+
+		generator.generateAsync(assessmentInput("He is running."));
 		verify(fixture.completions(), times(2)).create(
 			any(ChatCompletionCreateParams.class)
 		);

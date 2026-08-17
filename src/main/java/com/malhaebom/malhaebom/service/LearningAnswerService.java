@@ -1,9 +1,13 @@
 package com.malhaebom.malhaebom.service;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -19,6 +23,7 @@ import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionReposit
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation.Completed;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation.Processing;
@@ -35,6 +40,7 @@ public class LearningAnswerService {
 	private final AnswerSubmissionRepository answerSubmissionRepository;
 	private final AnswerAssessmentService answerAssessmentService;
 	private final AnswerSubmissionTransactionService submissionTransactionService;
+	private final Clock clock;
 
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public CompletionStage<AnswerSubmissionResult> submitAsync(
@@ -60,19 +66,54 @@ public class LearningAnswerService {
 	}
 
 	private CompletionStage<AnswerAssessment> assess(Processing processing) {
-		CompletionStage<AnswerAssessment> assessment;
+		AnswerAssessmentTask task;
 		try {
-			assessment = answerAssessmentService
+			task = answerAssessmentService
 				.assessAsync(processing.assessmentInput());
 		} catch (RuntimeException exception) {
 			return failAssessment(processing, exception);
 		}
-		return assessment.exceptionallyCompose(exception ->
-			failAssessment(processing, exception)
+		return withinDeadline(processing, task).exceptionallyCompose(exception ->
+			handleAssessmentFailure(processing, task, exception)
 		);
 	}
 
-	private RuntimeException unwrapCompletionException(
+	private CompletionStage<AnswerAssessment> withinDeadline(
+		Processing processing,
+		AnswerAssessmentTask task
+	) {
+		Duration remaining = processing.deadline().remainingAt(clock.instant());
+		if (remaining.isZero()) {
+			return CompletableFuture.failedFuture(new TimeoutException());
+		}
+
+		CompletableFuture<AnswerAssessment> result = new CompletableFuture<>();
+		task.result().whenComplete((assessment, exception) -> {
+			if (exception != null) {
+				result.completeExceptionally(exception);
+				return;
+			}
+			result.complete(assessment);
+		});
+		return result.orTimeout(
+			remaining.toNanos(),
+			TimeUnit.NANOSECONDS
+		);
+	}
+
+	private CompletionStage<AnswerAssessment> handleAssessmentFailure(
+		Processing processing,
+		AnswerAssessmentTask task,
+		Throwable exception
+	) {
+		Throwable cause = unwrapCompletionException(exception);
+		if (cause instanceof TimeoutException) {
+			return timeout(processing, task);
+		}
+		return failAssessment(processing, cause);
+	}
+
+	private Throwable unwrapCompletionException(
 		Throwable exception
 	) {
 		Throwable cause = exception;
@@ -80,18 +121,35 @@ public class LearningAnswerService {
 			&& cause.getCause() != null) {
 			cause = cause.getCause();
 		}
-		return cause instanceof RuntimeException runtimeException
-			? runtimeException
-			: new RuntimeException(cause);
+		return cause;
 	}
 
 	private CompletionStage<AnswerAssessment> failAssessment(
 		Processing processing,
 		Throwable exception
 	) {
-		RuntimeException cause = unwrapCompletionException(exception);
+		Throwable unwrapped = unwrapCompletionException(exception);
+		RuntimeException cause = unwrapped instanceof RuntimeException runtime
+			? runtime
+			: new RuntimeException(unwrapped);
 		fail(processing, cause);
 		return CompletableFuture.failedFuture(assessmentException(cause));
+	}
+
+	private CompletionStage<AnswerAssessment> timeout(
+		Processing processing,
+		AnswerAssessmentTask task
+	) {
+		ApiException timeout = new ApiException(
+			ErrorCode.ANSWER_SUBMISSION_TIMEOUT
+		);
+		try {
+			task.cancel();
+		} catch (RuntimeException exception) {
+			timeout.addSuppressed(exception);
+		}
+		fail(processing, timeout);
+		return CompletableFuture.failedFuture(timeout);
 	}
 
 	private RuntimeException assessmentException(RuntimeException cause) {

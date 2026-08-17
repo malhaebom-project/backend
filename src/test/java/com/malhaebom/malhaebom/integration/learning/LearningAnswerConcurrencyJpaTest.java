@@ -44,6 +44,7 @@ import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation.Processing;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
@@ -290,12 +291,15 @@ class LearningAnswerConcurrencyJpaTest {
 		}
 
 		@Override
-		public CompletionStage<AnswerAssessment> generateAsync(
+		public AnswerAssessmentTask generateAsync(
 			AnswerAssessmentInput input
 		) {
 			calls.incrementAndGet();
 			assessmentStarted.countDown();
-			return assessment;
+			return new AnswerAssessmentTask(
+				assessment,
+				() -> assessment.cancel(true)
+			);
 		}
 	}
 }

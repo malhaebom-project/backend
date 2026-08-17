@@ -1,6 +1,7 @@
 package com.malhaebom.malhaebom.infra.ai;
 
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 
 @Component
@@ -90,20 +92,26 @@ public class OpenAiAnswerAssessmentGenerator
 	}
 
 	@Override
-	public CompletionStage<AnswerAssessment> generateAsync(
+	public AnswerAssessmentTask generateAsync(
 		AnswerAssessmentInput input
 	) {
 		Objects.requireNonNull(input, "채점 입력은 null일 수 없습니다.");
 		return concurrencyLimiter.execute(() -> generate(input));
 	}
 
-	private CompletionStage<AnswerAssessment> generate(
+	private AnswerAssessmentTask generate(
 		AnswerAssessmentInput input
 	) {
-		return openAiClient.chat()
+		CompletableFuture<ChatCompletion> request = openAiClient.chat()
 			.completions()
-			.create(createParams(input))
-			.thenApply(this::extractAssessment);
+			.create(createParams(input));
+		CompletionStage<AnswerAssessment> result = request.thenApply(
+			this::extractAssessment
+		);
+		return new AnswerAssessmentTask(
+			result,
+			() -> request.cancel(true)
+		);
 	}
 
 	private ChatCompletionCreateParams createParams(
