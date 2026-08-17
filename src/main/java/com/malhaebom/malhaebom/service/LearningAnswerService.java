@@ -1,7 +1,9 @@
 package com.malhaebom.malhaebom.service;
 
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -35,7 +37,7 @@ public class LearningAnswerService {
 	private final AnswerSubmissionTransactionService submissionTransactionService;
 
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
-	public AnswerSubmissionResult submit(
+	public CompletionStage<AnswerSubmissionResult> submitAsync(
 		Long sessionId,
 		Long sessionQuestionId,
 		Long speechAnswerId
@@ -43,39 +45,53 @@ public class LearningAnswerService {
 		AnswerSubmissionPreparation preparation = submissionTransactionService
 			.prepare(sessionId, sessionQuestionId, speechAnswerId);
 		return switch (preparation) {
-			case Completed completed -> completed.result();
+			case Completed completed -> CompletableFuture.completedFuture(
+				completed.result()
+			);
 			case Processing processing -> assessAndComplete(processing);
 		};
 	}
 
-	private AnswerSubmissionResult assessAndComplete(Processing processing) {
-		AnswerAssessment assessment = assess(processing);
-		return complete(processing, assessment);
+	private CompletionStage<AnswerSubmissionResult> assessAndComplete(
+		Processing processing
+	) {
+		return assess(processing)
+			.thenApply(assessment -> complete(processing, assessment));
 	}
 
-	private AnswerAssessment assess(Processing processing) {
-		AnswerAssessment assessment;
+	private CompletionStage<AnswerAssessment> assess(Processing processing) {
+		CompletionStage<AnswerAssessment> assessment;
 		try {
 			assessment = answerAssessmentService
-				.assessAsync(processing.assessmentInput())
-				.toCompletableFuture()
-				.join();
+				.assessAsync(processing.assessmentInput());
 		} catch (RuntimeException exception) {
-			RuntimeException cause = unwrapCompletionException(exception);
-			fail(processing, cause);
-			throw assessmentException(cause);
+			return failAssessment(processing, exception);
 		}
-		return assessment;
+		return assessment.exceptionallyCompose(exception ->
+			failAssessment(processing, exception)
+		);
 	}
 
 	private RuntimeException unwrapCompletionException(
-		RuntimeException exception
+		Throwable exception
 	) {
-		if (exception instanceof CompletionException
-			&& exception.getCause() instanceof RuntimeException cause) {
-			return cause;
+		Throwable cause = exception;
+		while (cause instanceof CompletionException
+			&& cause.getCause() != null) {
+			cause = cause.getCause();
 		}
-		return exception;
+		return cause instanceof RuntimeException runtimeException
+			? runtimeException
+			: new RuntimeException(cause);
+	}
+
+	private CompletionStage<AnswerAssessment> failAssessment(
+		Processing processing,
+		Throwable exception
+	) {
+		RuntimeException cause = unwrapCompletionException(exception);
+		fail(processing, cause);
+		return CompletableFuture.failedFuture(assessmentException(cause));
 	}
 
 	private RuntimeException assessmentException(RuntimeException cause) {

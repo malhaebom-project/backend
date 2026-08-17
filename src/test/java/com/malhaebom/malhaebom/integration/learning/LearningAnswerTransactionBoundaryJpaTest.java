@@ -14,6 +14,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -106,7 +107,7 @@ class LearningAnswerTransactionBoundaryJpaTest {
 
 		assertApiException(
 			ErrorCode.ANSWER_ASSESSMENT_FAILED,
-			() -> learningAnswerService.submit(
+			() -> submit(
 				session.getId(),
 				question.getId(),
 				speechAnswer.getId()
@@ -127,12 +128,12 @@ class LearningAnswerTransactionBoundaryJpaTest {
 			20,
 			"현재진행형을 정확하게 사용했어요!"
 		));
-		AnswerSubmissionResult completed = learningAnswerService.submit(
+		AnswerSubmissionResult completed = submit(
 			session.getId(),
 			question.getId(),
 			speechAnswer.getId()
 		);
-		AnswerSubmissionResult duplicated = learningAnswerService.submit(
+		AnswerSubmissionResult duplicated = submit(
 			session.getId(),
 			question.getId(),
 			speechAnswer.getId()
@@ -184,7 +185,7 @@ class LearningAnswerTransactionBoundaryJpaTest {
 
 		assertApiException(
 			ErrorCode.ANSWER_SUBMISSION_TIMEOUT,
-			() -> learningAnswerService.submit(
+			() -> submit(
 				session.getId(),
 				question.getId(),
 				speechAnswer.getId()
@@ -205,7 +206,7 @@ class LearningAnswerTransactionBoundaryJpaTest {
 		);
 		assertApiException(
 			ErrorCode.ANSWER_ASSESSMENT_FAILED,
-			() -> learningAnswerService.submit(
+			() -> submit(
 				session.getId(),
 				question.getId(),
 				speechAnswer.getId()
@@ -251,7 +252,7 @@ class LearningAnswerTransactionBoundaryJpaTest {
 		AnswerSubmissionResult result = transactionTemplate.execute(status -> {
 			assertTrue(TransactionSynchronizationManager
 				.isActualTransactionActive());
-			AnswerSubmissionResult submitted = learningAnswerService.submit(
+			AnswerSubmissionResult submitted = submit(
 				session.getId(),
 				question.getId(),
 				speechAnswer.getId()
@@ -283,6 +284,25 @@ class LearningAnswerTransactionBoundaryJpaTest {
 				.orElseThrow()
 				.isInProgress()
 		));
+	}
+
+	private AnswerSubmissionResult submit(
+		Long sessionId,
+		Long sessionQuestionId,
+		Long speechAnswerId
+	) {
+		try {
+			return learningAnswerService.submitAsync(
+				sessionId,
+				sessionQuestionId,
+				speechAnswerId
+			).toCompletableFuture().join();
+		} catch (CompletionException exception) {
+			if (exception.getCause() instanceof RuntimeException cause) {
+				throw cause;
+			}
+			throw exception;
+		}
 	}
 
 	@TestConfiguration(proxyBeanMethods = false)
