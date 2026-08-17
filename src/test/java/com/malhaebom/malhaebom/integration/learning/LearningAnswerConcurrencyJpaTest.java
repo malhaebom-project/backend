@@ -121,7 +121,7 @@ class LearningAnswerConcurrencyJpaTest {
 
 			assertEquals(1, assessmentGenerator.callCount());
 			assertEquals(AnswerSubmissionStatus.COMPLETED, submission.getStatus());
-			assertEquals(completed.answer().getId(), submission.getAnswer().getId());
+			assertEquals(completed.answerId(), submission.getAnswer().getId());
 		} finally {
 			assessmentGenerator.releaseAssessment();
 			cancel(firstRequest);
@@ -219,7 +219,7 @@ class LearningAnswerConcurrencyJpaTest {
 		).orElseThrow();
 
 		assertEquals(AnswerSubmissionStatus.COMPLETED, submission.getStatus());
-		assertEquals(completed.answer().getId(), submission.getAnswer().getId());
+		assertEquals(completed.answerId(), submission.getAnswer().getId());
 	}
 
 	private LearningSession saveSession() {

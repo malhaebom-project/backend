@@ -131,7 +131,7 @@ class LearningAnswerTransactionBoundaryJpaTest {
 			.orElseThrow();
 		assertEquals(failed.getId(), saved.getId());
 		assertEquals(AnswerSubmissionStatus.COMPLETED, saved.getStatus());
-		assertEquals(completed.answer().getId(), duplicated.answer().getId());
+		assertEquals(completed.answerId(), duplicated.answerId());
 		assertEquals(2, assessmentGenerator.transactionStates.size());
 		assertTrue(assessmentGenerator.transactionStates.stream().noneMatch(
 			Boolean::booleanValue
@@ -180,6 +180,13 @@ class LearningAnswerTransactionBoundaryJpaTest {
 		});
 
 		assertNotNull(result);
+		assertNotNull(result.answerId());
+		assertEquals(question.getId(), result.sessionQuestionId());
+		assertEquals("He is running.", result.answerText());
+		assertEquals(
+			"현재진행형을 정확하게 사용했어요!",
+			result.feedbackText()
+		);
 		assertEquals(List.of(false), assessmentGenerator.transactionStates);
 		assertFalse(TransactionSynchronizationManager
 			.isActualTransactionActive());

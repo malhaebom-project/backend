@@ -101,16 +101,16 @@ class LearningAnswerServiceJpaTest {
 
 		assertEquals(1, answerRepository.count());
 		assertEquals(ANSWER_TEXT, assessmentGenerator.answerText);
-		assertEquals(ANSWER_TEXT, result.answer().getAnswerText());
-		assertEquals(1, result.answer().getAttemptNo());
-		assertTrue(result.answer().isCorrect());
+		assertEquals(ANSWER_TEXT, result.answerText());
+		assertEquals(1, result.attemptNo());
+		assertTrue(result.result().isCorrect());
 		assertTrue(session.isCompleted());
 		assertFalse(result.canRetry());
 		assertEquals(0, result.remainingAttempts());
 
 		answerRepository.flush();
 		entityManager.clear();
-		Answer savedAnswer = answerRepository.findById(result.answer().getId())
+		Answer savedAnswer = answerRepository.findById(result.answerId())
 			.orElseThrow();
 		assertEquals(
 			"현재진행형을 정확하게 사용했어요!",
@@ -136,8 +136,8 @@ class LearningAnswerServiceJpaTest {
 			speechAnswer.getId()
 		);
 
-		assertEquals(AnswerResult.PARTIALLY_CORRECT, result.answer().getResult());
-		assertEquals(78, result.answer().getScore());
+		assertEquals(AnswerResult.PARTIALLY_CORRECT, result.result());
+		assertEquals(78, result.score());
 		assertTrue(result.canRetry());
 		assertEquals(1, result.remainingAttempts());
 		assertEquals(1, session.getCurrentQuestion().getWrongAnswerCount());
@@ -244,7 +244,7 @@ class LearningAnswerServiceJpaTest {
 			speechAnswer.getId()
 		);
 
-		assertEquals(first.answer().getId(), retried.answer().getId());
+		assertEquals(first.answerId(), retried.answerId());
 		assertEquals(1, assessmentGenerator.callCount);
 		assertEquals(1, answerRepository.count());
 		assertEquals(1, answerSubmissionRepository.count());
@@ -292,7 +292,7 @@ class LearningAnswerServiceJpaTest {
 			.orElseThrow();
 		assertEquals(failed.getId(), completed.getId());
 		assertEquals(AnswerSubmissionStatus.COMPLETED, completed.getStatus());
-		assertEquals(retried.answer().getId(), completed.getAnswer().getId());
+		assertEquals(retried.answerId(), completed.getAnswer().getId());
 		assertEquals(2, assessmentGenerator.callCount);
 		assertEquals(1, answerRepository.count());
 		assertEquals(1, answerSubmissionRepository.count());
@@ -346,7 +346,7 @@ class LearningAnswerServiceJpaTest {
 			speechAnswer.getId()
 		);
 
-		assertTrue(result.answer().isCorrect());
+		assertTrue(result.result().isCorrect());
 		assertEquals(1, assessmentGenerator.callCount);
 		assertEquals(
 			AnswerSubmissionStatus.COMPLETED,
