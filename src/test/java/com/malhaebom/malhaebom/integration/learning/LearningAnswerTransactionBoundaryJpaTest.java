@@ -6,6 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -68,11 +73,14 @@ class LearningAnswerTransactionBoundaryJpaTest {
 	@Autowired
 	private TestAnswerAssessmentGenerator assessmentGenerator;
 	@Autowired
+	private TestClock clock;
+	@Autowired
 	private PlatformTransactionManager transactionManager;
 
 	@BeforeEach
 	void setUp() {
 		assessmentGenerator.reset();
+		clock.reset();
 	}
 
 	@Test
@@ -106,7 +114,9 @@ class LearningAnswerTransactionBoundaryJpaTest {
 			.findBySpeechAnswer_Id(speechAnswer.getId())
 			.orElseThrow();
 		assertEquals(AnswerSubmissionStatus.FAILED, failed.getStatus());
-		assertEquals(0, answerRepository.count());
+		assertFalse(answerRepository.existsBySpeechAnswer_Id(
+			speechAnswer.getId()
+		));
 
 		assessmentGenerator.willReturn(new AnswerAssessment(
 			true,
@@ -138,6 +148,76 @@ class LearningAnswerTransactionBoundaryJpaTest {
 		));
 		assertFalse(TransactionSynchronizationManager
 			.isActualTransactionActive());
+	}
+
+	@Test
+	void 작업_기한_이후의_채점_결과는_저장하지_않고_동일_제출을_재시도한다() {
+		LearningSession session = LearningJpaTestFixture.saveSession(
+			questionRepository,
+			learningSessionRepository,
+			"He is ____ing."
+		);
+		LearningSessionQuestion question = session.getCurrentQuestion();
+		SpeechAnswer speechAnswer = SpeechAnswer.start(
+			question,
+			"expired-deadline-request",
+			1
+		);
+		speechAnswer.complete("He is running.", 0.94, "TEST_STT");
+		speechAnswerRepository.saveAndFlush(speechAnswer);
+		AnswerAssessment assessment = new AnswerAssessment(
+			true,
+			50,
+			30,
+			20,
+			"현재진행형을 정확하게 사용했어요!"
+		);
+		assessmentGenerator.willReturnThen(
+			assessment,
+			() -> clock.advanceAfterChecks(
+				1,
+				Duration.ofSeconds(25)
+			)
+		);
+
+		assertApiException(
+			ErrorCode.ANSWER_SUBMISSION_TIMEOUT,
+			() -> learningAnswerService.submit(
+				session.getId(),
+				question.getId(),
+				speechAnswer.getId()
+			)
+		);
+		AnswerSubmission failed = answerSubmissionRepository
+			.findBySpeechAnswer_Id(speechAnswer.getId())
+			.orElseThrow();
+
+		assertEquals(AnswerSubmissionStatus.FAILED, failed.getStatus());
+		assertFalse(answerRepository.existsBySpeechAnswer_Id(
+			speechAnswer.getId()
+		));
+		assertTrue(isSessionInProgress(session.getId()));
+
+		assessmentGenerator.willThrow(
+			new IllegalStateException("재시도 채점 실패")
+		);
+		assertApiException(
+			ErrorCode.ANSWER_ASSESSMENT_FAILED,
+			() -> learningAnswerService.submit(
+				session.getId(),
+				question.getId(),
+				speechAnswer.getId()
+			)
+		);
+		AnswerSubmission retried = answerSubmissionRepository
+			.findById(failed.getId())
+			.orElseThrow();
+
+		assertEquals(AnswerSubmissionStatus.FAILED, retried.getStatus());
+		assertEquals("재시도 채점 실패", retried.getFailureMessage());
+		assertFalse(answerRepository.existsBySpeechAnswer_Id(
+			speechAnswer.getId()
+		));
 	}
 
 	@Test
@@ -192,12 +272,28 @@ class LearningAnswerTransactionBoundaryJpaTest {
 			.isActualTransactionActive());
 	}
 
+	private boolean isSessionInProgress(Long sessionId) {
+		TransactionTemplate transactionTemplate = new TransactionTemplate(
+			transactionManager
+		);
+		return Boolean.TRUE.equals(transactionTemplate.execute(status ->
+			learningSessionRepository.findById(sessionId)
+				.orElseThrow()
+				.isInProgress()
+		));
+	}
+
 	@TestConfiguration(proxyBeanMethods = false)
 	static class AssessmentTestConfiguration {
 
 		@Bean
 		TestAnswerAssessmentGenerator answerAssessmentGenerator() {
 			return new TestAnswerAssessmentGenerator();
+		}
+
+		@Bean
+		TestClock clock() {
+			return new TestClock();
 		}
 	}
 
@@ -207,21 +303,34 @@ class LearningAnswerTransactionBoundaryJpaTest {
 		private final List<Boolean> transactionStates = new ArrayList<>();
 		private AnswerAssessment assessment;
 		private RuntimeException exception;
+		private Runnable afterGenerate;
 
 		void reset() {
 			transactionStates.clear();
 			assessment = null;
 			exception = null;
+			afterGenerate = () -> {
+			};
 		}
 
 		void willReturn(AnswerAssessment assessment) {
 			this.assessment = assessment;
 			exception = null;
+			afterGenerate = () -> {
+			};
+		}
+
+		void willReturnThen(AnswerAssessment assessment, Runnable afterGenerate) {
+			this.assessment = assessment;
+			exception = null;
+			this.afterGenerate = afterGenerate;
 		}
 
 		void willThrow(RuntimeException exception) {
 			this.exception = exception;
 			assessment = null;
+			afterGenerate = () -> {
+			};
 		}
 
 		@Override
@@ -231,7 +340,58 @@ class LearningAnswerTransactionBoundaryJpaTest {
 			if (exception != null) {
 				throw exception;
 			}
+			afterGenerate.run();
 			return assessment;
+		}
+	}
+
+	private static final class TestClock extends Clock {
+
+		private Instant current;
+		private final ZoneId zone;
+		private int checksBeforeAdvance = -1;
+		private Duration pendingAdvance = Duration.ZERO;
+
+		private TestClock() {
+			this(Instant.now(), ZoneOffset.UTC);
+		}
+
+		private TestClock(Instant current, ZoneId zone) {
+			this.current = current;
+			this.zone = zone;
+		}
+
+		void reset() {
+			current = Instant.now();
+			checksBeforeAdvance = -1;
+			pendingAdvance = Duration.ZERO;
+		}
+
+		void advanceAfterChecks(int checks, Duration duration) {
+			checksBeforeAdvance = checks;
+			pendingAdvance = duration;
+		}
+
+		@Override
+		public ZoneId getZone() {
+			return zone;
+		}
+
+		@Override
+		public Clock withZone(ZoneId zone) {
+			return new TestClock(current, zone);
+		}
+
+		@Override
+		public Instant instant() {
+			if (checksBeforeAdvance == 0) {
+				current = current.plus(pendingAdvance);
+				checksBeforeAdvance = -1;
+				pendingAdvance = Duration.ZERO;
+			} else if (checksBeforeAdvance > 0) {
+				checksBeforeAdvance--;
+			}
+			return current;
 		}
 	}
 }

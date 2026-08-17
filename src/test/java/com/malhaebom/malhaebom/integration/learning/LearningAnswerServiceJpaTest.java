@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -82,7 +83,8 @@ class LearningAnswerServiceJpaTest {
 			new AnswerSubmissionPolicyProperties(
 				Duration.ofSeconds(25),
 				Duration.ofSeconds(60)
-			)
+			),
+			Clock.systemUTC()
 		);
 		learningAnswerService = new LearningAnswerService(
 			learningSessionRepository,

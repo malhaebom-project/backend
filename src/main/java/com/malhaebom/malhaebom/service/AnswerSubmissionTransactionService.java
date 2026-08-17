@@ -1,5 +1,6 @@
 package com.malhaebom.malhaebom.service;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
@@ -41,6 +42,7 @@ public class AnswerSubmissionTransactionService {
 	private final AnswerRepository answerRepository;
 	private final AnswerSubmissionRepository answerSubmissionRepository;
 	private final AnswerSubmissionPolicyProperties policyProperties;
+	private final Clock clock;
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public AnswerSubmissionPreparation prepare(
@@ -49,7 +51,7 @@ public class AnswerSubmissionTransactionService {
 		Long speechAnswerId
 	) {
 		AnswerSubmissionDeadline deadline = AnswerSubmissionDeadline.startingAt(
-			Instant.now(),
+			clock.instant(),
 			policyProperties.processingTimeout()
 		);
 		answerSubmissionRepository
@@ -67,7 +69,7 @@ public class AnswerSubmissionTransactionService {
 				lockedExisting,
 				session,
 				sessionQuestionId,
-				Instant.now(),
+				clock.instant(),
 				deadline
 			);
 		}
@@ -85,14 +87,15 @@ public class AnswerSubmissionTransactionService {
 		AnswerSubmission submission = answerSubmissionRepository.save(
 			AnswerSubmission.reserve(currentQuestion, speechAnswer, attemptNo)
 		);
-		return claim(submission, Instant.now(), deadline);
+		return claim(submission, clock.instant(), deadline);
 	}
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public AnswerSubmissionResult complete(
 		Long submissionId,
 		String processingToken,
-		AnswerAssessment assessment
+		AnswerAssessment assessment,
+		AnswerSubmissionDeadline deadline
 	) {
 		AnswerSubmission found = getSubmission(submissionId);
 		LearningSession session = getSessionForUpdate(
@@ -100,6 +103,7 @@ public class AnswerSubmissionTransactionService {
 		);
 		AnswerSubmission submission = getSubmissionForUpdate(submissionId);
 		validateProcessingToken(submission, processingToken);
+		validateDeadline(deadline);
 		validateInProgress(session);
 		validateCurrentQuestion(
 			session.getCurrentQuestion(),
@@ -117,6 +121,7 @@ public class AnswerSubmissionTransactionService {
 		} else {
 			session.completeCurrentQuestion(answer.isCorrect());
 		}
+		validateDeadline(deadline);
 		submission.complete(processingToken, answer);
 
 		return AnswerSubmissionResult.from(answer);
@@ -310,6 +315,12 @@ public class AnswerSubmissionTransactionService {
 				ErrorCode.ANSWER_SUBMISSION_PROCESSING,
 				"답변 제출 처리 권한이 만료되었습니다."
 			);
+		}
+	}
+
+	private void validateDeadline(AnswerSubmissionDeadline deadline) {
+		if (deadline.isExpiredAt(clock.instant())) {
+			throw new ApiException(ErrorCode.ANSWER_SUBMISSION_TIMEOUT);
 		}
 	}
 

@@ -76,7 +76,8 @@ public class LearningAnswerService {
 			return submissionTransactionService.complete(
 				processing.submissionId(),
 				processing.processingToken(),
-				assessment
+				assessment,
+				processing.deadline()
 			);
 		} catch (RuntimeException exception) {
 			fail(processing, exception);

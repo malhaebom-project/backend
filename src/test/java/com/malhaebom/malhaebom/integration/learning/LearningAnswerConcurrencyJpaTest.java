@@ -37,6 +37,7 @@ import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
+import com.malhaebom.malhaebom.infra.time.TimeConfiguration;
 import com.malhaebom.malhaebom.service.AnswerAssessmentService;
 import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
@@ -53,6 +54,7 @@ import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 	LearningAnswerService.class,
 	AnswerSubmissionTransactionService.class,
 	AnswerAssessmentService.class,
+	TimeConfiguration.class,
 	LearningAnswerConcurrencyJpaTest.AssessmentTestConfiguration.class
 })
 class LearningAnswerConcurrencyJpaTest {
@@ -205,14 +207,16 @@ class LearningAnswerConcurrencyJpaTest {
 			() -> submissionTransactionService.complete(
 				expired.submissionId(),
 				expired.processingToken(),
-				CORRECT_ASSESSMENT
+				CORRECT_ASSESSMENT,
+				expired.deadline()
 			)
 		);
 
 		AnswerSubmissionResult completed = submissionTransactionService.complete(
 			reclaimed.submissionId(),
 			reclaimed.processingToken(),
-			CORRECT_ASSESSMENT
+			CORRECT_ASSESSMENT,
+			reclaimed.deadline()
 		);
 		AnswerSubmission submission = answerSubmissionRepository.findById(
 			reclaimed.submissionId()
