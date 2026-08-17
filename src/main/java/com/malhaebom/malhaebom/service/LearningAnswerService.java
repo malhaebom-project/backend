@@ -1,6 +1,7 @@
 package com.malhaebom.malhaebom.service;
 
 import java.util.Objects;
+import java.util.concurrent.CompletionException;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -55,17 +56,29 @@ public class LearningAnswerService {
 	private AnswerAssessment assess(Processing processing) {
 		AnswerAssessment assessment;
 		try {
-			assessment = answerAssessmentService.assess(
-				processing.assessmentInput()
-			);
+			assessment = answerAssessmentService
+				.assessAsync(processing.assessmentInput())
+				.toCompletableFuture()
+				.join();
 		} catch (RuntimeException exception) {
-			fail(processing, exception);
+			RuntimeException cause = unwrapCompletionException(exception);
+			fail(processing, cause);
 			throw new ApiException(
 				ErrorCode.ANSWER_ASSESSMENT_FAILED,
-				exception
+				cause
 			);
 		}
 		return assessment;
+	}
+
+	private RuntimeException unwrapCompletionException(
+		RuntimeException exception
+	) {
+		if (exception instanceof CompletionException
+			&& exception.getCause() instanceof RuntimeException cause) {
+			return cause;
+		}
+		return exception;
 	}
 
 	private AnswerSubmissionResult complete(

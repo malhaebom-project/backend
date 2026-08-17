@@ -1,6 +1,8 @@
 package com.malhaebom.malhaebom.infra.ai;
 
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Component;
@@ -68,24 +70,31 @@ public class OpenAiAnswerAssessmentGenerator
 	}
 
 	@Override
-	public AnswerAssessment generate(AnswerAssessmentInput input) {
+	public CompletionStage<AnswerAssessment> generateAsync(
+		AnswerAssessmentInput input
+	) {
 		Objects.requireNonNull(input, "채점 입력은 null일 수 없습니다.");
 
-		return chatClient.prompt()
-			.user(user -> user
-				.text(USER_PROMPT)
-				.param("questionText", input.questionText())
-				.param("questionTextKo", input.questionTextKo())
-				.param("modelAnswer", input.modelAnswer())
-				.param(
-					"acceptedAnswers",
-					String.join(" | ", input.acceptedAnswers())
-				)
-				.param("answerText", input.answerText()))
-			.call()
-			.entity(
-				AnswerAssessment.class,
-				spec -> spec.useProviderStructuredOutput()
-			);
+		try {
+			AnswerAssessment assessment = chatClient.prompt()
+				.user(user -> user
+					.text(USER_PROMPT)
+					.param("questionText", input.questionText())
+					.param("questionTextKo", input.questionTextKo())
+					.param("modelAnswer", input.modelAnswer())
+					.param(
+						"acceptedAnswers",
+						String.join(" | ", input.acceptedAnswers())
+					)
+					.param("answerText", input.answerText()))
+				.call()
+				.entity(
+					AnswerAssessment.class,
+					spec -> spec.useProviderStructuredOutput()
+				);
+			return CompletableFuture.completedFuture(assessment);
+		} catch (RuntimeException exception) {
+			return CompletableFuture.failedFuture(exception);
+		}
 	}
 }

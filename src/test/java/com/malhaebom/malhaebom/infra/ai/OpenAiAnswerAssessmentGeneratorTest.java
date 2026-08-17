@@ -42,9 +42,10 @@ class OpenAiAnswerAssessmentGeneratorTest {
 				ChatClient.builder(chatModel)
 			);
 
-		AnswerAssessment assessment = generator.generate(
-			assessmentInput("He is running.")
-		);
+		AnswerAssessment assessment = generator
+			.generateAsync(assessmentInput("He is running."))
+			.toCompletableFuture()
+			.join();
 
 		assertEquals(93, assessment.totalScore());
 		assertEquals(AnswerResult.CORRECT, assessment.result());
@@ -63,7 +64,7 @@ class OpenAiAnswerAssessmentGeneratorTest {
 
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> generator.generate(assessmentInput(" "))
+			() -> generator.generateAsync(assessmentInput(" "))
 		);
 		assertNull(chatModel.prompt());
 	}

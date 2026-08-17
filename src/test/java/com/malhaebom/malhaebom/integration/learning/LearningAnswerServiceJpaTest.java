@@ -10,6 +10,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -635,13 +637,15 @@ class LearningAnswerServiceJpaTest {
 		}
 
 		@Override
-		public AnswerAssessment generate(AnswerAssessmentInput input) {
+		public CompletionStage<AnswerAssessment> generateAsync(
+			AnswerAssessmentInput input
+		) {
 			callCount++;
 			answerText = input.answerText();
 			if (exception != null) {
-				throw exception;
+				return CompletableFuture.failedFuture(exception);
 			}
-			return assessment;
+			return CompletableFuture.completedFuture(assessment);
 		}
 	}
 }

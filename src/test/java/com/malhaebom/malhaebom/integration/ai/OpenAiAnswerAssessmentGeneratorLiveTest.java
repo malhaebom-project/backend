@@ -56,9 +56,10 @@ class OpenAiAnswerAssessmentGeneratorLiveTest {
 		);
 
 		for (String answerText : List.of("yes", "Yes.", "YES!")) {
-			AnswerAssessment assessment = generator.generate(
-				assessmentInput(elephantQuestion, answerText)
-			);
+			AnswerAssessment assessment = generator
+				.generateAsync(assessmentInput(elephantQuestion, answerText))
+				.toCompletableFuture()
+				.join();
 
 			assertEquals(
 				AnswerResult.CORRECT,
@@ -79,12 +80,13 @@ class OpenAiAnswerAssessmentGeneratorLiveTest {
 	@Test
 	void 대표_문제와_답안을_실제_AI로_평가한다() {
 		for (LiveCase liveCase : liveCases()) {
-			AnswerAssessment assessment = generator.generate(
-				assessmentInput(
+			AnswerAssessment assessment = generator
+				.generateAsync(assessmentInput(
 					liveCase.question(),
 					liveCase.answerText()
-				)
-			);
+				))
+				.toCompletableFuture()
+				.join();
 
 			assertEquals(
 				liveCase.expectedResult(),

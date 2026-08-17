@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -288,18 +290,24 @@ class LearningAnswerConcurrencyJpaTest {
 		}
 
 		@Override
-		public AnswerAssessment generate(AnswerAssessmentInput input) {
+		public CompletionStage<AnswerAssessment> generateAsync(
+			AnswerAssessmentInput input
+		) {
 			calls.incrementAndGet();
 			assessmentStarted.countDown();
 			try {
 				if (!assessmentReleased.await(10, SECONDS)) {
-					throw new IllegalStateException("채점 대기 시간이 초과되었습니다.");
+					return CompletableFuture.failedFuture(
+						new IllegalStateException("채점 대기 시간이 초과되었습니다.")
+					);
 				}
 			} catch (InterruptedException exception) {
 				Thread.currentThread().interrupt();
-				throw new IllegalStateException("채점 대기가 중단되었습니다.", exception);
+				return CompletableFuture.failedFuture(
+					new IllegalStateException("채점 대기가 중단되었습니다.", exception)
+				);
 			}
-			return CORRECT_ASSESSMENT;
+			return CompletableFuture.completedFuture(CORRECT_ASSESSMENT);
 		}
 	}
 }

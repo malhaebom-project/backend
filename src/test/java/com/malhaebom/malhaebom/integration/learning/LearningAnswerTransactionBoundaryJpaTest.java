@@ -13,6 +13,8 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -334,14 +336,16 @@ class LearningAnswerTransactionBoundaryJpaTest {
 		}
 
 		@Override
-		public AnswerAssessment generate(AnswerAssessmentInput input) {
+		public CompletionStage<AnswerAssessment> generateAsync(
+			AnswerAssessmentInput input
+		) {
 			transactionStates.add(TransactionSynchronizationManager
 				.isActualTransactionActive());
 			if (exception != null) {
-				throw exception;
+				return CompletableFuture.failedFuture(exception);
 			}
 			afterGenerate.run();
-			return assessment;
+			return CompletableFuture.completedFuture(assessment);
 		}
 	}
 
