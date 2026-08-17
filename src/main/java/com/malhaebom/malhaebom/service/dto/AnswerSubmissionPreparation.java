@@ -2,6 +2,8 @@ package com.malhaebom.malhaebom.service.dto;
 
 import java.util.Objects;
 
+import com.malhaebom.malhaebom.service.policy.AnswerSubmissionDeadline;
+
 public sealed interface AnswerSubmissionPreparation
 	permits AnswerSubmissionPreparation.Processing,
 	AnswerSubmissionPreparation.Completed {
@@ -11,12 +13,14 @@ public sealed interface AnswerSubmissionPreparation
 	static Processing processing(
 		Long submissionId,
 		String processingToken,
-		AnswerAssessmentInput assessmentInput
+		AnswerAssessmentInput assessmentInput,
+		AnswerSubmissionDeadline deadline
 	) {
 		return new Processing(
 			submissionId,
 			processingToken,
-			assessmentInput
+			assessmentInput,
+			deadline
 		);
 	}
 
@@ -30,7 +34,8 @@ public sealed interface AnswerSubmissionPreparation
 	record Processing(
 		Long submissionId,
 		String processingToken,
-		AnswerAssessmentInput assessmentInput
+		AnswerAssessmentInput assessmentInput,
+		AnswerSubmissionDeadline deadline
 	) implements AnswerSubmissionPreparation {
 
 		public Processing {
@@ -39,6 +44,7 @@ public sealed interface AnswerSubmissionPreparation
 				throw new IllegalArgumentException("처리 토큰은 비어 있을 수 없습니다.");
 			}
 			Objects.requireNonNull(assessmentInput, "채점 입력은 null일 수 없습니다.");
+			Objects.requireNonNull(deadline, "답변 제출 작업 기한은 null일 수 없습니다.");
 		}
 	}
 

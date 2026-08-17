@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -43,6 +44,7 @@ import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
+import com.malhaebom.malhaebom.service.policy.AnswerSubmissionPolicyProperties;
 
 @DataJpaTest
 @Import(JpaAuditingConfiguration.class)
@@ -76,7 +78,11 @@ class LearningAnswerServiceJpaTest {
 			learningSessionRepository,
 			speechAnswerRepository,
 			answerRepository,
-			answerSubmissionRepository
+			answerSubmissionRepository,
+			new AnswerSubmissionPolicyProperties(
+				Duration.ofSeconds(25),
+				Duration.ofSeconds(60)
+			)
 		);
 		learningAnswerService = new LearningAnswerService(
 			learningSessionRepository,

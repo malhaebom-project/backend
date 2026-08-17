@@ -1,10 +1,10 @@
 package com.malhaebom.malhaebom.service;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,19 +26,21 @@ import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
+import com.malhaebom.malhaebom.service.policy.AnswerSubmissionDeadline;
+import com.malhaebom.malhaebom.service.policy.AnswerSubmissionPolicyProperties;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+@EnableConfigurationProperties(AnswerSubmissionPolicyProperties.class)
 public class AnswerSubmissionTransactionService {
-
-	private static final Duration PROCESSING_LEASE = Duration.ofSeconds(60);
 
 	private final LearningSessionRepository learningSessionRepository;
 	private final SpeechAnswerRepository speechAnswerRepository;
 	private final AnswerRepository answerRepository;
 	private final AnswerSubmissionRepository answerSubmissionRepository;
+	private final AnswerSubmissionPolicyProperties policyProperties;
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public AnswerSubmissionPreparation prepare(
@@ -46,6 +48,10 @@ public class AnswerSubmissionTransactionService {
 		Long sessionQuestionId,
 		Long speechAnswerId
 	) {
+		AnswerSubmissionDeadline deadline = AnswerSubmissionDeadline.startingAt(
+			Instant.now(),
+			policyProperties.processingTimeout()
+		);
 		answerSubmissionRepository
 				.findBySpeechAnswer_Id(speechAnswerId)
 				.ifPresent(existing ->
@@ -61,7 +67,8 @@ public class AnswerSubmissionTransactionService {
 				lockedExisting,
 				session,
 				sessionQuestionId,
-				Instant.now()
+				Instant.now(),
+				deadline
 			);
 		}
 
@@ -78,7 +85,7 @@ public class AnswerSubmissionTransactionService {
 		AnswerSubmission submission = answerSubmissionRepository.save(
 			AnswerSubmission.reserve(currentQuestion, speechAnswer, attemptNo)
 		);
-		return claim(submission, Instant.now());
+		return claim(submission, Instant.now(), deadline);
 	}
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -139,7 +146,8 @@ public class AnswerSubmissionTransactionService {
 		AnswerSubmission submission,
 		LearningSession session,
 		Long sessionQuestionId,
-		Instant now
+		Instant now,
+		AnswerSubmissionDeadline deadline
 	) {
 		validateRequestPath(submission, session.getId(), sessionQuestionId);
 		if (submission.isCompleted()) {
@@ -162,23 +170,25 @@ public class AnswerSubmissionTransactionService {
 		if (submission.getStatus() == AnswerSubmissionStatus.FAILED) {
 			submission.retry();
 		}
-		return claim(submission, now);
+		return claim(submission, now, deadline);
 	}
 
 	private AnswerSubmissionPreparation claim(
 		AnswerSubmission submission,
-		Instant claimedAt
+		Instant claimedAt,
+		AnswerSubmissionDeadline deadline
 	) {
 		String processingToken = UUID.randomUUID().toString();
 		submission.claim(
 			processingToken,
 			claimedAt,
-			claimedAt.plus(PROCESSING_LEASE)
+			claimedAt.plus(policyProperties.processingLease())
 		);
 		return AnswerSubmissionPreparation.processing(
 			submission.getId(),
 			processingToken,
-			AnswerAssessmentInput.from(submission)
+			AnswerAssessmentInput.from(submission),
+			deadline
 		);
 	}
 
