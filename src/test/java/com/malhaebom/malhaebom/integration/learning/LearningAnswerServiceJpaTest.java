@@ -38,6 +38,7 @@ import com.malhaebom.malhaebom.domain.learning.repository.AnswerSubmissionReposi
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
+import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.AnswerAssessmentService;
@@ -306,6 +307,36 @@ class LearningAnswerServiceJpaTest {
 		assertEquals(2, assessmentGenerator.callCount);
 		assertEquals(1, answerRepository.count());
 		assertEquals(1, answerSubmissionRepository.count());
+	}
+
+	@Test
+	void 채점_동시_요청_한도를_초과하면_예약을_실패시키고_503을_반환한다() {
+		LearningSession session = saveSession();
+		LearningSessionQuestion question = session.getCurrentQuestion();
+		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(session);
+		assessmentGenerator.willThrow(
+			new ApiException(ErrorCode.ANSWER_ASSESSMENT_OVERLOADED)
+		);
+
+		assertApiException(
+			ErrorCode.ANSWER_ASSESSMENT_OVERLOADED,
+			() -> learningAnswerService.submit(
+				session.getId(),
+				question.getId(),
+				speechAnswer.getId()
+			)
+		);
+
+		AnswerSubmission failed = answerSubmissionRepository
+			.findBySpeechAnswer_Id(speechAnswer.getId())
+			.orElseThrow();
+		assertEquals(AnswerSubmissionStatus.FAILED, failed.getStatus());
+		assertEquals(
+			ErrorCode.ANSWER_ASSESSMENT_OVERLOADED.getMessage(),
+			failed.getFailureMessage()
+		);
+		assertEquals(1, assessmentGenerator.callCount);
+		assertEquals(0, answerRepository.count());
 	}
 
 	@Test

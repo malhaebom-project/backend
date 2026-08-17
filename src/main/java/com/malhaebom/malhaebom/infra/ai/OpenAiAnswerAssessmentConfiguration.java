@@ -14,7 +14,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(OpenAiAnswerAssessmentProperties.class)
+@EnableConfigurationProperties({
+	OpenAiAnswerAssessmentProperties.class,
+	AnswerAssessmentConcurrencyProperties.class
+})
 public class OpenAiAnswerAssessmentConfiguration {
 
 	@Bean(destroyMethod = "close")

@@ -1,7 +1,6 @@
 package com.malhaebom.malhaebom.infra.ai;
 
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -72,15 +71,18 @@ public class OpenAiAnswerAssessmentGenerator
 
 	private final OpenAIClientAsync openAiClient;
 	private final OpenAiAnswerAssessmentProperties properties;
+	private final AnswerAssessmentConcurrencyLimiter concurrencyLimiter;
 	private final BeanOutputConverter<AnswerAssessment> outputConverter;
 	private final ResponseFormatJsonSchema responseFormat;
 
 	public OpenAiAnswerAssessmentGenerator(
 		OpenAIClientAsync openAiClient,
-		OpenAiAnswerAssessmentProperties properties
+		OpenAiAnswerAssessmentProperties properties,
+		AnswerAssessmentConcurrencyLimiter concurrencyLimiter
 	) {
 		this.openAiClient = openAiClient;
 		this.properties = properties;
+		this.concurrencyLimiter = concurrencyLimiter;
 		this.outputConverter = new BeanOutputConverter<>(AnswerAssessment.class);
 		this.responseFormat = createResponseFormat(
 			outputConverter.getJsonSchema()
@@ -92,15 +94,16 @@ public class OpenAiAnswerAssessmentGenerator
 		AnswerAssessmentInput input
 	) {
 		Objects.requireNonNull(input, "채점 입력은 null일 수 없습니다.");
+		return concurrencyLimiter.execute(() -> generate(input));
+	}
 
-		try {
-			return openAiClient.chat()
-				.completions()
-				.create(createParams(input))
-				.thenApply(this::extractAssessment);
-		} catch (RuntimeException exception) {
-			return CompletableFuture.failedFuture(exception);
-		}
+	private CompletionStage<AnswerAssessment> generate(
+		AnswerAssessmentInput input
+	) {
+		return openAiClient.chat()
+			.completions()
+			.create(createParams(input))
+			.thenApply(this::extractAssessment);
 	}
 
 	private ChatCompletionCreateParams createParams(

@@ -2,12 +2,14 @@ package com.malhaebom.malhaebom.infra.ai;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -31,6 +33,8 @@ import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningTopic;
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
 
@@ -39,11 +43,7 @@ class OpenAiAnswerAssessmentGeneratorTest {
 	@Test
 	void 비동기_HTTP_응답에서_채점과_피드백을_구조화해서_반환한다() {
 		AsyncClientFixture fixture = asyncClientFixture();
-		OpenAiAnswerAssessmentGenerator generator =
-			new OpenAiAnswerAssessmentGenerator(
-				fixture.client(),
-				properties()
-			);
+		OpenAiAnswerAssessmentGenerator generator = generator(fixture.client());
 
 		CompletableFuture<AnswerAssessment> assessmentFuture = generator
 			.generateAsync(assessmentInput("He is running."))
@@ -69,11 +69,7 @@ class OpenAiAnswerAssessmentGeneratorTest {
 	@Test
 	void 비동기_HTTP_실패는_예외_완료로_전달한다() {
 		AsyncClientFixture fixture = asyncClientFixture();
-		OpenAiAnswerAssessmentGenerator generator =
-			new OpenAiAnswerAssessmentGenerator(
-				fixture.client(),
-				properties()
-			);
+		OpenAiAnswerAssessmentGenerator generator = generator(fixture.client());
 		RuntimeException failure = new IllegalStateException("OpenAI timeout");
 
 		CompletableFuture<AnswerAssessment> assessmentFuture = generator
@@ -91,14 +87,54 @@ class OpenAiAnswerAssessmentGeneratorTest {
 	@Test
 	void 빈_답변은_AI를_호출하기_전에_거부한다() {
 		OpenAIClientAsync client = mock(OpenAIClientAsync.class);
-		OpenAiAnswerAssessmentGenerator generator =
-			new OpenAiAnswerAssessmentGenerator(client, properties());
+		OpenAiAnswerAssessmentGenerator generator = generator(client);
 
 		assertThrows(
 			IllegalArgumentException.class,
 			() -> generator.generateAsync(assessmentInput(" "))
 		);
 		verify(client, never()).chat();
+	}
+
+	@Test
+	void 동시_채점_한도를_초과하면_OpenAI를_호출하지_않고_즉시_거절한다() {
+		AsyncClientFixture fixture = asyncClientFixture();
+		OpenAiAnswerAssessmentGenerator generator = generator(
+			fixture.client(),
+			1
+		);
+
+		CompletableFuture<AnswerAssessment> first = generator
+			.generateAsync(assessmentInput("He is running."))
+			.toCompletableFuture();
+		CompletableFuture<AnswerAssessment> rejected = generator
+			.generateAsync(assessmentInput("He is running."))
+			.toCompletableFuture();
+
+		CompletionException exception = assertThrows(
+			CompletionException.class,
+			rejected::join
+		);
+		ApiException cause = assertInstanceOf(
+			ApiException.class,
+			exception.getCause()
+		);
+		assertEquals(
+			ErrorCode.ANSWER_ASSESSMENT_OVERLOADED,
+			cause.getErrorCode()
+		);
+		verify(fixture.completions(), times(1)).create(
+			any(ChatCompletionCreateParams.class)
+		);
+
+		fixture.response().complete(chatCompletion());
+		first.join();
+		generator.generateAsync(assessmentInput("He is running."))
+			.toCompletableFuture()
+			.join();
+		verify(fixture.completions(), times(2)).create(
+			any(ChatCompletionCreateParams.class)
+		);
 	}
 
 	private AsyncClientFixture asyncClientFixture() {
@@ -114,6 +150,27 @@ class OpenAiAnswerAssessmentGeneratorTest {
 			any(ChatCompletionCreateParams.class)
 		)).thenReturn(response);
 		return new AsyncClientFixture(client, completions, response);
+	}
+
+	private OpenAiAnswerAssessmentGenerator generator(
+		OpenAIClientAsync client
+	) {
+		return generator(client, 32);
+	}
+
+	private OpenAiAnswerAssessmentGenerator generator(
+		OpenAIClientAsync client,
+		int maxConcurrentRequests
+	) {
+		return new OpenAiAnswerAssessmentGenerator(
+			client,
+			properties(),
+			new AnswerAssessmentConcurrencyLimiter(
+				new AnswerAssessmentConcurrencyProperties(
+					maxConcurrentRequests
+				)
+			)
+		);
 	}
 
 	private ChatCompletion chatCompletion() {

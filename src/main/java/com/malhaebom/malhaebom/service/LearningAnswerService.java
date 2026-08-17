@@ -63,10 +63,7 @@ public class LearningAnswerService {
 		} catch (RuntimeException exception) {
 			RuntimeException cause = unwrapCompletionException(exception);
 			fail(processing, cause);
-			throw new ApiException(
-				ErrorCode.ANSWER_ASSESSMENT_FAILED,
-				cause
-			);
+			throw assessmentException(cause);
 		}
 		return assessment;
 	}
@@ -79,6 +76,15 @@ public class LearningAnswerService {
 			return cause;
 		}
 		return exception;
+	}
+
+	private RuntimeException assessmentException(RuntimeException cause) {
+		if (cause instanceof ApiException apiException
+			&& apiException.getErrorCode()
+				== ErrorCode.ANSWER_ASSESSMENT_OVERLOADED) {
+			return apiException;
+		}
+		return new ApiException(ErrorCode.ANSWER_ASSESSMENT_FAILED, cause);
 	}
 
 	private AnswerSubmissionResult complete(

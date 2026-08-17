@@ -94,6 +94,10 @@ public enum ErrorCode {
 		HttpStatus.BAD_GATEWAY,
 		"답변 채점에 실패했습니다. 잠시 후 다시 시도해 주세요."
 	),
+	ANSWER_ASSESSMENT_OVERLOADED(
+		HttpStatus.SERVICE_UNAVAILABLE,
+		"답변 채점 요청이 많습니다. 잠시 후 다시 시도해 주세요."
+	),
 	SPEECH_NOT_RECOGNIZED(
 		HttpStatus.UNPROCESSABLE_CONTENT,
 		"음성을 인식하지 못했습니다."
