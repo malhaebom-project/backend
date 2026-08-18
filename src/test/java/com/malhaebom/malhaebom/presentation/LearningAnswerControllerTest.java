@@ -1,5 +1,6 @@
 package com.malhaebom.malhaebom.presentation;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
@@ -8,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -25,8 +27,10 @@ import com.malhaebom.malhaebom.domain.learning.AnswerResult;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.infra.async.AnswerSubmissionAsyncProperties;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
+import com.malhaebom.malhaebom.service.dto.AnswerSubmissionTask;
 
 @ExtendWith(MockitoExtension.class)
 class LearningAnswerControllerTest {
@@ -46,7 +50,10 @@ class LearningAnswerControllerTest {
 	@BeforeEach
 	void setUp() {
 		mockMvc = MockMvcBuilders.standaloneSetup(
-			new LearningAnswerController(learningAnswerService)
+			new LearningAnswerController(
+				learningAnswerService,
+				new AnswerSubmissionAsyncProperties(Duration.ofSeconds(30))
+			)
 		)
 			.setControllerAdvice(new ApiExceptionHandler())
 			.build();
@@ -61,11 +68,15 @@ class LearningAnswerControllerTest {
 			SESSION_ID,
 			SESSION_QUESTION_ID,
 			SPEECH_ANSWER_ID
-		)).thenReturn(submission);
+		)).thenReturn(submissionTask(submission));
 
 		MvcResult pending = performSubmission()
 			.andExpect(request().asyncStarted())
 			.andReturn();
+		assertEquals(
+			Duration.ofSeconds(30).toMillis(),
+			pending.getRequest().getAsyncContext().getTimeout()
+		);
 
 		submission.complete(submissionResult());
 
@@ -94,7 +105,7 @@ class LearningAnswerControllerTest {
 			SESSION_ID,
 			SESSION_QUESTION_ID,
 			SPEECH_ANSWER_ID
-		)).thenReturn(submission);
+		)).thenReturn(submissionTask(submission));
 		MvcResult pending = performSubmission()
 			.andExpect(request().asyncStarted())
 			.andReturn();
@@ -135,5 +146,11 @@ class LearningAnswerControllerTest {
 			false,
 			2
 		);
+	}
+
+	private AnswerSubmissionTask submissionTask(
+		CompletableFuture<AnswerSubmissionResult> result
+	) {
+		return new AnswerSubmissionTask(result, () -> result.cancel(true));
 	}
 }

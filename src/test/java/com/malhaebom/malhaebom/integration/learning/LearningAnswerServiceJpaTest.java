@@ -285,7 +285,7 @@ class LearningAnswerServiceJpaTest {
 				session.getId(),
 				question.getId(),
 				speechAnswer.getId()
-			);
+			).result();
 		AnswerSubmission processing = answerSubmissionRepository
 			.findBySpeechAnswer_Id(speechAnswer.getId())
 			.orElseThrow();
@@ -611,7 +611,7 @@ class LearningAnswerServiceJpaTest {
 			sessionId,
 			sessionQuestionId,
 			speechAnswerId
-		));
+		).result());
 	}
 
 	private <T> T await(CompletionStage<T> stage) {

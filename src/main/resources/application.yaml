@@ -34,6 +34,8 @@ malhaebom:
   answer-submission:
     processing-timeout: 25s
     processing-lease: 60s
+    async:
+      request-timeout: 30s
 
 gcp:
   credentials: file:./config/google-credentials.json

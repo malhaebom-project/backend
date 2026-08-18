@@ -252,7 +252,7 @@ class LearningAnswerTransactionBoundaryJpaTest {
 				session.getId(),
 				question.getId(),
 				speechAnswer.getId()
-			);
+			).result();
 		assertFalse(submission.toCompletableFuture().isDone());
 
 		assertApiException(
@@ -347,7 +347,7 @@ class LearningAnswerTransactionBoundaryJpaTest {
 			sessionId,
 			sessionQuestionId,
 			speechAnswerId
-		));
+		).result());
 	}
 
 	private <T> T await(CompletionStage<T> stage) {

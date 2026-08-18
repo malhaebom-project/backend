@@ -102,7 +102,7 @@ class LearningAnswerConcurrencyJpaTest {
 				session.getId(),
 				question.getId(),
 				speechAnswer.getId()
-			);
+			).result();
 
 		try {
 			assertTrue(assessmentGenerator.awaitAssessmentStarted());
@@ -114,7 +114,7 @@ class LearningAnswerConcurrencyJpaTest {
 					session.getId(),
 					question.getId(),
 					speechAnswer.getId()
-				))
+				).result())
 			);
 
 			assessmentGenerator.releaseAssessment();
@@ -143,7 +143,7 @@ class LearningAnswerConcurrencyJpaTest {
 				session.getId(),
 				question.getId(),
 				firstSpeech.getId()
-			);
+			).result();
 
 		try {
 			assertTrue(assessmentGenerator.awaitAssessmentStarted());
@@ -155,7 +155,7 @@ class LearningAnswerConcurrencyJpaTest {
 					session.getId(),
 					question.getId(),
 					secondSpeech.getId()
-				))
+				).result())
 			);
 			assertTrue(answerSubmissionRepository.findBySpeechAnswer_Id(
 				secondSpeech.getId()
