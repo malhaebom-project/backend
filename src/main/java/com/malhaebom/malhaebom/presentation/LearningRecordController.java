@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.LearningHistoryResponse;
+import com.malhaebom.malhaebom.presentation.dto.LearningStatisticsResponse;
 import com.malhaebom.malhaebom.service.LearningRecordQueryService;
 import com.malhaebom.malhaebom.service.dto.LoginUser;
 
@@ -44,6 +45,21 @@ public class LearningRecordController {
 					size,
 					startDate,
 					endDate
+				)
+			)
+		);
+	}
+
+	@GetMapping("/{childId}/statistics")
+	public ApiResponse<LearningStatisticsResponse> getStatistics(
+		@Auth LoginUser loginUser,
+		@PathVariable Long childId
+	) {
+		return ApiResponse.success(
+			LearningStatisticsResponse.from(
+				learningRecordQueryService.getStatistics(
+					loginUser.userId(),
+					childId
 				)
 			)
 		);

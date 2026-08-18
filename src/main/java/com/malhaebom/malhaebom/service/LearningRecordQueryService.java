@@ -1,8 +1,14 @@
 package com.malhaebom.malhaebom.service;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -13,9 +19,15 @@ import com.malhaebom.malhaebom.domain.learning.LearningSessionStatus;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.service.dto.ChildStatistics;
+import com.malhaebom.malhaebom.service.dto.ChildStatisticsProjection;
 import com.malhaebom.malhaebom.service.dto.LearningHistory;
 import com.malhaebom.malhaebom.service.dto.LearningHistoryItem;
 import com.malhaebom.malhaebom.service.dto.LearningHistoryProjection;
+import com.malhaebom.malhaebom.service.dto.LearningSessionPeriodProjection;
+import com.malhaebom.malhaebom.service.dto.LearningStatistics;
+import com.malhaebom.malhaebom.service.dto.TopicStatistics;
+import com.malhaebom.malhaebom.service.dto.TopicStatisticsProjection;
 
 import lombok.RequiredArgsConstructor;
 
@@ -24,6 +36,7 @@ import lombok.RequiredArgsConstructor;
 public class LearningRecordQueryService {
 
 	private static final int MAX_PAGE_SIZE = 50;
+	private static final ZoneId STUDY_ZONE = ZoneId.of("Asia/Seoul");
 	private static final LocalDateTime DEFAULT_START_AT =
 		LocalDate.of(1970, 1, 1).atStartOfDay();
 	private static final LocalDateTime DEFAULT_END_AT =
@@ -31,6 +44,7 @@ public class LearningRecordQueryService {
 
 	private final ChildProfileService childProfileService;
 	private final LearningSessionRepository learningSessionRepository;
+	private final Clock clock;
 
 	@Transactional(readOnly = true)
 	public LearningHistory getHistory(
@@ -70,6 +84,39 @@ public class LearningRecordQueryService {
 		);
 	}
 
+	@Transactional(readOnly = true)
+	public LearningStatistics getStatistics(Long userId, Long childId) {
+		childProfileService.getOwnedActive(userId, childId);
+
+		ChildStatistics overallStatistics = learningSessionRepository
+			.findChildStatistics(List.of(childId))
+			.stream()
+			.findFirst()
+			.map(this::toChildStatistics)
+			.orElseGet(ChildStatistics::empty);
+		List<LearningSessionPeriodProjection> periods =
+			learningSessionRepository.findLearningSessionPeriods(
+				childId,
+				LearningSessionStatus.COMPLETED
+			);
+		List<TopicStatistics> topicStatistics = learningSessionRepository
+			.findTopicStatistics(childId, LearningSessionStatus.COMPLETED)
+			.stream()
+			.sorted(Comparator.comparing(
+				projection -> projection.getTopic().getTopicId()
+			))
+			.map(this::toTopicStatistics)
+			.toList();
+
+		return new LearningStatistics(
+			overallStatistics.totalStudyCount(),
+			calculateTotalStudySeconds(periods),
+			overallStatistics.totalCorrectRate(),
+			calculateConsecutiveStudyDays(periods),
+			topicStatistics
+		);
+	}
+
 	private LearningHistoryItem toHistoryItem(
 		LearningHistoryProjection projection
 	) {
@@ -91,7 +138,66 @@ public class LearningRecordQueryService {
 		);
 	}
 
-	private double calculateCorrectRate(int correctCount, int questionCount) {
+	private ChildStatistics toChildStatistics(
+		ChildStatisticsProjection projection
+	) {
+		return new ChildStatistics(
+			projection.getTotalStudyCount(),
+			projection.getCorrectCount(),
+			projection.getQuestionCount()
+		);
+	}
+
+	private TopicStatistics toTopicStatistics(
+		TopicStatisticsProjection projection
+	) {
+		long questionCount = projection.getQuestionCount();
+		long correctCount = projection.getCorrectCount();
+		return new TopicStatistics(
+			projection.getTopic().getName(),
+			questionCount,
+			calculateCorrectRate(correctCount, questionCount)
+		);
+	}
+
+	private long calculateTotalStudySeconds(
+		List<LearningSessionPeriodProjection> periods
+	) {
+		return periods.stream()
+			.mapToLong(period -> calculateStudySeconds(
+				period.getStartedAt(),
+				period.getCompletedAt()
+			))
+			.sum();
+	}
+
+	private int calculateConsecutiveStudyDays(
+		List<LearningSessionPeriodProjection> periods
+	) {
+		Set<LocalDate> studyDates = new HashSet<>();
+		for (LearningSessionPeriodProjection period : periods) {
+			if (period.getCompletedAt() != null) {
+				studyDates.add(period.getCompletedAt().toLocalDate());
+			}
+		}
+
+		LocalDate today = LocalDate.now(clock.withZone(STUDY_ZONE));
+		LocalDate cursor = studyDates.contains(today)
+			? today
+			: today.minusDays(1);
+		if (!studyDates.contains(cursor)) {
+			return 0;
+		}
+
+		int consecutiveDays = 0;
+		while (studyDates.contains(cursor)) {
+			consecutiveDays++;
+			cursor = cursor.minusDays(1);
+		}
+		return consecutiveDays;
+	}
+
+	private double calculateCorrectRate(long correctCount, long questionCount) {
 		if (questionCount == 0) {
 			return 0.0;
 		}

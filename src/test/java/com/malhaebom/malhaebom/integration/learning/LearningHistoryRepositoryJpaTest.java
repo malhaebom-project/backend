@@ -158,6 +158,65 @@ class LearningHistoryRepositoryJpaTest {
 			.isEqualTo(LearningTopic.ANIMAL);
 	}
 
+	@Test
+	void 완료된_학습의_전체와_주제별_통계를_조회한다() {
+		LocalDateTime animalCompletedAt =
+			LocalDateTime.of(2026, 8, 17, 10, 0);
+		LocalDateTime foodCompletedAt =
+			LocalDateTime.of(2026, 8, 18, 11, 0);
+		saveCompletedSession(
+			CHILD_ID,
+			LearningTopic.ANIMAL,
+			List.of(firstQuestion, secondQuestion),
+			List.of(true, false),
+			animalCompletedAt
+		);
+		saveCompletedSession(
+			CHILD_ID,
+			LearningTopic.FOOD,
+			List.of(firstQuestion),
+			List.of(true),
+			foodCompletedAt
+		);
+		saveInProgressSession(CHILD_ID);
+		saveCompletedSession(
+			OTHER_CHILD_ID,
+			LearningTopic.DAILY_LIFE,
+			List.of(firstQuestion),
+			List.of(true),
+			foodCompletedAt
+		);
+
+		var overall = learningSessionRepository
+			.findChildStatistics(List.of(CHILD_ID))
+			.getFirst();
+		var topics = learningSessionRepository.findTopicStatistics(
+			CHILD_ID,
+			LearningSessionStatus.COMPLETED
+		);
+		var periods = learningSessionRepository.findLearningSessionPeriods(
+			CHILD_ID,
+			LearningSessionStatus.COMPLETED
+		);
+
+		assertThat(overall.getTotalStudyCount()).isEqualTo(2);
+		assertThat(overall.getQuestionCount()).isEqualTo(3);
+		assertThat(overall.getCorrectCount()).isEqualTo(2);
+		assertThat(topics).anySatisfy(topic -> {
+			assertThat(topic.getTopic()).isEqualTo(LearningTopic.ANIMAL);
+			assertThat(topic.getQuestionCount()).isEqualTo(2);
+			assertThat(topic.getCorrectCount()).isEqualTo(1);
+		});
+		assertThat(topics).anySatisfy(topic -> {
+			assertThat(topic.getTopic()).isEqualTo(LearningTopic.FOOD);
+			assertThat(topic.getQuestionCount()).isEqualTo(1);
+			assertThat(topic.getCorrectCount()).isEqualTo(1);
+		});
+		assertThat(periods).hasSize(2);
+		assertThat(periods.get(0).getCompletedAt()).isEqualTo(foodCompletedAt);
+		assertThat(periods.get(1).getCompletedAt()).isEqualTo(animalCompletedAt);
+	}
+
 	private LearningSession saveCompletedSession(
 		Long childId,
 		LearningTopic topic,
