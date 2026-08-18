@@ -159,9 +159,78 @@ class LearningHistoryRepositoryJpaTest {
 	}
 
 	@Test
+	void 같은_완료_시각은_세션_ID_역순으로_페이징한다() {
+		LocalDateTime completedAt = LocalDateTime.of(2026, 7, 22, 14, 5);
+		LearningSession first = saveCompletedSession(
+			CHILD_ID,
+			LearningTopic.ANIMAL,
+			List.of(firstQuestion),
+			List.of(true),
+			completedAt
+		);
+		LearningSession second = saveCompletedSession(
+			CHILD_ID,
+			LearningTopic.FOOD,
+			List.of(secondQuestion),
+			List.of(false),
+			completedAt
+		);
+
+		var firstPage = learningSessionRepository.findLearningHistory(
+			CHILD_ID,
+			LearningSessionStatus.COMPLETED,
+			completedAt.minusDays(1),
+			completedAt.plusDays(1),
+			PageRequest.of(0, 1)
+		);
+		var secondPage = learningSessionRepository.findLearningHistory(
+			CHILD_ID,
+			LearningSessionStatus.COMPLETED,
+			completedAt.minusDays(1),
+			completedAt.plusDays(1),
+			PageRequest.of(1, 1)
+		);
+
+		assertThat(firstPage.getContent()).singleElement()
+			.extracting(item -> item.getSessionId())
+			.isEqualTo(second.getId());
+		assertThat(secondPage.getContent()).singleElement()
+			.extracting(item -> item.getSessionId())
+			.isEqualTo(first.getId());
+	}
+
+	@Test
+	void 비활성화된_문제의_학습_기록도_조회한다() {
+		LocalDateTime completedAt = LocalDateTime.of(2026, 7, 22, 14, 5);
+		LearningSession session = saveCompletedSession(
+			CHILD_ID,
+			LearningTopic.ANIMAL,
+			List.of(firstQuestion),
+			List.of(true),
+			completedAt
+		);
+		firstQuestion.deactivate();
+		questionRepository.flush();
+
+		var history = learningSessionRepository.findLearningHistory(
+			CHILD_ID,
+			LearningSessionStatus.COMPLETED,
+			completedAt.minusDays(1),
+			completedAt.plusDays(1),
+			PageRequest.of(0, 10)
+		);
+
+		assertThat(history.getContent()).singleElement()
+			.extracting(item -> item.getSessionId())
+			.isEqualTo(session.getId());
+	}
+
+	@Test
 	void 완료된_학습의_전체와_주제별_통계를_조회한다() {
 		LocalDateTime animalCompletedAt =
 			LocalDateTime.of(2026, 8, 17, 10, 0);
+		LocalDateTime secondAnimalCompletedAt =
+			LocalDateTime.of(2026, 8, 18, 9, 0);
 		LocalDateTime foodCompletedAt =
 			LocalDateTime.of(2026, 8, 18, 11, 0);
 		saveCompletedSession(
@@ -173,12 +242,20 @@ class LearningHistoryRepositoryJpaTest {
 		);
 		saveCompletedSession(
 			CHILD_ID,
+			LearningTopic.ANIMAL,
+			List.of(firstQuestion),
+			List.of(true),
+			secondAnimalCompletedAt
+		);
+		saveCompletedSession(
+			CHILD_ID,
 			LearningTopic.FOOD,
 			List.of(firstQuestion),
 			List.of(true),
 			foodCompletedAt
 		);
 		saveInProgressSession(CHILD_ID);
+		saveCanceledSession(CHILD_ID, foodCompletedAt.plusHours(1));
 		saveCompletedSession(
 			OTHER_CHILD_ID,
 			LearningTopic.DAILY_LIFE,
@@ -187,9 +264,9 @@ class LearningHistoryRepositoryJpaTest {
 			foodCompletedAt
 		);
 
-		var overall = learningSessionRepository
-			.findChildStatistics(List.of(CHILD_ID))
-			.getFirst();
+		var overall = learningSessionRepository.findChildStatistics(
+			List.of(CHILD_ID)
+		);
 		var topics = learningSessionRepository.findTopicStatistics(
 			CHILD_ID,
 			LearningSessionStatus.COMPLETED
@@ -199,22 +276,74 @@ class LearningHistoryRepositoryJpaTest {
 			LearningSessionStatus.COMPLETED
 		);
 
-		assertThat(overall.getTotalStudyCount()).isEqualTo(2);
-		assertThat(overall.getQuestionCount()).isEqualTo(3);
-		assertThat(overall.getCorrectCount()).isEqualTo(2);
-		assertThat(topics).anySatisfy(topic -> {
-			assertThat(topic.getTopic()).isEqualTo(LearningTopic.ANIMAL);
-			assertThat(topic.getQuestionCount()).isEqualTo(2);
-			assertThat(topic.getCorrectCount()).isEqualTo(1);
+		assertThat(overall).singleElement().satisfies(statistics -> {
+			assertThat(statistics.getChildId()).isEqualTo(CHILD_ID);
+			assertThat(statistics.getTotalStudyCount()).isEqualTo(3);
+			assertThat(statistics.getQuestionCount()).isEqualTo(4);
+			assertThat(statistics.getCorrectCount()).isEqualTo(3);
 		});
-		assertThat(topics).anySatisfy(topic -> {
-			assertThat(topic.getTopic()).isEqualTo(LearningTopic.FOOD);
-			assertThat(topic.getQuestionCount()).isEqualTo(1);
-			assertThat(topic.getCorrectCount()).isEqualTo(1);
-		});
-		assertThat(periods).hasSize(2);
+		assertThat(topics).satisfiesExactlyInAnyOrder(
+			topic -> {
+				assertThat(topic.getTopic()).isEqualTo(LearningTopic.ANIMAL);
+				assertThat(topic.getQuestionCount()).isEqualTo(3);
+				assertThat(topic.getCorrectCount()).isEqualTo(2);
+			},
+			topic -> {
+				assertThat(topic.getTopic()).isEqualTo(LearningTopic.FOOD);
+				assertThat(topic.getQuestionCount()).isEqualTo(1);
+				assertThat(topic.getCorrectCount()).isEqualTo(1);
+			}
+		);
+		assertThat(periods).hasSize(3);
 		assertThat(periods.get(0).getCompletedAt()).isEqualTo(foodCompletedAt);
-		assertThat(periods.get(1).getCompletedAt()).isEqualTo(animalCompletedAt);
+		assertThat(periods.get(1).getCompletedAt())
+			.isEqualTo(secondAnimalCompletedAt);
+		assertThat(periods.get(2).getCompletedAt()).isEqualTo(animalCompletedAt);
+	}
+
+	@Test
+	void 여러_어린이의_학습_통계를_각각_집계한다() {
+		LocalDateTime completedAt = LocalDateTime.of(2026, 8, 18, 11, 0);
+		saveCompletedSession(
+			CHILD_ID,
+			LearningTopic.ANIMAL,
+			List.of(firstQuestion, secondQuestion),
+			List.of(true, false),
+			completedAt
+		);
+		saveCompletedSession(
+			OTHER_CHILD_ID,
+			LearningTopic.FOOD,
+			List.of(firstQuestion),
+			List.of(true),
+			completedAt
+		);
+		saveCompletedSession(
+			OTHER_CHILD_ID,
+			LearningTopic.DAILY_LIFE,
+			List.of(secondQuestion),
+			List.of(false),
+			completedAt.plusMinutes(1)
+		);
+
+		var statistics = learningSessionRepository.findChildStatistics(
+			List.of(CHILD_ID, OTHER_CHILD_ID)
+		);
+
+		assertThat(statistics).satisfiesExactlyInAnyOrder(
+			child -> {
+				assertThat(child.getChildId()).isEqualTo(CHILD_ID);
+				assertThat(child.getTotalStudyCount()).isEqualTo(1);
+				assertThat(child.getQuestionCount()).isEqualTo(2);
+				assertThat(child.getCorrectCount()).isEqualTo(1);
+			},
+			child -> {
+				assertThat(child.getChildId()).isEqualTo(OTHER_CHILD_ID);
+				assertThat(child.getTotalStudyCount()).isEqualTo(2);
+				assertThat(child.getQuestionCount()).isEqualTo(2);
+				assertThat(child.getCorrectCount()).isEqualTo(1);
+			}
+		);
 	}
 
 	private LearningSession saveCompletedSession(
@@ -247,5 +376,20 @@ class LearningHistoryRepositoryJpaTest {
 			Difficulty.EASY,
 			List.of(firstQuestion)
 		));
+	}
+
+	private void saveCanceledSession(
+		Long childId,
+		LocalDateTime completedAt
+	) {
+		LearningSession session = LearningSession.create(
+			childId,
+			LearningTopic.DAILY_LIFE,
+			Difficulty.EASY,
+			List.of(firstQuestion)
+		);
+		session.cancel();
+		ReflectionTestUtils.setField(session, "completedAt", completedAt);
+		learningSessionRepository.saveAndFlush(session);
 	}
 }

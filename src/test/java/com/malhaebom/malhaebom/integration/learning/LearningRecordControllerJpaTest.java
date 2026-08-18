@@ -89,6 +89,7 @@ class LearningRecordControllerJpaTest {
 	private Long childId;
 	private Long otherChildId;
 	private Question question;
+	private Question secondQuestion;
 	private int requestSequence;
 
 	@BeforeEach
@@ -128,6 +129,18 @@ class LearningRecordControllerJpaTest {
 			IMAGE_PATH,
 			"The boy is running.",
 			Set.of("He is running."),
+			null,
+			null
+		));
+		secondQuestion = questionRepository.saveAndFlush(Question.create(
+			LearningTopic.DAILY_LIFE,
+			Difficulty.EASY,
+			QuestionType.SHORT_ANSWER,
+			"What is this?",
+			"이것은 무엇인가요?",
+			null,
+			"It is a book.",
+			Set.of("It is a book."),
 			null,
 			null
 		));
@@ -172,6 +185,7 @@ class LearningRecordControllerJpaTest {
 			baseTime.plusHours(2)
 		);
 		question.deactivate();
+		secondQuestion.deactivate();
 		questionRepository.flush();
 
 		Answer newest = wrongAnswers.get(10);
@@ -199,6 +213,83 @@ class LearningRecordControllerJpaTest {
 				.value("2026-08-18T10:10:00"))
 			.andExpect(jsonPath("$.data[9].answerId")
 				.value(oldestIncluded.getId()));
+	}
+
+	@Test
+	void 학습_통계를_실제_저장_결과로_집계한다() throws Exception {
+		saveCompletedSession(
+			childId,
+			LearningTopic.ANIMAL,
+			List.of(true, false),
+			LocalDateTime.of(2026, 8, 18, 9, 55),
+			LocalDateTime.of(2026, 8, 18, 10, 0)
+		);
+		saveCompletedSession(
+			childId,
+			LearningTopic.ANIMAL,
+			List.of(true),
+			LocalDateTime.of(2026, 8, 17, 10, 50),
+			LocalDateTime.of(2026, 8, 17, 11, 0)
+		);
+		saveCompletedSession(
+			childId,
+			LearningTopic.FOOD,
+			List.of(false, true),
+			LocalDateTime.of(2026, 8, 16, 8, 53),
+			LocalDateTime.of(2026, 8, 16, 9, 0)
+		);
+		saveCompletedSession(
+			childId,
+			LearningTopic.DAILY_LIFE,
+			List.of(true),
+			LocalDateTime.of(2026, 8, 17, 14, 58),
+			LocalDateTime.of(2026, 8, 17, 15, 0)
+		);
+		saveInProgressSession(childId);
+		saveCanceledSession(
+			childId,
+			LocalDateTime.of(2026, 8, 18, 11, 0)
+		);
+		saveCompletedSession(
+			otherChildId,
+			LearningTopic.ANIMAL,
+			List.of(true),
+			LocalDateTime.of(2026, 8, 18, 11, 55),
+			LocalDateTime.of(2026, 8, 18, 12, 0)
+		);
+		question.deactivate();
+		secondQuestion.deactivate();
+		questionRepository.flush();
+
+		mockMvc.perform(get(
+				"/api/v1/children/{childId}/statistics",
+				childId
+			))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.success").value(true))
+			.andExpect(jsonPath("$.data.totalSessionCount").value(4))
+			.andExpect(jsonPath("$.data.totalStudySeconds").value(1440))
+			.andExpect(jsonPath("$.data.averageCorrectRate").value(66.7))
+			.andExpect(jsonPath("$.data.consecutiveStudyDays").value(3))
+			.andExpect(jsonPath("$.data.topicStatistics.length()").value(3))
+			.andExpect(jsonPath("$.data.topicStatistics[0].topicName")
+				.value("동물"))
+			.andExpect(jsonPath("$.data.topicStatistics[0].questionCount")
+				.value(3))
+			.andExpect(jsonPath("$.data.topicStatistics[0].correctRate")
+				.value(66.7))
+			.andExpect(jsonPath("$.data.topicStatistics[1].topicName")
+				.value("음식"))
+			.andExpect(jsonPath("$.data.topicStatistics[1].questionCount")
+				.value(2))
+			.andExpect(jsonPath("$.data.topicStatistics[1].correctRate")
+				.value(50.0))
+			.andExpect(jsonPath("$.data.topicStatistics[2].topicName")
+				.value("일상생활"))
+			.andExpect(jsonPath("$.data.topicStatistics[2].questionCount")
+				.value(1))
+			.andExpect(jsonPath("$.data.topicStatistics[2].correctRate")
+				.value(100.0));
 	}
 
 	private Answer saveAnswer(
@@ -234,6 +325,51 @@ class LearningRecordControllerJpaTest {
 		);
 		ReflectionTestUtils.setField(answer, "submittedAt", submittedAt);
 		return answerRepository.saveAndFlush(answer);
+	}
+
+	private LearningSession saveCompletedSession(
+		Long sessionChildId,
+		LearningTopic topic,
+		List<Boolean> results,
+		LocalDateTime startedAt,
+		LocalDateTime completedAt
+	) {
+		List<Question> questions = List.of(question, secondQuestion)
+			.subList(0, results.size());
+		LearningSession session = LearningSession.create(
+			sessionChildId,
+			topic,
+			Difficulty.EASY,
+			questions
+		);
+		results.forEach(session::completeCurrentQuestion);
+		ReflectionTestUtils.setField(session, "startedAt", startedAt);
+		ReflectionTestUtils.setField(session, "completedAt", completedAt);
+		return learningSessionRepository.saveAndFlush(session);
+	}
+
+	private void saveInProgressSession(Long sessionChildId) {
+		learningSessionRepository.saveAndFlush(LearningSession.create(
+			sessionChildId,
+			LearningTopic.ANIMAL,
+			Difficulty.EASY,
+			List.of(question)
+		));
+	}
+
+	private void saveCanceledSession(
+		Long sessionChildId,
+		LocalDateTime completedAt
+	) {
+		LearningSession session = LearningSession.create(
+			sessionChildId,
+			LearningTopic.ANIMAL,
+			Difficulty.EASY,
+			List.of(question)
+		);
+		session.cancel();
+		ReflectionTestUtils.setField(session, "completedAt", completedAt);
+		learningSessionRepository.saveAndFlush(session);
 	}
 
 	private HandlerMethodArgumentResolver loginUserResolver() {
