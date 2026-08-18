@@ -2,6 +2,8 @@ package com.malhaebom.malhaebom.presentation.dto;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionStatus;
@@ -14,8 +16,8 @@ public record LearningSessionResponse(
 	int correctCount,
 	int correctRate,
 	long studySeconds,
-	LocalDateTime startedAt,
-	LocalDateTime completedAt
+	OffsetDateTime startedAt,
+	OffsetDateTime completedAt
 ) {
 
 	public static LearningSessionResponse from(LearningSession session) {
@@ -33,8 +35,8 @@ public record LearningSessionResponse(
 				session.getStartedAt(),
 				session.getCompletedAt()
 			),
-			session.getStartedAt(),
-			session.getCompletedAt()
+			toUtcOffset(session.getStartedAt()),
+			toUtcOffset(session.getCompletedAt())
 		);
 	}
 
@@ -54,12 +56,16 @@ public record LearningSessionResponse(
 		LocalDateTime completedAt
 	) {
 		LocalDateTime endAt = completedAt == null
-			? LocalDateTime.now()
+			? LocalDateTime.now(ZoneOffset.UTC)
 			: completedAt;
 
 		return Math.max(
 			0L,
 			Duration.between(startedAt, endAt).getSeconds()
 		);
+	}
+
+	private static OffsetDateTime toUtcOffset(LocalDateTime dateTime) {
+		return dateTime == null ? null : dateTime.atOffset(ZoneOffset.UTC);
 	}
 }

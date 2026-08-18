@@ -1,6 +1,7 @@
 package com.malhaebom.malhaebom.domain.learning;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import jakarta.persistence.Column;
@@ -66,7 +67,7 @@ public class LearningSession extends BaseEntity {
 		session.topic = topic;
 		session.difficulty = difficulty;
 		session.status = LearningSessionStatus.IN_PROGRESS;
-		session.startedAt = LocalDateTime.now();
+		session.startedAt = LocalDateTime.now(ZoneOffset.UTC);
 		session.questions.addAll(session, questions);
 		return session;
 	}
@@ -107,7 +108,7 @@ public class LearningSession extends BaseEntity {
 	public void cancel() {
 		validateInProgress();
 		status = LearningSessionStatus.CANCELED;
-		completedAt = LocalDateTime.now();
+		completedAt = LocalDateTime.now(ZoneOffset.UTC);
 	}
 
 	public int getCurrentQuestionIndex() {
@@ -137,7 +138,7 @@ public class LearningSession extends BaseEntity {
 
 	private void markCompleted() {
 		status = LearningSessionStatus.COMPLETED;
-		completedAt = LocalDateTime.now();
+		completedAt = LocalDateTime.now(ZoneOffset.UTC);
 	}
 
 	private void validateInProgress() {

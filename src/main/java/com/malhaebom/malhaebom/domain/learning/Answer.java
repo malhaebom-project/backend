@@ -1,6 +1,7 @@
 package com.malhaebom.malhaebom.domain.learning;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -106,7 +107,7 @@ public class Answer extends BaseEntity {
 			.getQuestion()
 			.getModelAnswer();
 		answer.feedbackText = feedbackText;
-		answer.submittedAt = LocalDateTime.now();
+		answer.submittedAt = LocalDateTime.now(ZoneOffset.UTC);
 		return answer;
 	}
 

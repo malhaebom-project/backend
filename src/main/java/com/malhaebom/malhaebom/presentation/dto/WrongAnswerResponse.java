@@ -1,6 +1,7 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 import com.malhaebom.malhaebom.service.dto.WrongAnswer;
 
@@ -12,7 +13,7 @@ public record WrongAnswerResponse(
 	String answerText,
 	String modelAnswer,
 	String feedbackText,
-	LocalDateTime answeredAt
+	OffsetDateTime answeredAt
 ) {
 
 	public static WrongAnswerResponse from(WrongAnswer wrongAnswer) {
@@ -24,7 +25,7 @@ public record WrongAnswerResponse(
 			wrongAnswer.answerText(),
 			wrongAnswer.modelAnswer(),
 			wrongAnswer.feedbackText(),
-			wrongAnswer.answeredAt()
+			wrongAnswer.answeredAt().atOffset(ZoneOffset.UTC)
 		);
 	}
 }

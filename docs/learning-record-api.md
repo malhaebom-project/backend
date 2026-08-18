@@ -25,6 +25,9 @@
   `IN_PROGRESS`, `CANCELED` 세션은 제외한다.
 - 문제의 `active` 여부는 과거 기록의 포함 여부에 영향을 주지 않는다. 완료 후
   문제가 비활성화되어도 기존 학습 기록과 통계에는 계속 포함한다.
+- 학습 시각은 데이터베이스에 UTC 기준으로 저장한다. 날짜 요청과 연속 학습일은
+  `Asia/Seoul` 날짜를 기준으로 해석하고, API 시각 응답에는 UTC 오프셋 `Z`를
+  포함한다.
 - 정답률은 퍼센트 값이며 소수점 첫째 자리까지 반올림한다.
 - 집계할 기록이 없으면 횟수와 시간은 `0`, 정답률은 `0.0`으로 반환한다.
 
@@ -36,8 +39,8 @@
 | --- | --- | --- |
 | `page` | `0` | 0부터 시작하며 음수일 수 없다. |
 | `size` | `10` | 1 이상 50 이하여야 한다. |
-| `startDate` | 없음 | 지정한 날짜의 `00:00`부터 조회한다. 생략하면 `1970-01-01 00:00`부터 조회한다. |
-| `endDate` | 없음 | 지정한 날짜 전체를 포함한다. 생략하면 `9999-01-01 00:00` 전까지 조회한다. |
+| `startDate` | 없음 | `Asia/Seoul` 기준 지정한 날짜의 `00:00`부터 조회한다. 생략하면 `1970-01-01 00:00`부터 조회한다. |
+| `endDate` | 없음 | `Asia/Seoul` 기준 지정한 날짜 전체를 포함한다. 생략하면 `9999-01-01 00:00` 전까지 조회한다. |
 
 `startDate`와 `endDate`를 모두 지정한 경우 `startDate`는 `endDate`보다 늦을 수
 없다. 날짜를 생략하면 위 기본 경계를 사용하므로 일반적인 운영 데이터에
@@ -46,11 +49,11 @@
 기간 조건은 완료 시각 `completedAt`을 기준으로 다음과 같이 적용한다.
 
 ```text
-startDate 00:00 <= completedAt < endDate 다음 날 00:00
+startDate 00:00 KST <= completedAt < endDate 다음 날 00:00 KST
 ```
 
 따라서 `endDate` 당일의 모든 완료 기록이 포함되고, 다음 날 `00:00`에 완료된
-기록은 포함되지 않는다.
+기록은 포함되지 않는다. 이 경계는 UTC 저장 시각으로 변환한 뒤 조회한다.
 
 ### 정렬과 페이징
 
@@ -71,7 +74,7 @@ startDate 00:00 <= completedAt < endDate 다음 날 00:00
 | `correctCount` | `correct = true`인 세션 문제 수 |
 | `correctRate` | `correctCount / questionCount * 100` |
 | `studySeconds` | `completedAt - startedAt`의 초 단위 값 |
-| `completedAt` | 세션 완료 시각 |
+| `completedAt` | UTC 오프셋 `Z`가 포함된 세션 완료 시각 |
 
 `startedAt` 또는 `completedAt`이 없거나 계산 결과가 음수이면 `studySeconds`는
 `0`으로 처리한다.
@@ -156,7 +159,7 @@ startDate 00:00 <= completedAt < endDate 다음 날 00:00
 | `answerText` | 제출된 답변 문구 |
 | `modelAnswer` | 답변 생성 시 저장한 모범 답안 스냅샷 |
 | `feedbackText` | 해당 답변에 생성된 피드백 |
-| `answeredAt` | 답변 제출 시각 |
+| `answeredAt` | UTC 오프셋 `Z`가 포함된 답변 제출 시각 |
 
 `questionText`와 `imageUrl`은 현재 문제 데이터를 참조하고, `modelAnswer`는 답변
 당시의 스냅샷을 사용한다.

@@ -210,9 +210,87 @@ class LearningRecordControllerJpaTest {
 			.andExpect(jsonPath("$.data[0].feedbackText")
 				.value("피드백 10"))
 			.andExpect(jsonPath("$.data[0].answeredAt")
-				.value("2026-08-18T10:10:00"))
+				.value("2026-08-18T10:10:00Z"))
 			.andExpect(jsonPath("$.data[9].answerId")
 				.value(oldestIncluded.getId()));
+	}
+
+	@Test
+	void 서울_날짜_경계를_UTC_저장값으로_조회한다() throws Exception {
+		saveCompletedSession(
+			childId,
+			LearningTopic.ANIMAL,
+			List.of(true),
+			LocalDateTime.of(2026, 8, 17, 14, 54, 59),
+			LocalDateTime.of(2026, 8, 17, 14, 59, 59)
+		);
+		LearningSession firstIncluded = saveCompletedSession(
+			childId,
+			LearningTopic.ANIMAL,
+			List.of(true),
+			LocalDateTime.of(2026, 8, 17, 14, 55),
+			LocalDateTime.of(2026, 8, 17, 15, 0)
+		);
+		LearningSession lastIncluded = saveCompletedSession(
+			childId,
+			LearningTopic.FOOD,
+			List.of(false),
+			LocalDateTime.of(2026, 8, 18, 14, 54, 59),
+			LocalDateTime.of(2026, 8, 18, 14, 59, 59)
+		);
+		saveCompletedSession(
+			childId,
+			LearningTopic.FOOD,
+			List.of(true),
+			LocalDateTime.of(2026, 8, 18, 14, 55),
+			LocalDateTime.of(2026, 8, 18, 15, 0)
+		);
+
+		mockMvc.perform(get(
+				"/api/v1/children/{childId}/learning-history",
+				childId
+			)
+				.param("startDate", "2026-08-18")
+				.param("endDate", "2026-08-18"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.content.length()").value(2))
+			.andExpect(jsonPath("$.data.totalElements").value(2))
+			.andExpect(jsonPath("$.data.content[0].sessionId")
+				.value(lastIncluded.getId()))
+			.andExpect(jsonPath("$.data.content[0].completedAt")
+				.value("2026-08-18T14:59:59Z"))
+			.andExpect(jsonPath("$.data.content[1].sessionId")
+				.value(firstIncluded.getId()))
+			.andExpect(jsonPath("$.data.content[1].completedAt")
+				.value("2026-08-17T15:00:00Z"));
+	}
+
+	@Test
+	void UTC_완료시각을_서울_날짜로_변환해_연속학습일을_계산한다()
+		throws Exception {
+		for (int day = 15; day <= 17; day++) {
+			LocalDateTime completedAt = LocalDateTime.of(
+				2026,
+				8,
+				day,
+				15,
+				30
+			);
+			saveCompletedSession(
+				childId,
+				LearningTopic.ANIMAL,
+				List.of(true),
+				completedAt.minusMinutes(5),
+				completedAt
+			);
+		}
+
+		mockMvc.perform(get(
+				"/api/v1/children/{childId}/statistics",
+				childId
+			))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.consecutiveStudyDays").value(3));
 	}
 
 	@Test

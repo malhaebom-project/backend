@@ -1,6 +1,7 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
@@ -14,7 +15,7 @@ public record CreateLearningSessionResponse(
 	int questionCount,
 	int currentQuestionIndex,
 	LearningSessionStatus status,
-	LocalDateTime startedAt
+	OffsetDateTime startedAt
 ) {
 
 	public static CreateLearningSessionResponse from(LearningSession session) {
@@ -26,7 +27,7 @@ public record CreateLearningSessionResponse(
 			session.getQuestionCount(),
 			session.getCurrentQuestionIndex(),
 			session.getStatus(),
-			session.getStartedAt()
+			session.getStartedAt().atOffset(ZoneOffset.UTC)
 		);
 	}
 }

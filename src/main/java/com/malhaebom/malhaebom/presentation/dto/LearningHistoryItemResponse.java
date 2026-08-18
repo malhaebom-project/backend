@@ -1,6 +1,7 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.service.dto.LearningHistoryItem;
@@ -13,7 +14,7 @@ public record LearningHistoryItemResponse(
 	int correctCount,
 	double correctRate,
 	long studySeconds,
-	LocalDateTime completedAt
+	OffsetDateTime completedAt
 ) {
 
 	public static LearningHistoryItemResponse from(LearningHistoryItem item) {
@@ -25,7 +26,7 @@ public record LearningHistoryItemResponse(
 			item.correctCount(),
 			item.correctRate(),
 			item.studySeconds(),
-			item.completedAt()
+			item.completedAt().atOffset(ZoneOffset.UTC)
 		);
 	}
 }

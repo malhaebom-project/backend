@@ -1,6 +1,7 @@
 package com.malhaebom.malhaebom.domain.learning;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -78,7 +79,7 @@ public class LearningSessionQuestion extends BaseEntity {
 		}
 
 		this.correct = correct;
-		this.answeredAt = LocalDateTime.now();
+		this.answeredAt = LocalDateTime.now(ZoneOffset.UTC);
 
 		if (!correct) {
 			wrongAnswerCount++;
@@ -103,7 +104,7 @@ public class LearningSessionQuestion extends BaseEntity {
 		}
 
 		correct = false;
-		answeredAt = LocalDateTime.now();
+		answeredAt = LocalDateTime.now(ZoneOffset.UTC);
 	}
 
 	void useHint() {
