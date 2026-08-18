@@ -2,6 +2,10 @@
 
 Java 21과 Spring Boot 기반의 말해봄 백엔드 애플리케이션입니다.
 
+## 프로젝트 문서
+
+- [학습 기록 API 집계 기준](docs/learning-record-api.md)
+
 ## 애플리케이션 설정
 
 기본 설정 파일인 `src/main/resources/application.yaml`은 다음 외부 파일을
