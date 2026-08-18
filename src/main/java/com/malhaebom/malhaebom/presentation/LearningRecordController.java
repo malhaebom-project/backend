@@ -1,6 +1,7 @@
 package com.malhaebom.malhaebom.presentation;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +14,7 @@ import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.LearningHistoryResponse;
 import com.malhaebom.malhaebom.presentation.dto.LearningStatisticsResponse;
+import com.malhaebom.malhaebom.presentation.dto.WrongAnswerResponse;
 import com.malhaebom.malhaebom.service.LearningRecordQueryService;
 import com.malhaebom.malhaebom.service.dto.LoginUser;
 
@@ -62,6 +64,21 @@ public class LearningRecordController {
 					childId
 				)
 			)
+		);
+	}
+
+	@GetMapping("/{childId}/wrong-answers")
+	public ApiResponse<List<WrongAnswerResponse>> getRecentWrongAnswers(
+		@Auth LoginUser loginUser,
+		@PathVariable Long childId
+	) {
+		return ApiResponse.success(
+			learningRecordQueryService.getRecentWrongAnswers(
+				loginUser.userId(),
+				childId
+			).stream()
+				.map(WrongAnswerResponse::from)
+				.toList()
 		);
 	}
 }

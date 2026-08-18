@@ -16,9 +16,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.malhaebom.malhaebom.domain.learning.LearningSessionStatus;
+import com.malhaebom.malhaebom.domain.learning.AnswerResult;
+import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.infra.storage.image.QuestionImageUrlResolver;
 import com.malhaebom.malhaebom.service.dto.ChildStatistics;
 import com.malhaebom.malhaebom.service.dto.ChildStatisticsProjection;
 import com.malhaebom.malhaebom.service.dto.LearningHistory;
@@ -28,6 +31,8 @@ import com.malhaebom.malhaebom.service.dto.LearningSessionPeriodProjection;
 import com.malhaebom.malhaebom.service.dto.LearningStatistics;
 import com.malhaebom.malhaebom.service.dto.TopicStatistics;
 import com.malhaebom.malhaebom.service.dto.TopicStatisticsProjection;
+import com.malhaebom.malhaebom.service.dto.WrongAnswer;
+import com.malhaebom.malhaebom.service.dto.WrongAnswerProjection;
 
 import lombok.RequiredArgsConstructor;
 
@@ -36,6 +41,12 @@ import lombok.RequiredArgsConstructor;
 public class LearningRecordQueryService {
 
 	private static final int MAX_PAGE_SIZE = 50;
+	private static final int RECENT_WRONG_ANSWER_LIMIT = 10;
+	private static final List<AnswerResult> WRONG_ANSWER_RESULTS = List.of(
+		AnswerResult.PARTIALLY_CORRECT,
+		AnswerResult.INCORRECT,
+		AnswerResult.UNRECOGNIZED
+	);
 	private static final ZoneId STUDY_ZONE = ZoneId.of("Asia/Seoul");
 	private static final LocalDateTime DEFAULT_START_AT =
 		LocalDate.of(1970, 1, 1).atStartOfDay();
@@ -44,6 +55,8 @@ public class LearningRecordQueryService {
 
 	private final ChildProfileService childProfileService;
 	private final LearningSessionRepository learningSessionRepository;
+	private final AnswerRepository answerRepository;
+	private final QuestionImageUrlResolver questionImageUrlResolver;
 	private final Clock clock;
 
 	@Transactional(readOnly = true)
@@ -117,6 +130,22 @@ public class LearningRecordQueryService {
 		);
 	}
 
+	@Transactional(readOnly = true)
+	public List<WrongAnswer> getRecentWrongAnswers(
+		Long userId,
+		Long childId
+	) {
+		childProfileService.getOwnedActive(userId, childId);
+
+		return answerRepository.findRecentWrongAnswers(
+			childId,
+			WRONG_ANSWER_RESULTS,
+			PageRequest.of(0, RECENT_WRONG_ANSWER_LIMIT)
+		).stream()
+			.map(this::toWrongAnswer)
+			.toList();
+	}
+
 	private LearningHistoryItem toHistoryItem(
 		LearningHistoryProjection projection
 	) {
@@ -157,6 +186,19 @@ public class LearningRecordQueryService {
 			projection.getTopic().getName(),
 			questionCount,
 			calculateCorrectRate(correctCount, questionCount)
+		);
+	}
+
+	private WrongAnswer toWrongAnswer(WrongAnswerProjection projection) {
+		return new WrongAnswer(
+			projection.getAnswerId(),
+			projection.getQuestionId(),
+			projection.getQuestionText(),
+			questionImageUrlResolver.resolve(projection.getImageUrl()),
+			projection.getAnswerText(),
+			projection.getModelAnswer(),
+			projection.getFeedbackText(),
+			projection.getAnsweredAt()
 		);
 	}
 
