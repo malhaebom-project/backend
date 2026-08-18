@@ -3,6 +3,7 @@ package com.malhaebom.malhaebom.presentation.dto;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.Duration;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
 
@@ -38,7 +39,10 @@ class LearningSessionResponseTest {
 			).getSeconds(),
 			response.studySeconds()
 		);
-		assertEquals(session.getCompletedAt(), response.completedAt());
+		assertEquals(
+			session.getCompletedAt().atOffset(ZoneOffset.UTC),
+			response.completedAt()
+		);
 	}
 
 	private Question createQuestion() {
