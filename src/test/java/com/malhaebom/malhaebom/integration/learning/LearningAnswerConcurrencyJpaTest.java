@@ -10,12 +10,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,11 +35,14 @@ import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionStatus;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
+import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerSubmissionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.infra.ai.AnswerAssessmentConcurrencyLimiter;
+import com.malhaebom.malhaebom.infra.ai.AnswerAssessmentConcurrencyProperties;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.infra.time.TimeConfiguration;
 import com.malhaebom.malhaebom.service.AnswerAssessmentService;
@@ -79,6 +85,8 @@ class LearningAnswerConcurrencyJpaTest {
 	@Autowired
 	private AnswerSubmissionRepository answerSubmissionRepository;
 	@Autowired
+	private AnswerRepository answerRepository;
+	@Autowired
 	private LearningAnswerService learningAnswerService;
 	@Autowired
 	private AnswerSubmissionTransactionService submissionTransactionService;
@@ -90,6 +98,11 @@ class LearningAnswerConcurrencyJpaTest {
 	@BeforeEach
 	void setUp() {
 		assessmentGenerator.reset();
+	}
+
+	@AfterEach
+	void tearDown() {
+		assessmentGenerator.releaseAllAssessments();
 	}
 
 	@Test
@@ -224,6 +237,70 @@ class LearningAnswerConcurrencyJpaTest {
 		assertEquals(completed.answerId(), submission.getAnswer().getId());
 	}
 
+	@Test
+	void 동시_한도_초과로_실패한_제출은_자리가_나면_재시도한다()
+		throws Exception {
+		LearningSession firstSession = saveSession();
+		LearningSessionQuestion firstQuestion = firstSession
+			.getCurrentQuestion();
+		SpeechAnswer firstSpeech = saveCompletedSpeechAnswer(firstQuestion, 1);
+		LearningSession secondSession = saveSession();
+		LearningSessionQuestion secondQuestion = secondSession
+			.getCurrentQuestion();
+		SpeechAnswer secondSpeech = saveCompletedSpeechAnswer(secondQuestion, 1);
+
+		CompletionStage<AnswerSubmissionResult> firstRequest =
+			learningAnswerService.submitAsync(
+				firstSession.getId(),
+				firstQuestion.getId(),
+				firstSpeech.getId()
+			).result();
+		assertTrue(assessmentGenerator.awaitAssessmentStarted());
+		assertFalse(firstRequest.toCompletableFuture().isDone());
+
+		assertApiException(
+			ErrorCode.ANSWER_ASSESSMENT_OVERLOADED,
+			() -> await(learningAnswerService.submitAsync(
+				secondSession.getId(),
+				secondQuestion.getId(),
+				secondSpeech.getId()
+			).result())
+		);
+		AnswerSubmission failed = answerSubmissionRepository
+			.findBySpeechAnswer_Id(secondSpeech.getId())
+			.orElseThrow();
+		assertEquals(AnswerSubmissionStatus.FAILED, failed.getStatus());
+		assertEquals(
+			ErrorCode.ANSWER_ASSESSMENT_OVERLOADED.getMessage(),
+			failed.getFailureMessage()
+		);
+		assertEquals(1, assessmentGenerator.callCount());
+		assertEquals(0, answerRepository.count());
+
+		assessmentGenerator.releaseAssessment(0);
+		await(firstRequest);
+		CompletionStage<AnswerSubmissionResult> retried = learningAnswerService
+			.submitAsync(
+				secondSession.getId(),
+				secondQuestion.getId(),
+				secondSpeech.getId()
+			)
+			.result();
+		assertEquals(2, assessmentGenerator.callCount());
+		assertFalse(retried.toCompletableFuture().isDone());
+
+		assessmentGenerator.releaseAssessment(1);
+		AnswerSubmissionResult recovered = await(retried);
+		AnswerSubmission completed = answerSubmissionRepository
+			.findById(failed.getId())
+			.orElseThrow();
+
+		assertEquals(AnswerSubmissionStatus.COMPLETED, completed.getStatus());
+		assertEquals(recovered.answerId(), completed.getAnswer().getId());
+		assertEquals(2, answerRepository.count());
+		assertEquals(2, answerSubmissionRepository.count());
+	}
+
 	private LearningSession saveSession() {
 		return LearningJpaTestFixture.saveSession(
 			questionRepository,
@@ -260,22 +337,39 @@ class LearningAnswerConcurrencyJpaTest {
 	static class AssessmentTestConfiguration {
 
 		@Bean
-		BlockingAnswerAssessmentGenerator answerAssessmentGenerator() {
-			return new BlockingAnswerAssessmentGenerator();
+		AnswerAssessmentConcurrencyLimiter answerAssessmentConcurrencyLimiter() {
+			return new AnswerAssessmentConcurrencyLimiter(
+				new AnswerAssessmentConcurrencyProperties(1)
+			);
+		}
+
+		@Bean
+		BlockingAnswerAssessmentGenerator answerAssessmentGenerator(
+			AnswerAssessmentConcurrencyLimiter concurrencyLimiter
+		) {
+			return new BlockingAnswerAssessmentGenerator(concurrencyLimiter);
 		}
 	}
 
 	private static final class BlockingAnswerAssessmentGenerator
 		implements AnswerAssessmentGenerator {
 
+		private final AnswerAssessmentConcurrencyLimiter concurrencyLimiter;
+		private final List<CompletableFuture<AnswerAssessment>> assessments =
+			new CopyOnWriteArrayList<>();
 		private final AtomicInteger calls = new AtomicInteger();
 		private volatile CountDownLatch assessmentStarted;
-		private volatile CompletableFuture<AnswerAssessment> assessment;
+
+		private BlockingAnswerAssessmentGenerator(
+			AnswerAssessmentConcurrencyLimiter concurrencyLimiter
+		) {
+			this.concurrencyLimiter = concurrencyLimiter;
+		}
 
 		void reset() {
 			calls.set(0);
 			assessmentStarted = new CountDownLatch(1);
-			assessment = new CompletableFuture<>();
+			assessments.clear();
 		}
 
 		boolean awaitAssessmentStarted() throws InterruptedException {
@@ -283,7 +377,17 @@ class LearningAnswerConcurrencyJpaTest {
 		}
 
 		void releaseAssessment() {
-			assessment.complete(CORRECT_ASSESSMENT);
+			releaseAssessment(0);
+		}
+
+		void releaseAssessment(int index) {
+			assessments.get(index).complete(CORRECT_ASSESSMENT);
+		}
+
+		void releaseAllAssessments() {
+			assessments.forEach(assessment ->
+				assessment.complete(CORRECT_ASSESSMENT)
+			);
 		}
 
 		int callCount() {
@@ -294,12 +398,17 @@ class LearningAnswerConcurrencyJpaTest {
 		public AnswerAssessmentTask generateAsync(
 			AnswerAssessmentInput input
 		) {
-			calls.incrementAndGet();
-			assessmentStarted.countDown();
-			return new AnswerAssessmentTask(
-				assessment,
-				() -> assessment.cancel(true)
-			);
+			return concurrencyLimiter.execute(() -> {
+				calls.incrementAndGet();
+				CompletableFuture<AnswerAssessment> assessment =
+					new CompletableFuture<>();
+				assessments.add(assessment);
+				assessmentStarted.countDown();
+				return new AnswerAssessmentTask(
+					assessment,
+					() -> assessment.cancel(true)
+				);
+			});
 		}
 	}
 }

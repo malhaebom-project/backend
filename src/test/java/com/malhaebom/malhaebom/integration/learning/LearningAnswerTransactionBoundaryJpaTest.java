@@ -50,6 +50,7 @@ import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
+import com.malhaebom.malhaebom.service.dto.AnswerSubmissionTask;
 import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 
 @DataJpaTest
@@ -273,6 +274,77 @@ class LearningAnswerTransactionBoundaryJpaTest {
 		assertFalse(answerRepository.existsBySpeechAnswer_Id(
 			speechAnswer.getId()
 		));
+	}
+
+	@Test
+	void Servlet_타임아웃으로_제출을_취소하면_늦은_결과를_막고_재시도한다() {
+		LearningSession session = LearningJpaTestFixture.saveSession(
+			questionRepository,
+			learningSessionRepository,
+			"He is ____ing."
+		);
+		LearningSessionQuestion question = session.getCurrentQuestion();
+		SpeechAnswer speechAnswer = SpeechAnswer.start(
+			question,
+			"servlet-timeout-request",
+			1
+		);
+		speechAnswer.complete("He is running.", 0.94, "TEST_STT");
+		speechAnswerRepository.saveAndFlush(speechAnswer);
+		CompletableFuture<AnswerAssessment> assessment =
+			new CompletableFuture<>();
+		assessmentGenerator.willReturn(assessment);
+		AnswerSubmissionTask submission = learningAnswerService.submitAsync(
+			session.getId(),
+			question.getId(),
+			speechAnswer.getId()
+		);
+
+		assertTrue(submission.cancel());
+		assertApiException(
+			ErrorCode.ANSWER_SUBMISSION_TIMEOUT,
+			() -> await(submission.result())
+		);
+		AnswerSubmission failed = answerSubmissionRepository
+			.findBySpeechAnswer_Id(speechAnswer.getId())
+			.orElseThrow();
+		assertEquals(AnswerSubmissionStatus.FAILED, failed.getStatus());
+		assertEquals(
+			ErrorCode.ANSWER_SUBMISSION_TIMEOUT.getMessage(),
+			failed.getFailureMessage()
+		);
+		assertTrue(assessment.isCancelled());
+		assertFalse(assessment.complete(new AnswerAssessment(
+			true,
+			50,
+			30,
+			20,
+			"늦게 도착한 결과"
+		)));
+		assertFalse(answerRepository.existsBySpeechAnswer_Id(
+			speechAnswer.getId()
+		));
+		assertTrue(isSessionInProgress(session.getId()));
+
+		assessmentGenerator.willReturn(new AnswerAssessment(
+			true,
+			50,
+			30,
+			20,
+			"재시도 채점 성공"
+		));
+		AnswerSubmissionResult retried = submit(
+			session.getId(),
+			question.getId(),
+			speechAnswer.getId()
+		);
+		AnswerSubmission completed = answerSubmissionRepository
+			.findById(failed.getId())
+			.orElseThrow();
+
+		assertEquals(AnswerSubmissionStatus.COMPLETED, completed.getStatus());
+		assertEquals(retried.answerId(), completed.getAnswer().getId());
+		assertEquals(1, answerRepository.count());
 	}
 
 	@Test
