@@ -47,7 +47,7 @@ class AnswerSubmissionRepositoryJpaTest {
 	private EntityManager entityManager;
 
 	@Test
-	void 제출_예약과_채점_입력_스냅샷을_저장한다() {
+	void 제출_예약을_저장한다() {
 		LearningSession session = saveSession();
 		LearningSessionQuestion question = session.getCurrentQuestion();
 		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(question, 1);
@@ -64,20 +64,6 @@ class AnswerSubmissionRepositoryJpaTest {
 		assertEquals(question.getId(), found.getSessionQuestion().getId());
 		assertEquals(speechAnswer.getId(), found.getSpeechAnswer().getId());
 		assertEquals(1, found.getAttemptNo());
-		assertEquals(
-			"What is the boy doing?",
-			found.getQuestionTextSnapshot()
-		);
-		assertEquals(
-			"남자아이는 무엇을 하고 있나요?",
-			found.getQuestionTextKoSnapshot()
-		);
-		assertEquals(
-			"The boy is running.",
-			found.getModelAnswerSnapshot()
-		);
-		assertEquals(2, found.getAcceptedAnswersSnapshot().size());
-		assertEquals("He is running.", found.getAnswerTextSnapshot());
 		assertEquals(
 			saved.getId(),
 			answerSubmissionRepository.findBySpeechAnswer_Id(

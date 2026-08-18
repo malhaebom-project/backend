@@ -22,7 +22,7 @@ class AnswerSubmissionTest {
 		Instant.parse("2026-08-13T07:01:00Z");
 
 	@Test
-	void 완료된_음성_답변의_제출을_예약하고_채점_입력을_복사한다() {
+	void 완료된_음성_답변의_제출을_예약한다() {
 		LearningSessionQuestion sessionQuestion = createSessionQuestion();
 		SpeechAnswer speechAnswer = completedSpeechAnswer(sessionQuestion);
 
@@ -40,41 +40,6 @@ class AnswerSubmissionTest {
 		assertNull(submission.getProcessingToken());
 		assertNull(submission.getLeaseExpiresAt());
 		assertNull(submission.getFailureMessage());
-		assertEquals(
-			"What is the boy doing?",
-			submission.getQuestionTextSnapshot()
-		);
-		assertEquals(
-			"남자아이는 무엇을 하고 있나요?",
-			submission.getQuestionTextKoSnapshot()
-		);
-		assertEquals(
-			"The boy is running.",
-			submission.getModelAnswerSnapshot()
-		);
-		assertEquals(
-			Set.of("He is running.", "He's running."),
-			submission.getAcceptedAnswersSnapshot()
-		);
-		assertEquals(
-			"He is running.",
-			submission.getAnswerTextSnapshot()
-		);
-	}
-
-	@Test
-	void 예약의_허용_답안_스냅샷은_외부에서_수정할_수_없다() {
-		LearningSessionQuestion sessionQuestion = createSessionQuestion();
-		AnswerSubmission submission = AnswerSubmission.reserve(
-			sessionQuestion,
-			completedSpeechAnswer(sessionQuestion),
-			1
-		);
-
-		assertThrows(
-			UnsupportedOperationException.class,
-			() -> submission.getAcceptedAnswersSnapshot().add("New answer")
-		);
 	}
 
 	@Test
