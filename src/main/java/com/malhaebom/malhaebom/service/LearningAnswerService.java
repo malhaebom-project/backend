@@ -1,6 +1,14 @@
 package com.malhaebom.malhaebom.service;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -16,10 +24,12 @@ import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionReposit
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation.Completed;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation.Processing;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
+import com.malhaebom.malhaebom.service.dto.AnswerSubmissionTask;
 
 import lombok.RequiredArgsConstructor;
 
@@ -32,9 +42,10 @@ public class LearningAnswerService {
 	private final AnswerSubmissionRepository answerSubmissionRepository;
 	private final AnswerAssessmentService answerAssessmentService;
 	private final AnswerSubmissionTransactionService submissionTransactionService;
+	private final Clock clock;
 
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
-	public AnswerSubmissionResult submit(
+	public AnswerSubmissionTask submitAsync(
 		Long sessionId,
 		Long sessionQuestionId,
 		Long speechAnswerId
@@ -42,30 +53,161 @@ public class LearningAnswerService {
 		AnswerSubmissionPreparation preparation = submissionTransactionService
 			.prepare(sessionId, sessionQuestionId, speechAnswerId);
 		return switch (preparation) {
-			case Completed completed -> completed.result();
+			case Completed completed -> AnswerSubmissionTask.completed(
+				completed.result()
+			);
 			case Processing processing -> assessAndComplete(processing);
 		};
 	}
 
-	private AnswerSubmissionResult assessAndComplete(Processing processing) {
-		AnswerAssessment assessment = assess(processing);
-		return complete(processing, assessment);
-	}
-
-	private AnswerAssessment assess(Processing processing) {
-		AnswerAssessment assessment;
+	private AnswerSubmissionTask assessAndComplete(
+		Processing processing
+	) {
+		AnswerAssessmentTask task;
 		try {
-			assessment = answerAssessmentService.assess(
-				processing.assessmentInput()
-			);
+			task = answerAssessmentService
+				.assessAsync(processing.assessmentInput());
 		} catch (RuntimeException exception) {
-			fail(processing, exception);
-			throw new ApiException(
-				ErrorCode.ANSWER_ASSESSMENT_FAILED,
-				exception
+			return new AnswerSubmissionTask(
+				failAssessment(processing, exception)
+					.thenApply(assessment -> complete(processing, assessment)),
+				() -> false
 			);
 		}
-		return assessment;
+
+		AtomicReference<ApiException> cancellation = new AtomicReference<>();
+		CompletionStage<AnswerSubmissionResult> result = withinDeadline(
+			processing,
+			task
+		)
+			.exceptionallyCompose(exception -> handleAssessmentFailure(
+				processing,
+				task,
+				cancellation,
+				exception
+			))
+			.thenApply(assessment -> completeUnlessCancelled(
+				processing,
+				assessment,
+				cancellation
+			));
+		return new AnswerSubmissionTask(
+			result,
+			() -> cancel(processing, task, cancellation)
+		);
+	}
+
+	private CompletionStage<AnswerAssessment> withinDeadline(
+		Processing processing,
+		AnswerAssessmentTask task
+	) {
+		Duration remaining = processing.deadline().remainingAt(clock.instant());
+		if (remaining.isZero()) {
+			return CompletableFuture.failedFuture(new TimeoutException());
+		}
+
+		CompletableFuture<AnswerAssessment> result = new CompletableFuture<>();
+		task.result().whenComplete((assessment, exception) -> {
+			if (exception != null) {
+				result.completeExceptionally(exception);
+				return;
+			}
+			result.complete(assessment);
+		});
+		return result.orTimeout(
+			remaining.toNanos(),
+			TimeUnit.NANOSECONDS
+		);
+	}
+
+	private CompletionStage<AnswerAssessment> handleAssessmentFailure(
+		Processing processing,
+		AnswerAssessmentTask task,
+		AtomicReference<ApiException> cancellation,
+		Throwable exception
+	) {
+		ApiException cancellationException = cancellation.get();
+		if (cancellationException != null) {
+			return CompletableFuture.failedFuture(cancellationException);
+		}
+		Throwable cause = unwrapCompletionException(exception);
+		if (cause instanceof TimeoutException) {
+			return timeout(processing, task);
+		}
+		return failAssessment(processing, cause);
+	}
+
+	private Throwable unwrapCompletionException(
+		Throwable exception
+	) {
+		Throwable cause = exception;
+		while (cause instanceof CompletionException
+			&& cause.getCause() != null) {
+			cause = cause.getCause();
+		}
+		return cause;
+	}
+
+	private CompletionStage<AnswerAssessment> failAssessment(
+		Processing processing,
+		Throwable exception
+	) {
+		Throwable unwrapped = unwrapCompletionException(exception);
+		RuntimeException cause = unwrapped instanceof RuntimeException runtime
+			? runtime
+			: new RuntimeException(unwrapped);
+		fail(processing, cause);
+		return CompletableFuture.failedFuture(assessmentException(cause));
+	}
+
+	private CompletionStage<AnswerAssessment> timeout(
+		Processing processing,
+		AnswerAssessmentTask task
+	) {
+		ApiException timeout = new ApiException(
+			ErrorCode.ANSWER_SUBMISSION_TIMEOUT
+		);
+		try {
+			task.cancel();
+		} catch (RuntimeException exception) {
+			timeout.addSuppressed(exception);
+		}
+		fail(processing, timeout);
+		return CompletableFuture.failedFuture(timeout);
+	}
+
+	private boolean cancel(
+		Processing processing,
+		AnswerAssessmentTask task,
+		AtomicReference<ApiException> cancellation
+	) {
+		ApiException timeout = new ApiException(
+			ErrorCode.ANSWER_SUBMISSION_TIMEOUT
+		);
+		if (!cancellation.compareAndSet(null, timeout)) {
+			return false;
+		}
+
+		try {
+			fail(processing, timeout);
+		} catch (RuntimeException exception) {
+			timeout.addSuppressed(exception);
+		}
+		try {
+			task.cancel();
+		} catch (RuntimeException exception) {
+			timeout.addSuppressed(exception);
+		}
+		return true;
+	}
+
+	private RuntimeException assessmentException(RuntimeException cause) {
+		if (cause instanceof ApiException apiException
+			&& apiException.getErrorCode()
+				== ErrorCode.ANSWER_ASSESSMENT_OVERLOADED) {
+			return apiException;
+		}
+		return new ApiException(ErrorCode.ANSWER_ASSESSMENT_FAILED, cause);
 	}
 
 	private AnswerSubmissionResult complete(
@@ -76,12 +218,25 @@ public class LearningAnswerService {
 			return submissionTransactionService.complete(
 				processing.submissionId(),
 				processing.processingToken(),
-				assessment
+				assessment,
+				processing.deadline()
 			);
 		} catch (RuntimeException exception) {
 			fail(processing, exception);
 			throw exception;
 		}
+	}
+
+	private AnswerSubmissionResult completeUnlessCancelled(
+		Processing processing,
+		AnswerAssessment assessment,
+		AtomicReference<ApiException> cancellation
+	) {
+		ApiException cancellationException = cancellation.get();
+		if (cancellationException != null) {
+			throw cancellationException;
+		}
+		return complete(processing, assessment);
 	}
 
 	private void fail(Processing processing, RuntimeException exception) {

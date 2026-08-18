@@ -1,10 +1,11 @@
 package com.malhaebom.malhaebom.service;
 
-import java.time.Duration;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,19 +27,22 @@ import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
+import com.malhaebom.malhaebom.service.policy.AnswerSubmissionDeadline;
+import com.malhaebom.malhaebom.service.policy.AnswerSubmissionPolicyProperties;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+@EnableConfigurationProperties(AnswerSubmissionPolicyProperties.class)
 public class AnswerSubmissionTransactionService {
-
-	private static final Duration PROCESSING_LEASE = Duration.ofSeconds(60);
 
 	private final LearningSessionRepository learningSessionRepository;
 	private final SpeechAnswerRepository speechAnswerRepository;
 	private final AnswerRepository answerRepository;
 	private final AnswerSubmissionRepository answerSubmissionRepository;
+	private final AnswerSubmissionPolicyProperties policyProperties;
+	private final Clock clock;
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public AnswerSubmissionPreparation prepare(
@@ -46,6 +50,10 @@ public class AnswerSubmissionTransactionService {
 		Long sessionQuestionId,
 		Long speechAnswerId
 	) {
+		AnswerSubmissionDeadline deadline = AnswerSubmissionDeadline.startingAt(
+			clock.instant(),
+			policyProperties.processingTimeout()
+		);
 		answerSubmissionRepository
 				.findBySpeechAnswer_Id(speechAnswerId)
 				.ifPresent(existing ->
@@ -61,7 +69,8 @@ public class AnswerSubmissionTransactionService {
 				lockedExisting,
 				session,
 				sessionQuestionId,
-				Instant.now()
+				clock.instant(),
+				deadline
 			);
 		}
 
@@ -78,14 +87,15 @@ public class AnswerSubmissionTransactionService {
 		AnswerSubmission submission = answerSubmissionRepository.save(
 			AnswerSubmission.reserve(currentQuestion, speechAnswer, attemptNo)
 		);
-		return claim(submission, Instant.now());
+		return claim(submission, clock.instant(), deadline);
 	}
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public AnswerSubmissionResult complete(
 		Long submissionId,
 		String processingToken,
-		AnswerAssessment assessment
+		AnswerAssessment assessment,
+		AnswerSubmissionDeadline deadline
 	) {
 		AnswerSubmission found = getSubmission(submissionId);
 		LearningSession session = getSessionForUpdate(
@@ -93,6 +103,7 @@ public class AnswerSubmissionTransactionService {
 		);
 		AnswerSubmission submission = getSubmissionForUpdate(submissionId);
 		validateProcessingToken(submission, processingToken);
+		validateDeadline(deadline);
 		validateInProgress(session);
 		validateCurrentQuestion(
 			session.getCurrentQuestion(),
@@ -110,6 +121,7 @@ public class AnswerSubmissionTransactionService {
 		} else {
 			session.completeCurrentQuestion(answer.isCorrect());
 		}
+		validateDeadline(deadline);
 		submission.complete(processingToken, answer);
 
 		return AnswerSubmissionResult.from(answer);
@@ -139,7 +151,8 @@ public class AnswerSubmissionTransactionService {
 		AnswerSubmission submission,
 		LearningSession session,
 		Long sessionQuestionId,
-		Instant now
+		Instant now,
+		AnswerSubmissionDeadline deadline
 	) {
 		validateRequestPath(submission, session.getId(), sessionQuestionId);
 		if (submission.isCompleted()) {
@@ -162,23 +175,25 @@ public class AnswerSubmissionTransactionService {
 		if (submission.getStatus() == AnswerSubmissionStatus.FAILED) {
 			submission.retry();
 		}
-		return claim(submission, now);
+		return claim(submission, now, deadline);
 	}
 
 	private AnswerSubmissionPreparation claim(
 		AnswerSubmission submission,
-		Instant claimedAt
+		Instant claimedAt,
+		AnswerSubmissionDeadline deadline
 	) {
 		String processingToken = UUID.randomUUID().toString();
 		submission.claim(
 			processingToken,
 			claimedAt,
-			claimedAt.plus(PROCESSING_LEASE)
+			claimedAt.plus(policyProperties.processingLease())
 		);
 		return AnswerSubmissionPreparation.processing(
 			submission.getId(),
 			processingToken,
-			AnswerAssessmentInput.from(submission)
+			AnswerAssessmentInput.from(submission),
+			deadline
 		);
 	}
 
@@ -300,6 +315,12 @@ public class AnswerSubmissionTransactionService {
 				ErrorCode.ANSWER_SUBMISSION_PROCESSING,
 				"답변 제출 처리 권한이 만료되었습니다."
 			);
+		}
+	}
+
+	private void validateDeadline(AnswerSubmissionDeadline deadline) {
+		if (deadline.isExpiredAt(clock.instant())) {
+			throw new ApiException(ErrorCode.ANSWER_SUBMISSION_TIMEOUT);
 		}
 	}
 

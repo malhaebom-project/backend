@@ -86,9 +86,17 @@ public enum ErrorCode {
 		HttpStatus.CONFLICT,
 		"처리 중이거나 재시도할 답변 제출이 이미 있습니다."
 	),
+	ANSWER_SUBMISSION_TIMEOUT(
+		HttpStatus.GATEWAY_TIMEOUT,
+		"답변 제출 처리 시간이 초과되었습니다."
+	),
 	ANSWER_ASSESSMENT_FAILED(
 		HttpStatus.BAD_GATEWAY,
 		"답변 채점에 실패했습니다. 잠시 후 다시 시도해 주세요."
+	),
+	ANSWER_ASSESSMENT_OVERLOADED(
+		HttpStatus.SERVICE_UNAVAILABLE,
+		"답변 채점 요청이 많습니다. 잠시 후 다시 시도해 주세요."
 	),
 	SPEECH_NOT_RECOGNIZED(
 		HttpStatus.UNPROCESSABLE_CONTENT,

@@ -14,21 +14,23 @@ spring:
   ai:
     openai:
       api-key: "${OPENAI_API_KEY}"
+      max-retries: 1
       chat:
         model: gpt-5.6-terra
         reasoning-effort: none
         verbosity: low
         max-completion-tokens: 300
-    retry:
-      max-attempts: 2
-      backoff:
-        initial-interval: 200ms
-        multiplier: 2
-        max-interval: 1s
 
 malhaebom:
   assets:
     base-url: https://malhaebom-assets-prod-514090179227-ap-northeast-2-an.s3.ap-northeast-2.amazonaws.com
+  answer-assessment:
+    max-concurrent-requests: ${ANSWER_ASSESSMENT_MAX_CONCURRENT_REQUESTS:32}
+  answer-submission:
+    processing-timeout: 25s
+    processing-lease: 60s
+    async:
+      request-timeout: 30s
 
 gcp:
   credentials: file:./config/google-credentials.json

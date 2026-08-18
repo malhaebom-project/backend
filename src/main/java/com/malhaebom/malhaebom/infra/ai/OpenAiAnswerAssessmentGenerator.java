@@ -1,17 +1,29 @@
 package com.malhaebom.malhaebom.infra.ai;
 
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
-import org.springframework.ai.chat.client.ChatClient;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openai.client.OpenAIClientAsync;
+import com.openai.models.ReasoningEffort;
+import com.openai.models.ResponseFormatJsonSchema;
+import com.openai.models.chat.completions.ChatCompletion;
+import com.openai.models.chat.completions.ChatCompletionCreateParams;
+import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.stereotype.Component;
 
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 
 @Component
 public class OpenAiAnswerAssessmentGenerator
 	implements AnswerAssessmentGenerator {
+
+	private static final ObjectMapper SCHEMA_MAPPER = new ObjectMapper();
 
 	private static final String SYSTEM_PROMPT = """
 		당신은 초급 영어 학습자의 말하기 답변을 채점하고 피드백하는
@@ -49,43 +61,135 @@ public class OpenAiAnswerAssessmentGenerator
 		총점과 최종 채점 결과는 서버에서 계산하므로 반환하지 마세요.
 		""";
 
-	private static final String USER_PROMPT = """
+	private static final String USER_PROMPT_TEMPLATE = """
 		<learning_data>
-		영어 문제: {questionText}
-		한국어 문제: {questionTextKo}
-		모범 답안: {modelAnswer}
-		허용 답안: {acceptedAnswers}
-		학습자 답변: {answerText}
+		영어 문제: %s
+		한국어 문제: %s
+		모범 답안: %s
+		허용 답안: %s
+		학습자 답변: %s
 		</learning_data>
 		""";
 
-	private final ChatClient chatClient;
+	private final OpenAIClientAsync openAiClient;
+	private final OpenAiAnswerAssessmentProperties properties;
+	private final AnswerAssessmentConcurrencyLimiter concurrencyLimiter;
+	private final BeanOutputConverter<AnswerAssessment> outputConverter;
+	private final ResponseFormatJsonSchema responseFormat;
 
-	public OpenAiAnswerAssessmentGenerator(ChatClient.Builder builder) {
-		this.chatClient = builder
-			.defaultSystem(SYSTEM_PROMPT)
-			.build();
+	public OpenAiAnswerAssessmentGenerator(
+		OpenAIClientAsync openAiClient,
+		OpenAiAnswerAssessmentProperties properties,
+		AnswerAssessmentConcurrencyLimiter concurrencyLimiter
+	) {
+		this.openAiClient = openAiClient;
+		this.properties = properties;
+		this.concurrencyLimiter = concurrencyLimiter;
+		this.outputConverter = new BeanOutputConverter<>(AnswerAssessment.class);
+		this.responseFormat = createResponseFormat(
+			outputConverter.getJsonSchema()
+		);
 	}
 
 	@Override
-	public AnswerAssessment generate(AnswerAssessmentInput input) {
+	public AnswerAssessmentTask generateAsync(
+		AnswerAssessmentInput input
+	) {
 		Objects.requireNonNull(input, "채점 입력은 null일 수 없습니다.");
+		return concurrencyLimiter.execute(() -> generate(input));
+	}
 
-		return chatClient.prompt()
-			.user(user -> user
-				.text(USER_PROMPT)
-				.param("questionText", input.questionText())
-				.param("questionTextKo", input.questionTextKo())
-				.param("modelAnswer", input.modelAnswer())
-				.param(
-					"acceptedAnswers",
-					String.join(" | ", input.acceptedAnswers())
-				)
-				.param("answerText", input.answerText()))
-			.call()
-			.entity(
-				AnswerAssessment.class,
-				spec -> spec.useProviderStructuredOutput()
+	private AnswerAssessmentTask generate(
+		AnswerAssessmentInput input
+	) {
+		CompletableFuture<ChatCompletion> request = openAiClient.chat()
+			.completions()
+			.create(createParams(input));
+		CompletionStage<AnswerAssessment> result = request.thenApply(
+			this::extractAssessment
+		);
+		return new AnswerAssessmentTask(
+			result,
+			() -> request.cancel(true)
+		);
+	}
+
+	private ChatCompletionCreateParams createParams(
+		AnswerAssessmentInput input
+	) {
+		OpenAiAnswerAssessmentProperties.Chat chat = properties.getChat();
+		ChatCompletionCreateParams.Builder builder =
+			ChatCompletionCreateParams.builder()
+				.model(chat.getModel())
+				.addSystemMessage(SYSTEM_PROMPT)
+				.addUserMessage(userPrompt(input))
+				.responseFormat(responseFormat);
+
+		if (chat.getReasoningEffort() != null) {
+			builder.reasoningEffort(
+				ReasoningEffort.of(chat.getReasoningEffort())
 			);
+		}
+		if (chat.getVerbosity() != null) {
+			builder.verbosity(
+				ChatCompletionCreateParams.Verbosity.of(chat.getVerbosity())
+			);
+		}
+		if (chat.getMaxCompletionTokens() != null) {
+			builder.maxCompletionTokens(chat.getMaxCompletionTokens());
+		}
+
+		return builder.build();
+	}
+
+	private ResponseFormatJsonSchema createResponseFormat(String jsonSchema) {
+		try {
+			ResponseFormatJsonSchema.JsonSchema.Schema schema = SCHEMA_MAPPER
+				.readValue(
+					jsonSchema,
+					ResponseFormatJsonSchema.JsonSchema.Schema.class
+				);
+			ResponseFormatJsonSchema.JsonSchema definition =
+				ResponseFormatJsonSchema.JsonSchema.builder()
+					.name("answer_assessment")
+					.schema(schema)
+					.strict(true)
+					.build();
+			return ResponseFormatJsonSchema.builder()
+				.jsonSchema(definition)
+				.build();
+		} catch (JsonProcessingException exception) {
+			throw new IllegalStateException(
+				"답변 채점 JSON 스키마를 생성할 수 없습니다.",
+				exception
+			);
+		}
+	}
+
+	private String userPrompt(AnswerAssessmentInput input) {
+		return USER_PROMPT_TEMPLATE.formatted(
+			input.questionText(),
+			input.questionTextKo(),
+			input.modelAnswer(),
+			String.join(" | ", input.acceptedAnswers()),
+			input.answerText()
+		);
+	}
+
+	private AnswerAssessment extractAssessment(
+		ChatCompletion completion
+	) {
+		if (completion.choices().isEmpty()) {
+			throw new IllegalStateException("OpenAI 채점 응답이 비어 있습니다.");
+		}
+
+		var message = completion.choices().getFirst().message();
+		if (message.refusal().isPresent()) {
+			throw new IllegalStateException("OpenAI가 답변 채점을 거부했습니다.");
+		}
+		String content = message.content().orElseThrow(
+			() -> new IllegalStateException("OpenAI 채점 결과가 비어 있습니다.")
+		);
+		return outputConverter.convert(content);
 	}
 }

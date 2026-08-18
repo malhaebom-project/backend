@@ -1,14 +1,9 @@
 package com.malhaebom.malhaebom.domain.learning;
 
 import java.time.Instant;
-import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.Objects;
-import java.util.Set;
 
-import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -88,27 +83,6 @@ public class AnswerSubmission extends BaseEntity {
 	@Column(name = "failure_message", length = 1000)
 	private String failureMessage;
 
-	@Column(name = "question_text_snapshot", nullable = false, length = 500)
-	private String questionTextSnapshot;
-
-	@Column(name = "question_text_ko_snapshot", nullable = false, length = 500)
-	private String questionTextKoSnapshot;
-
-	@Column(name = "model_answer_snapshot", nullable = false, length = 1000)
-	private String modelAnswerSnapshot;
-
-	@ElementCollection
-	@CollectionTable(
-		name = "answer_submission_accepted_answers",
-		joinColumns = @JoinColumn(name = "answer_submission_id")
-	)
-	@Column(name = "answer_text", nullable = false, length = 1000)
-	@Getter(AccessLevel.NONE)
-	private Set<String> acceptedAnswersSnapshot = new LinkedHashSet<>();
-
-	@Column(name = "answer_text_snapshot", nullable = false, length = 4000)
-	private String answerTextSnapshot;
-
 	public static AnswerSubmission reserve(
 		LearningSessionQuestion sessionQuestion,
 		SpeechAnswer speechAnswer,
@@ -116,24 +90,12 @@ public class AnswerSubmission extends BaseEntity {
 	) {
 		validateReservation(sessionQuestion, speechAnswer, attemptNo);
 
-		Question question = sessionQuestion.getQuestion();
 		AnswerSubmission submission = new AnswerSubmission();
 		submission.sessionQuestion = sessionQuestion;
 		submission.speechAnswer = speechAnswer;
 		submission.attemptNo = attemptNo;
 		submission.status = AnswerSubmissionStatus.PENDING;
-		submission.questionTextSnapshot = question.getQuestionText();
-		submission.questionTextKoSnapshot = question.getQuestionTextKo();
-		submission.modelAnswerSnapshot = question.getModelAnswer();
-		submission.acceptedAnswersSnapshot.addAll(
-			question.getAcceptedAnswers()
-		);
-		submission.answerTextSnapshot = speechAnswer.getTranscript();
 		return submission;
-	}
-
-	public Set<String> getAcceptedAnswersSnapshot() {
-		return Collections.unmodifiableSet(acceptedAnswersSnapshot);
 	}
 
 	public void claim(

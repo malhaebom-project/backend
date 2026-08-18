@@ -5,6 +5,8 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmission;
+import com.malhaebom.malhaebom.domain.learning.Question;
+import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 
 public record AnswerAssessmentInput(
 	String questionText,
@@ -36,12 +38,14 @@ public record AnswerAssessmentInput(
 		if (submission == null) {
 			throw new IllegalArgumentException("답변 제출 예약은 null일 수 없습니다.");
 		}
+		Question question = submission.getSessionQuestion().getQuestion();
+		SpeechAnswer speechAnswer = submission.getSpeechAnswer();
 		return new AnswerAssessmentInput(
-			submission.getQuestionTextSnapshot(),
-			submission.getQuestionTextKoSnapshot(),
-			submission.getModelAnswerSnapshot(),
-			submission.getAcceptedAnswersSnapshot(),
-			submission.getAnswerTextSnapshot()
+			question.getQuestionText(),
+			question.getQuestionTextKo(),
+			question.getModelAnswer(),
+			question.getAcceptedAnswers(),
+			speechAnswer.getTranscript()
 		);
 	}
 
