@@ -3,6 +3,7 @@ package com.malhaebom.malhaebom.integration.learning;
 import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
@@ -22,6 +23,8 @@ import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
+import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
+import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
@@ -62,7 +65,10 @@ class SpeechAnswerServiceJpaTest {
 		speechAnswerService = new SpeechAnswerService(
 			stateService,
 			transcriber,
-			Runnable::run
+			Runnable::run,
+			new SpeechTranscriptionConcurrencyLimiter(
+				new SpeechAnswerAsyncProperties(Duration.ofSeconds(20), 8)
+			)
 		);
 		session = LearningJpaTestFixture.saveSession(
 			questionRepository,

@@ -46,6 +46,7 @@ import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
+import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.presentation.LearningSpeechController;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
@@ -86,15 +87,18 @@ class LearningSpeechControllerJpaTest {
 	@BeforeEach
 	void setUp() {
 		transcriber = new TestSpeechTranscriber();
+		SpeechAnswerAsyncProperties asyncProperties =
+			new SpeechAnswerAsyncProperties(Duration.ofSeconds(20), 8);
 		SpeechAnswerService speechAnswerService = new SpeechAnswerService(
 			stateService,
 			transcriber,
-			Runnable::run
+			Runnable::run,
+			new SpeechTranscriptionConcurrencyLimiter(asyncProperties)
 		);
 		mockMvc = MockMvcBuilders.standaloneSetup(
 			new LearningSpeechController(
 				speechAnswerService,
-				new SpeechAnswerAsyncProperties(Duration.ofSeconds(20))
+				asyncProperties
 			)
 		)
 			.setControllerAdvice(new ApiExceptionHandler())

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -35,7 +36,9 @@ import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionReposit
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.infra.async.AsyncConfiguration;
+import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
+import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
@@ -150,6 +153,13 @@ class SpeechAnswerTransactionBoundaryJpaTest {
 		@Bean(name = AsyncConfiguration.SPEECH_COMPLETION_EXECUTOR)
 		Executor speechCompletionExecutor() {
 			return Runnable::run;
+		}
+
+		@Bean
+		SpeechTranscriptionConcurrencyLimiter concurrencyLimiter() {
+			return new SpeechTranscriptionConcurrencyLimiter(
+				new SpeechAnswerAsyncProperties(Duration.ofSeconds(20), 8)
+			);
 		}
 	}
 

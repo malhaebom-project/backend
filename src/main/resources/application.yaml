@@ -34,6 +34,7 @@ malhaebom:
   speech:
     async:
       request-timeout: 20s
+      max-concurrent-requests: ${STT_MAX_CONCURRENT_REQUESTS:8}
 
 gcp:
   credentials: file:./config/google-credentials.json

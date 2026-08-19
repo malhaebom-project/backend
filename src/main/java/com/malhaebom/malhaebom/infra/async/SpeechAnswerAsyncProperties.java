@@ -5,12 +5,14 @@ import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
 @Validated
 @ConfigurationProperties(prefix = "malhaebom.speech.async")
 public record SpeechAnswerAsyncProperties(
-	@NotNull Duration requestTimeout
+	@NotNull Duration requestTimeout,
+	@Min(1) int maxConcurrentRequests
 ) {
 
 	public SpeechAnswerAsyncProperties {
