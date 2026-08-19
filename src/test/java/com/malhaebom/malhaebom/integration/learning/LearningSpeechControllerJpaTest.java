@@ -41,6 +41,7 @@ import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
+import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 
 @DataJpaTest
@@ -298,17 +299,19 @@ class LearningSpeechControllerJpaTest {
 		}
 
 		@Override
-		public SpeechTranscriptionResult transcribe(
+		public SpeechTranscriptionTask transcribeAsync(
 			SpeechAudio audio,
 			List<String> adaptationPhrases
 		) {
 			callCount++;
 			this.audio = audio;
 			this.adaptationPhrases = List.copyOf(adaptationPhrases);
-			return new SpeechTranscriptionResult(
-				"He is running.",
-				0.94,
-				STT_PROVIDER
+			return SpeechTranscriptionTask.completed(
+				new SpeechTranscriptionResult(
+					"He is running.",
+					0.94,
+					STT_PROVIDER
+				)
 			);
 		}
 	}
