@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -145,7 +146,7 @@ class GoogleSpeechV2TranscriberTest {
 	void confidence가_제공되지_않으면_null을_반환한다() {
 		completedFuture(response(alternative("Hello.", 0.0f)));
 
-		SpeechTranscriptionResult result = transcriber.transcribe(
+		SpeechTranscriptionResult result = transcribe(
 			AUDIO,
 			List.of()
 		);
@@ -158,7 +159,7 @@ class GoogleSpeechV2TranscriberTest {
 	void 유효한_적응_문구가_없으면_adaptation을_설정하지_않는다() {
 		completedFuture(response(alternative("Hello.", 0.9f)));
 
-		transcriber.transcribe(AUDIO, List.of());
+		transcribe(AUDIO, List.of());
 
 		ArgumentCaptor<RecognizeRequest> requestCaptor =
 			ArgumentCaptor.forClass(RecognizeRequest.class);
@@ -171,7 +172,7 @@ class GoogleSpeechV2TranscriberTest {
 	void 잘못된_문구와_중복을_제외하고_적응_문구를_구성한다() {
 		completedFuture(response(alternative("Hello.", 0.9f)));
 
-		transcriber.transcribe(
+		transcribe(
 			AUDIO,
 			java.util.Arrays.asList(
 				"  Hello world  ",
@@ -204,7 +205,7 @@ class GoogleSpeechV2TranscriberTest {
 			.mapToObj(index -> "phrase " + index)
 			.toList();
 
-		transcriber.transcribe(AUDIO, phrases);
+		transcribe(AUDIO, phrases);
 
 		ArgumentCaptor<RecognizeRequest> requestCaptor =
 			ArgumentCaptor.forClass(RecognizeRequest.class);
@@ -225,7 +226,7 @@ class GoogleSpeechV2TranscriberTest {
 
 		assertApiException(
 			ErrorCode.SPEECH_NOT_RECOGNIZED,
-			() -> transcriber.transcribe(AUDIO, List.of())
+			() -> transcribe(AUDIO, List.of())
 		);
 	}
 
@@ -235,7 +236,7 @@ class GoogleSpeechV2TranscriberTest {
 
 		assertApiException(
 			ErrorCode.AI_REQUEST_LIMIT_EXCEEDED,
-			() -> transcriber.transcribe(AUDIO, List.of())
+			() -> transcribe(AUDIO, List.of())
 		);
 	}
 
@@ -245,7 +246,7 @@ class GoogleSpeechV2TranscriberTest {
 
 		assertApiException(
 			ErrorCode.STT_PROCESSING_TIMEOUT,
-			() -> transcriber.transcribe(AUDIO, List.of())
+			() -> transcribe(AUDIO, List.of())
 		);
 	}
 
@@ -255,8 +256,25 @@ class GoogleSpeechV2TranscriberTest {
 
 		assertApiException(
 			ErrorCode.STT_PROCESSING_FAILED,
-			() -> transcriber.transcribe(AUDIO, List.of())
+			() -> transcribe(AUDIO, List.of())
 		);
+	}
+
+	private SpeechTranscriptionResult transcribe(
+		SpeechAudio audio,
+		List<String> adaptationPhrases
+	) {
+		try {
+			return transcriber.transcribeAsync(audio, adaptationPhrases)
+				.result()
+				.toCompletableFuture()
+				.join();
+		} catch (CompletionException exception) {
+			if (exception.getCause() instanceof RuntimeException cause) {
+				throw cause;
+			}
+			throw exception;
+		}
 	}
 
 	private SettableApiFuture<RecognizeResponse> pendingFuture() {

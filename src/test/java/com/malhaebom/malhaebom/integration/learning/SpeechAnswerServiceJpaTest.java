@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,7 +61,8 @@ class SpeechAnswerServiceJpaTest {
 		transcriber = new TestSpeechTranscriber();
 		speechAnswerService = new SpeechAnswerService(
 			stateService,
-			transcriber
+			transcriber,
+			Runnable::run
 		);
 		session = LearningJpaTestFixture.saveSession(
 			questionRepository,
@@ -101,12 +104,23 @@ class SpeechAnswerServiceJpaTest {
 	}
 
 	private SpeechAnswerResult upload() {
-		return speechAnswerService.upload(
+		return await(speechAnswerService.uploadAsync(
 			session.getId(),
 			sessionQuestionId,
 			REQUEST_KEY,
 			AUDIO
-		);
+		).result());
+	}
+
+	private <T> T await(CompletionStage<T> stage) {
+		try {
+			return stage.toCompletableFuture().join();
+		} catch (CompletionException exception) {
+			if (exception.getCause() instanceof RuntimeException cause) {
+				throw cause;
+			}
+			throw exception;
+		}
 	}
 
 	private void assertFailed(String expectedMessage) {

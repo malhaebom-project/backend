@@ -2,14 +2,20 @@ package com.malhaebom.malhaebom.integration.learning;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,8 +25,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockAsyncContext;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -34,7 +42,10 @@ import com.malhaebom.malhaebom.domain.learning.SpeechProcessingStatus;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
+import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.presentation.LearningSpeechController;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
@@ -43,6 +54,9 @@ import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+
+import jakarta.servlet.AsyncEvent;
+import jakarta.servlet.AsyncListener;
 
 @DataJpaTest
 @Import({SpeechAnswerStateService.class, JpaAuditingConfiguration.class})
@@ -74,10 +88,14 @@ class LearningSpeechControllerJpaTest {
 		transcriber = new TestSpeechTranscriber();
 		SpeechAnswerService speechAnswerService = new SpeechAnswerService(
 			stateService,
-			transcriber
+			transcriber,
+			Runnable::run
 		);
 		mockMvc = MockMvcBuilders.standaloneSetup(
-			new LearningSpeechController(speechAnswerService)
+			new LearningSpeechController(
+				speechAnswerService,
+				new SpeechAnswerAsyncProperties(Duration.ofSeconds(20))
+			)
 		)
 			.setControllerAdvice(new ApiExceptionHandler())
 			.build();
@@ -86,15 +104,30 @@ class LearningSpeechControllerJpaTest {
 	}
 
 	@Test
-	void Multipart_음성을_변환하고_실제_처리_결과를_저장한다()
+	void 미완료_STT는_Servlet_비동기를_시작하고_완료_후_응답과_DB를_갱신한다()
 		throws Exception {
 		byte[] audioContent = "webm audio".getBytes(StandardCharsets.UTF_8);
+		transcriber.willWait();
 
-		mockMvc.perform(
-			multipart(ENDPOINT, session.getId(), sessionQuestionId)
-				.file(audio(audioContent, "audio/webm;codecs=opus"))
-				.header("Idempotency-Key", REQUEST_KEY)
+		MvcResult pending = performRequest(
+			audio(audioContent, "audio/webm;codecs=opus")
 		)
+			.andExpect(request().asyncStarted())
+			.andReturn();
+		assertEquals(
+			Duration.ofSeconds(20).toMillis(),
+			pending.getRequest().getAsyncContext().getTimeout()
+		);
+		assertEquals(
+			SpeechProcessingStatus.PROCESSING,
+			speechAnswerRepository.findByRequestKey(REQUEST_KEY)
+				.orElseThrow()
+				.getProcessingStatus()
+		);
+
+		assertTrue(transcriber.completeSuccess());
+
+		mockMvc.perform(asyncDispatch(pending))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(
 				MediaType.APPLICATION_JSON
@@ -123,6 +156,77 @@ class LearningSpeechControllerJpaTest {
 		assertEquals(
 			"audio/webm;codecs=opus",
 			transcriber.audio.contentType()
+		);
+	}
+
+	@Test
+	void provider_실패는_기존_API_오류와_DB_FAILED_상태로_반환한다()
+		throws Exception {
+		transcriber.willFail(new ApiException(
+			ErrorCode.STT_PROCESSING_FAILED
+		));
+
+		MvcResult pending = performRequest(
+			audio(new byte[] {1}, "audio/webm")
+		)
+			.andExpect(request().asyncStarted())
+			.andReturn();
+
+		mockMvc.perform(asyncDispatch(pending))
+			.andExpect(status().isInternalServerError())
+			.andExpect(jsonPath("$.success").value(false))
+			.andExpect(jsonPath("$.errorCode")
+				.value("STT_PROCESSING_FAILED"));
+
+		SpeechAnswer failed = speechAnswerRepository
+			.findByRequestKey(REQUEST_KEY)
+			.orElseThrow();
+		assertEquals(SpeechProcessingStatus.FAILED, failed.getProcessingStatus());
+		assertEquals(
+			ErrorCode.STT_PROCESSING_FAILED.getMessage(),
+			failed.getFailureMessage()
+		);
+	}
+
+	@Test
+	void Servlet_타임아웃은_STT를_취소하고_늦은_완료를_막는다()
+		throws Exception {
+		transcriber.willWait();
+		MvcResult pending = performRequest(
+			audio(new byte[] {1}, "audio/webm")
+		)
+			.andExpect(request().asyncStarted())
+			.andReturn();
+
+		MockAsyncContext asyncContext = (MockAsyncContext)pending
+			.getRequest()
+			.getAsyncContext();
+		AsyncEvent timeoutEvent = new AsyncEvent(asyncContext);
+		for (AsyncListener listener : asyncContext.getListeners()) {
+			listener.onTimeout(timeoutEvent);
+		}
+
+		mockMvc.perform(asyncDispatch(pending))
+			.andExpect(status().isGatewayTimeout())
+			.andExpect(jsonPath("$.success").value(false))
+			.andExpect(jsonPath("$.errorCode")
+				.value("STT_PROCESSING_TIMEOUT"));
+
+		SpeechAnswer failed = speechAnswerRepository
+			.findByRequestKey(REQUEST_KEY)
+			.orElseThrow();
+		assertEquals(1, transcriber.cancellationCount);
+		assertEquals(SpeechProcessingStatus.FAILED, failed.getProcessingStatus());
+		assertEquals(
+			ErrorCode.STT_PROCESSING_TIMEOUT.getMessage(),
+			failed.getFailureMessage()
+		);
+		assertFalse(transcriber.completeSuccess());
+		assertEquals(
+			SpeechProcessingStatus.FAILED,
+			speechAnswerRepository.findById(failed.getId())
+				.orElseThrow()
+				.getProcessingStatus()
 		);
 	}
 
@@ -158,7 +262,7 @@ class LearningSpeechControllerJpaTest {
 
 	@Test
 	void 빈_파일을_INVALID_AUDIO_FILE로_거부한다() throws Exception {
-		performUpload(audio(new byte[0], "audio/webm;codecs=opus"))
+		performRequest(audio(new byte[0], "audio/webm;codecs=opus"))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.errorCode").value("INVALID_AUDIO_FILE"))
 			.andExpect(jsonPath("$.message").value(
@@ -170,7 +274,7 @@ class LearningSpeechControllerJpaTest {
 
 	@Test
 	void 파일_크기_초과를_INVALID_AUDIO_FILE로_거부한다() throws Exception {
-		performUpload(audio(
+		performRequest(audio(
 			new byte[5 * 1024 * 1024 + 1],
 			"audio/webm;codecs=opus"
 		))
@@ -186,7 +290,7 @@ class LearningSpeechControllerJpaTest {
 	@Test
 	void 지원하지_않는_MIME을_INVALID_AUDIO_FILE로_거부한다()
 		throws Exception {
-		performUpload(audio(new byte[] {1}, "application/octet-stream"))
+		performRequest(audio(new byte[] {1}, "application/octet-stream"))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.errorCode").value("INVALID_AUDIO_FILE"))
 			.andExpect(jsonPath("$.message").value(
@@ -230,6 +334,15 @@ class LearningSpeechControllerJpaTest {
 	}
 
 	private ResultActions performUpload(
+		MockMultipartFile audio
+	) throws Exception {
+		MvcResult pending = performRequest(audio)
+			.andExpect(request().asyncStarted())
+			.andReturn();
+		return mockMvc.perform(asyncDispatch(pending));
+	}
+
+	private ResultActions performRequest(
 		MockMultipartFile audio
 	) throws Exception {
 		return mockMvc.perform(
@@ -290,8 +403,23 @@ class LearningSpeechControllerJpaTest {
 		implements SpeechTranscriber {
 
 		private int callCount;
+		private int cancellationCount;
 		private SpeechAudio audio;
 		private List<String> adaptationPhrases;
+		private CompletableFuture<SpeechTranscriptionResult> result =
+			CompletableFuture.completedFuture(successResult());
+
+		void willWait() {
+			result = new CompletableFuture<>();
+		}
+
+		void willFail(RuntimeException exception) {
+			result = CompletableFuture.failedFuture(exception);
+		}
+
+		boolean completeSuccess() {
+			return result.complete(successResult());
+		}
 
 		@Override
 		public String provider() {
@@ -306,12 +434,20 @@ class LearningSpeechControllerJpaTest {
 			callCount++;
 			this.audio = audio;
 			this.adaptationPhrases = List.copyOf(adaptationPhrases);
-			return SpeechTranscriptionTask.completed(
-				new SpeechTranscriptionResult(
-					"He is running.",
-					0.94,
-					STT_PROVIDER
-				)
+			return new SpeechTranscriptionTask(
+				result,
+				() -> {
+					cancellationCount++;
+					return result.cancel(true);
+				}
+			);
+		}
+
+		private static SpeechTranscriptionResult successResult() {
+			return new SpeechTranscriptionResult(
+				"He is running.",
+				0.94,
+				STT_PROVIDER
 			);
 		}
 	}

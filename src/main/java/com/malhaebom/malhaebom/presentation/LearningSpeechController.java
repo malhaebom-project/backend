@@ -2,9 +2,11 @@ package com.malhaebom.malhaebom.presentation;
 
 import java.io.IOException;
 import java.util.Locale;
+import java.util.concurrent.CompletionException;
 
 import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
+import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -15,9 +17,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.SpeechAnswerResponse;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 
 import lombok.RequiredArgsConstructor;
@@ -31,12 +35,13 @@ public class LearningSpeechController {
 	private static final int MAX_REQUEST_KEY_LENGTH = 100;
 
 	private final SpeechAnswerService speechAnswerService;
+	private final SpeechAnswerAsyncProperties asyncProperties;
 
 	@PostMapping(
 		path = "/{sessionId}/questions/{sessionQuestionId}/speech",
 		consumes = MediaType.MULTIPART_FORM_DATA_VALUE
 	)
-	public ApiResponse<SpeechAnswerResponse> upload(
+	public DeferredResult<ApiResponse<SpeechAnswerResponse>> upload(
 		@PathVariable Long sessionId,
 		@PathVariable Long sessionQuestionId,
 		@RequestHeader(
@@ -47,18 +52,41 @@ public class LearningSpeechController {
 	) {
 		validateRequestKey(requestKey);
 		SpeechAudio speechAudio = toSpeechAudio(audio);
-
-		return ApiResponse.success(
-			SpeechAnswerResponse.from(
-				speechAnswerService.upload(
-					sessionId,
-					sessionQuestionId,
-					requestKey,
-					speechAudio
-				)
-			),
-			"음성 변환이 완료되었습니다."
+		SpeechAnswerTask task = speechAnswerService.uploadAsync(
+			sessionId,
+			sessionQuestionId,
+			requestKey,
+			speechAudio
 		);
+		DeferredResult<ApiResponse<SpeechAnswerResponse>> response =
+			new DeferredResult<>(asyncProperties.requestTimeout().toMillis());
+
+		task.result().whenComplete((result, exception) -> {
+			if (exception != null) {
+				response.setErrorResult(unwrapCompletionException(exception));
+				return;
+			}
+			response.setResult(ApiResponse.success(
+				SpeechAnswerResponse.from(result),
+				"음성 변환이 완료되었습니다."
+			));
+		});
+		response.onTimeout(() -> {
+			task.cancel();
+			response.setErrorResult(new ApiException(
+				ErrorCode.STT_PROCESSING_TIMEOUT
+			));
+		});
+		return response;
+	}
+
+	private Throwable unwrapCompletionException(Throwable exception) {
+		Throwable cause = exception;
+		while (cause instanceof CompletionException
+			&& cause.getCause() != null) {
+			cause = cause.getCause();
+		}
+		return cause;
 	}
 
 	private SpeechAudio toSpeechAudio(MultipartFile audio) {

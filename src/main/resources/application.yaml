@@ -31,6 +31,9 @@ malhaebom:
     processing-lease: 60s
     async:
       request-timeout: 30s
+  speech:
+    async:
+      request-timeout: 20s
 
 gcp:
   credentials: file:./config/google-credentials.json
