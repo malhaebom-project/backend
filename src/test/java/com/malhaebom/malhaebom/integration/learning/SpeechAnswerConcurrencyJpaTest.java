@@ -15,9 +15,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -84,6 +87,8 @@ class SpeechAnswerConcurrencyJpaTest {
 	private SpeechAnswerRepository speechAnswerRepository;
 	@Autowired
 	private SpeechAnswerService speechAnswerService;
+	@Autowired
+	private SpeechAnswerStateService stateService;
 	@Autowired
 	private ControllableSpeechTranscriber transcriber;
 	@Autowired
@@ -198,6 +203,111 @@ class SpeechAnswerConcurrencyJpaTest {
 		);
 	}
 
+	@Test
+	void 종료는_진행_STT를_drain하고_신규_요청을_거절한다()
+		throws Exception {
+		SpeechAnswerService drainingService = newService(
+			Duration.ofSeconds(1)
+		);
+		LearningSession session = saveSession();
+		Long sessionQuestionId = session.getCurrentQuestion().getId();
+		SpeechAnswerTask active = drainingService.uploadAsync(
+			session.getId(),
+			sessionQuestionId,
+			requestKey("shutdown-active"),
+			AUDIO
+		);
+		CountDownLatch shutdown = new CountDownLatch(1);
+
+		drainingService.stop(shutdown::countDown);
+
+		assertEquals(1L, shutdown.getCount());
+		ApiException rejected = assertThrows(
+			ApiException.class,
+			() -> drainingService.uploadAsync(
+				session.getId(),
+				sessionQuestionId,
+				requestKey("shutdown-rejected"),
+				AUDIO
+			)
+		);
+		assertEquals(
+			ErrorCode.STT_PROCESSING_OVERLOADED,
+			rejected.getErrorCode()
+		);
+		assertEquals(1, transcriber.callCount());
+
+		assertTrue(transcriber.complete(0));
+		assertEquals("He is running.", await(active).transcript());
+		assertTrue(shutdown.await(1, TimeUnit.SECONDS));
+		assertEquals(
+			SpeechProcessingStatus.COMPLETED,
+			speechAnswerRepository
+				.findByRequestKey(requestKey("shutdown-active"))
+				.orElseThrow()
+				.getProcessingStatus()
+		);
+	}
+
+	@Test
+	void 종료_drain_제한시간을_넘기면_STT를_취소하고_FAILED로_저장한다()
+		throws Exception {
+		SpeechAnswerService drainingService = newService(
+			Duration.ofMillis(50)
+		);
+		LearningSession session = saveSession();
+		Long sessionQuestionId = session.getCurrentQuestion().getId();
+		String requestKey = requestKey("shutdown-timeout");
+		SpeechAnswerTask active = drainingService.uploadAsync(
+			session.getId(),
+			sessionQuestionId,
+			requestKey,
+			AUDIO
+		);
+		CountDownLatch shutdown = new CountDownLatch(1);
+
+		drainingService.stop(shutdown::countDown);
+
+		assertTrue(shutdown.await(2, TimeUnit.SECONDS));
+		ApiException timeout = assertThrows(
+			ApiException.class,
+			() -> await(active)
+		);
+		assertEquals(
+			ErrorCode.STT_PROCESSING_TIMEOUT,
+			timeout.getErrorCode()
+		);
+		assertEquals(1, transcriber.cancellationCount());
+		SpeechAnswer failed = speechAnswerRepository
+			.findByRequestKey(requestKey)
+			.orElseThrow();
+		assertEquals(
+			SpeechProcessingStatus.FAILED,
+			failed.getProcessingStatus()
+		);
+		assertEquals(
+			ErrorCode.STT_PROCESSING_TIMEOUT.getMessage(),
+			failed.getFailureMessage()
+		);
+	}
+
+	private SpeechAnswerService newService(Duration shutdownDrainTimeout) {
+		SpeechAnswerAsyncProperties properties =
+			new SpeechAnswerAsyncProperties(
+				Duration.ofSeconds(20),
+				MAX_CONCURRENT_REQUESTS,
+				Duration.ofSeconds(60),
+				shutdownDrainTimeout
+			);
+		return new SpeechAnswerService(
+			stateService,
+			transcriber,
+			Runnable::run,
+			new SpeechTranscriptionConcurrencyLimiter(properties),
+			properties
+		);
+	}
+
 	private LearningSession saveSession() {
 		return LearningJpaTestFixture.saveSession(
 			questionRepository,
@@ -261,7 +371,8 @@ class SpeechAnswerConcurrencyJpaTest {
 			return new SpeechAnswerAsyncProperties(
 				Duration.ofSeconds(20),
 				MAX_CONCURRENT_REQUESTS,
-				Duration.ofSeconds(60)
+				Duration.ofSeconds(60),
+				Duration.ofSeconds(20)
 			);
 		}
 
@@ -288,13 +399,19 @@ class SpeechAnswerConcurrencyJpaTest {
 
 		private final List<CompletableFuture<SpeechTranscriptionResult>> requests =
 			new CopyOnWriteArrayList<>();
+		private final AtomicInteger cancellations = new AtomicInteger();
 
 		void reset() {
 			requests.clear();
+			cancellations.set(0);
 		}
 
 		int callCount() {
 			return requests.size();
+		}
+
+		int cancellationCount() {
+			return cancellations.get();
 		}
 
 		boolean allPending() {
@@ -328,7 +445,10 @@ class SpeechAnswerConcurrencyJpaTest {
 			requests.add(result);
 			return new SpeechTranscriptionTask(
 				result,
-				() -> result.cancel(true)
+				() -> {
+					cancellations.incrementAndGet();
+					return result.cancel(true);
+				}
 			);
 		}
 

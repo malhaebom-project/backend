@@ -93,13 +93,15 @@ class LearningSpeechControllerJpaTest {
 			new SpeechAnswerAsyncProperties(
 				Duration.ofSeconds(20),
 				8,
-				Duration.ofSeconds(60)
+				Duration.ofSeconds(60),
+				Duration.ofSeconds(20)
 			);
 		SpeechAnswerService speechAnswerService = new SpeechAnswerService(
 			stateService,
 			transcriber,
 			Runnable::run,
-			new SpeechTranscriptionConcurrencyLimiter(asyncProperties)
+			new SpeechTranscriptionConcurrencyLimiter(asyncProperties),
+			asyncProperties
 		);
 		mockMvc = MockMvcBuilders.standaloneSetup(
 			new LearningSpeechController(

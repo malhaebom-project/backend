@@ -13,7 +13,8 @@ import jakarta.validation.constraints.NotNull;
 public record SpeechAnswerAsyncProperties(
 	@NotNull Duration requestTimeout,
 	@Min(1) int maxConcurrentRequests,
-	@NotNull Duration processingLease
+	@NotNull Duration processingLease,
+	@NotNull Duration shutdownDrainTimeout
 ) {
 
 	public SpeechAnswerAsyncProperties {
@@ -29,6 +30,14 @@ public record SpeechAnswerAsyncProperties(
 			&& processingLease.compareTo(requestTimeout) <= 0) {
 			throw new IllegalArgumentException(
 				"음성 변환 처리 임대 시간은 Servlet 타임아웃보다 길어야 합니다."
+			);
+		}
+
+		if (shutdownDrainTimeout != null
+			&& (shutdownDrainTimeout.isZero()
+				|| shutdownDrainTimeout.isNegative())) {
+			throw new IllegalArgumentException(
+				"음성 변환 종료 대기 시간은 0초보다 길어야 합니다."
 			);
 		}
 	}

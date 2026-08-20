@@ -64,17 +64,19 @@ class SpeechAnswerServiceJpaTest {
 	@BeforeEach
 	void setUp() {
 		transcriber = new TestSpeechTranscriber();
+		SpeechAnswerAsyncProperties asyncProperties =
+			new SpeechAnswerAsyncProperties(
+				Duration.ofSeconds(20),
+				8,
+				Duration.ofSeconds(60),
+				Duration.ofSeconds(20)
+			);
 		speechAnswerService = new SpeechAnswerService(
 			stateService,
 			transcriber,
 			Runnable::run,
-			new SpeechTranscriptionConcurrencyLimiter(
-				new SpeechAnswerAsyncProperties(
-					Duration.ofSeconds(20),
-					8,
-					Duration.ofSeconds(60)
-				)
-			)
+			new SpeechTranscriptionConcurrencyLimiter(asyncProperties),
+			asyncProperties
 		);
 		session = LearningJpaTestFixture.saveSession(
 			questionRepository,

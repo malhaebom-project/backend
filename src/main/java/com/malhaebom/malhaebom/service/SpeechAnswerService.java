@@ -1,5 +1,6 @@
 package com.malhaebom.malhaebom.service;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -11,9 +12,12 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +26,7 @@ import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.async.AsyncConfiguration;
+import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
 import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter;
 import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter.Permit;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
@@ -36,28 +41,38 @@ import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
-public class SpeechAnswerService {
+public class SpeechAnswerService implements SmartLifecycle {
 	private static final int REQUEST_LOCK_COUNT = 64;
+	private static final long MAX_SHUTDOWN_CLEANUP_MILLIS = 5_000L;
+	private static final long MIN_SHUTDOWN_CLEANUP_MILLIS = 100L;
 
 	private final SpeechAnswerStateService stateService;
 	private final SpeechTranscriber transcriber;
 	private final Executor completionExecutor;
 	private final SpeechTranscriptionConcurrencyLimiter concurrencyLimiter;
+	private final SpeechAnswerAsyncProperties asyncProperties;
 	private final ConcurrentMap<String, InFlightSpeechAnswerTask> inFlightTasks =
 		new ConcurrentHashMap<>();
 	private final ReentrantLock[] requestLocks = createRequestLocks();
+	private final ReentrantReadWriteLock lifecycleLock =
+		new ReentrantReadWriteLock();
+	private final CompletableFuture<Void> shutdownCompletion =
+		new CompletableFuture<>();
+	private volatile boolean running = true;
 
 	public SpeechAnswerService(
 		SpeechAnswerStateService stateService,
 		SpeechTranscriber transcriber,
 		@Qualifier(AsyncConfiguration.SPEECH_COMPLETION_EXECUTOR)
 		Executor completionExecutor,
-		SpeechTranscriptionConcurrencyLimiter concurrencyLimiter
+		SpeechTranscriptionConcurrencyLimiter concurrencyLimiter,
+		SpeechAnswerAsyncProperties asyncProperties
 	) {
 		this.stateService = stateService;
 		this.transcriber = transcriber;
 		this.completionExecutor = completionExecutor;
 		this.concurrencyLimiter = concurrencyLimiter;
+		this.asyncProperties = asyncProperties;
 	}
 
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -68,6 +83,27 @@ public class SpeechAnswerService {
 		SpeechAudio audio
 	) {
 		Objects.requireNonNull(audio, "음성 파일은 null일 수 없습니다.");
+		Lock lifecycleReadLock = lifecycleLock.readLock();
+		lifecycleReadLock.lock();
+		try {
+			validateAcceptingRequests();
+			return uploadWhileRunning(
+				sessionId,
+				sessionQuestionId,
+				requestKey,
+				audio
+			);
+		} finally {
+			lifecycleReadLock.unlock();
+		}
+	}
+
+	private SpeechAnswerTask uploadWhileRunning(
+		Long sessionId,
+		Long sessionQuestionId,
+		String requestKey,
+		SpeechAudio audio
+	) {
 		long startedAt = System.nanoTime();
 		ReentrantLock requestLock = requestLock(requestKey);
 		requestLock.lock();
@@ -93,6 +129,18 @@ public class SpeechAnswerService {
 		} finally {
 			requestLock.unlock();
 		}
+	}
+
+	private void validateAcceptingRequests() {
+		if (running) {
+			return;
+		}
+		log.warn(
+			"event=stt_rejected reason=shutdown active={} limit={}",
+			concurrencyLimiter.activeRequests(),
+			concurrencyLimiter.maxConcurrentRequests()
+		);
+		throw new ApiException(ErrorCode.STT_PROCESSING_OVERLOADED);
 	}
 
 	private SpeechAnswerTask startClaimed(
@@ -438,6 +486,129 @@ public class SpeechAnswerService {
 		return locks;
 	}
 
+	@Override
+	public void start() {
+		running = true;
+	}
+
+	@Override
+	public void stop() {
+		stop(() -> {
+		});
+	}
+
+	@Override
+	public void stop(Runnable callback) {
+		Objects.requireNonNull(callback, "종료 완료 callback은 null일 수 없습니다.");
+		shutdownCompletion.whenComplete((ignored, exception) -> callback.run());
+
+		List<InFlightSpeechAnswerTask> snapshot;
+		Lock lifecycleWriteLock = lifecycleLock.writeLock();
+		lifecycleWriteLock.lock();
+		try {
+			if (!running) {
+				return;
+			}
+			running = false;
+			snapshot = List.copyOf(inFlightTasks.values());
+		} finally {
+			lifecycleWriteLock.unlock();
+		}
+		drain(snapshot);
+	}
+
+	@Override
+	public boolean isRunning() {
+		return running;
+	}
+
+	@Override
+	public int getPhase() {
+		return Integer.MAX_VALUE;
+	}
+
+	private void drain(List<InFlightSpeechAnswerTask> snapshot) {
+		if (snapshot.isEmpty()) {
+			completeShutdown(false, 0);
+			return;
+		}
+
+		CompletableFuture<Void> allTasks = allTasks(snapshot);
+		AtomicBoolean drainFinished = new AtomicBoolean();
+		allTasks.whenComplete((ignored, exception) -> {
+			if (drainFinished.compareAndSet(false, true)) {
+				completeShutdown(false, 0);
+			}
+		});
+		long drainTimeoutMillis = asyncProperties.shutdownDrainTimeout()
+			.toMillis();
+		CompletableFuture.delayedExecutor(
+			drainTimeoutMillis,
+			TimeUnit.MILLISECONDS
+		).execute(() -> {
+			if (!drainFinished.compareAndSet(false, true)) {
+				return;
+			}
+			List<InFlightSpeechAnswerTask> pending = snapshot.stream()
+				.filter(task -> !task.isDone())
+				.toList();
+			log.warn(
+				"event=stt_shutdown_timeout pending={} drain_timeout_ms={}",
+				pending.size(),
+				drainTimeoutMillis
+			);
+			pending.forEach(InFlightSpeechAnswerTask::expire);
+			awaitCancellation(pending);
+		});
+	}
+
+	private void awaitCancellation(
+		List<InFlightSpeechAnswerTask> pending
+	) {
+		if (pending.isEmpty()) {
+			completeShutdown(true, 0);
+			return;
+		}
+		long cleanupMillis = Math.min(
+			MAX_SHUTDOWN_CLEANUP_MILLIS,
+			Math.max(
+				MIN_SHUTDOWN_CLEANUP_MILLIS,
+				asyncProperties.shutdownDrainTimeout().toMillis() / 4
+			)
+		);
+		allTasks(pending)
+			.completeOnTimeout(null, cleanupMillis, TimeUnit.MILLISECONDS)
+			.whenComplete((ignored, exception) ->
+				completeShutdown(true, countPending(pending))
+			);
+	}
+
+	private CompletableFuture<Void> allTasks(
+		List<InFlightSpeechAnswerTask> tasks
+	) {
+		CompletableFuture<?>[] results = tasks.stream()
+			.map(InFlightSpeechAnswerTask::resultFuture)
+			.toArray(CompletableFuture[]::new);
+		return CompletableFuture.allOf(results);
+	}
+
+	private int countPending(List<InFlightSpeechAnswerTask> tasks) {
+		return (int)tasks.stream()
+			.filter(task -> !task.isDone())
+			.count();
+	}
+
+	private void completeShutdown(boolean timedOut, int pending) {
+		if (!shutdownCompletion.complete(null)) {
+			return;
+		}
+		log.info(
+			"event=stt_shutdown_drained timed_out={} pending={}",
+			timedOut,
+			pending
+		);
+	}
+
 	private static final class InFlightSpeechAnswerTask {
 
 		private final Long speechAnswerId;
@@ -462,6 +633,14 @@ public class SpeechAnswerService {
 
 		private int subscriberCount() {
 			return subscribers.get();
+		}
+
+		private CompletableFuture<SpeechAnswerResult> resultFuture() {
+			return sharedTask.result().toCompletableFuture();
+		}
+
+		private boolean isDone() {
+			return resultFuture().isDone();
 		}
 
 		private SpeechAnswerTask subscribe() {

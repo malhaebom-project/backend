@@ -25,7 +25,7 @@ public class AsyncConfiguration {
 		executor.setQueueCapacity(8);
 		executor.setThreadNamePrefix("speech-completion-");
 		executor.setWaitForTasksToCompleteOnShutdown(true);
-		executor.setAwaitTerminationSeconds(20);
+		executor.setAwaitTerminationSeconds(25);
 		return executor;
 	}
 }
