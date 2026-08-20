@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
@@ -82,6 +83,7 @@ class LearningSpeechControllerJpaTest {
 	private SpeechAnswerRepository speechAnswerRepository;
 
 	private TestSpeechTranscriber transcriber;
+	private SpeechTranscriptionConcurrencyLimiter concurrencyLimiter;
 	private MockMvc mockMvc;
 	private LearningSession session;
 	private Long sessionQuestionId;
@@ -96,11 +98,13 @@ class LearningSpeechControllerJpaTest {
 				Duration.ofSeconds(60),
 				Duration.ofSeconds(20)
 			);
+		concurrencyLimiter =
+			new SpeechTranscriptionConcurrencyLimiter(asyncProperties);
 		SpeechAnswerService speechAnswerService = new SpeechAnswerService(
 			stateService,
 			transcriber,
 			Runnable::run,
-			new SpeechTranscriptionConcurrencyLimiter(asyncProperties),
+			concurrencyLimiter,
 			asyncProperties
 		);
 		mockMvc = MockMvcBuilders.standaloneSetup(
@@ -300,6 +304,40 @@ class LearningSpeechControllerJpaTest {
 				.orElseThrow()
 				.getProcessingStatus()
 		);
+	}
+
+	@Test
+	void Servlet_비동기_IO_오류는_STT를_취소하고_DB를_FAILED로_전환한다()
+		throws Exception {
+		transcriber.willWait();
+		MvcResult pending = performRequest(
+			audio(new byte[] {1}, "audio/webm")
+		)
+			.andExpect(request().asyncStarted())
+			.andReturn();
+
+		MockAsyncContext asyncContext = (MockAsyncContext)pending
+			.getRequest()
+			.getAsyncContext();
+		AsyncEvent errorEvent = new AsyncEvent(
+			asyncContext,
+			new IOException("client disconnected")
+		);
+		for (AsyncListener listener : asyncContext.getListeners()) {
+			listener.onError(errorEvent);
+		}
+
+		SpeechAnswer failed = speechAnswerRepository
+			.findByRequestKey(REQUEST_KEY)
+			.orElseThrow();
+		assertEquals(1, transcriber.cancellationCount);
+		assertEquals(SpeechProcessingStatus.FAILED, failed.getProcessingStatus());
+		assertEquals(
+			ErrorCode.STT_PROCESSING_TIMEOUT.getMessage(),
+			failed.getFailureMessage()
+		);
+		assertEquals(0, concurrencyLimiter.activeRequests());
+		assertFalse(transcriber.completeSuccess());
 	}
 
 	@Test

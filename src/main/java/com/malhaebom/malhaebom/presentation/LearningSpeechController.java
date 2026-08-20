@@ -77,6 +77,7 @@ public class LearningSpeechController {
 				ErrorCode.STT_PROCESSING_TIMEOUT
 			));
 		});
+		response.onError(ignored -> task.cancel());
 		return response;
 	}
 
