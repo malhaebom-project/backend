@@ -10,7 +10,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.sql.Timestamp;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -20,6 +22,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
@@ -30,12 +33,15 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
@@ -54,6 +60,7 @@ import com.malhaebom.malhaebom.presentation.LearningSpeechController;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
@@ -93,6 +100,10 @@ class SpeechAnswerConcurrencyJpaTest {
 	private ControllableSpeechTranscriber transcriber;
 	@Autowired
 	private SpeechAnswerAsyncProperties asyncProperties;
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+	@Autowired
+	private PlatformTransactionManager transactionManager;
 
 	private String requestPrefix;
 	private MockMvc mockMvc;
@@ -201,6 +212,79 @@ class SpeechAnswerConcurrencyJpaTest {
 			ErrorCode.STT_PROCESSING_FAILED.getMessage(),
 			failed.getFailureMessage()
 		);
+	}
+
+	@Test
+	void lease_회수와_provider_완료가_경쟁하면_완료_결과를_보존한다()
+		throws Exception {
+		LearningSession session = saveSession();
+		Long sessionQuestionId = session.getCurrentQuestion().getId();
+		String requestKey = requestKey("lease-complete-race");
+		SpeechAnswerStartResult processing = stateService.start(
+			session.getId(),
+			sessionQuestionId,
+			requestKey
+		);
+		jdbcTemplate.update(
+			"update speech_answers set lease_expires_at = ? where id = ?",
+			Timestamp.from(Instant.now().minusSeconds(1)),
+			processing.speechAnswer().getId()
+		);
+
+		CountDownLatch completionFlushed = new CountDownLatch(1);
+		CountDownLatch allowCompletionCommit = new CountDownLatch(1);
+		TransactionTemplate transaction = new TransactionTemplate(
+			transactionManager
+		);
+		CompletableFuture<Void> completion = CompletableFuture.runAsync(() ->
+			transaction.executeWithoutResult(status -> {
+				assertTrue(stateService.complete(
+					processing.speechAnswer().getId(),
+					processing.processingToken(),
+					"He is running.",
+					0.94,
+					"TEST_STT"
+				).isPresent());
+				speechAnswerRepository.flush();
+				completionFlushed.countDown();
+				await(allowCompletionCommit);
+			})
+		);
+		assertTrue(completionFlushed.await(2, TimeUnit.SECONDS));
+
+		CountDownLatch reclaimStarted = new CountDownLatch(1);
+		CompletableFuture<SpeechAnswerStartResult> reclaim =
+			CompletableFuture.supplyAsync(() -> {
+				reclaimStarted.countDown();
+				return stateService.start(
+					session.getId(),
+					sessionQuestionId,
+					requestKey
+				);
+			});
+		assertTrue(reclaimStarted.await(2, TimeUnit.SECONDS));
+		try {
+			assertThrows(
+				TimeoutException.class,
+				() -> reclaim.get(200, TimeUnit.MILLISECONDS)
+			);
+		} finally {
+			allowCompletionCommit.countDown();
+		}
+
+		completion.get(2, TimeUnit.SECONDS);
+		SpeechAnswerStartResult resolved = reclaim.get(2, TimeUnit.SECONDS);
+		SpeechAnswer completed = speechAnswerRepository
+			.findByRequestKey(requestKey)
+			.orElseThrow();
+		assertTrue(resolved.isCompleted());
+		assertEquals(
+			SpeechProcessingStatus.COMPLETED,
+			completed.getProcessingStatus()
+		);
+		assertEquals("He is running.", completed.getTranscript());
+		assertEquals(0.94, completed.getConfidence());
+		assertEquals("TEST_STT", completed.getSttProvider());
 	}
 
 	@Test
@@ -360,6 +444,17 @@ class SpeechAnswerConcurrencyJpaTest {
 				throw cause;
 			}
 			throw exception;
+		}
+	}
+
+	private void await(CountDownLatch latch) {
+		try {
+			if (!latch.await(2, TimeUnit.SECONDS)) {
+				throw new IllegalStateException("동시성 테스트 대기 시간이 초과되었습니다.");
+			}
+		} catch (InterruptedException exception) {
+			Thread.currentThread().interrupt();
+			throw new IllegalStateException(exception);
 		}
 	}
 

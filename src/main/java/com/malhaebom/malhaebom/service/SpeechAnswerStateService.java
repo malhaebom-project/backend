@@ -53,7 +53,7 @@ public class SpeechAnswerStateService {
 			.toList();
 		Instant now = Instant.now();
 		return speechAnswerRepository
-			.findByRequestKey(requestKey)
+			.findForUpdateByRequestKey(requestKey)
 			.map(existing -> resolveExisting(
 				existing,
 				currentQuestion,

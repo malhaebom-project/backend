@@ -16,6 +16,15 @@ public interface SpeechAnswerRepository extends JpaRepository<SpeechAnswer, Long
 	Optional<SpeechAnswer> findByRequestKey(String requestKey);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query(
+		"select speechAnswer from SpeechAnswer speechAnswer "
+			+ "where speechAnswer.requestKey = :requestKey"
+	)
+	Optional<SpeechAnswer> findForUpdateByRequestKey(
+		@Param("requestKey") String requestKey
+	);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select speechAnswer from SpeechAnswer speechAnswer where speechAnswer.id = :id")
 	Optional<SpeechAnswer> findForUpdateById(@Param("id") Long id);
 
