@@ -643,7 +643,7 @@ public class SpeechAnswerService implements SmartLifecycle {
 			return resultFuture().isDone();
 		}
 
-		private SpeechAnswerTask subscribe() {
+		private synchronized SpeechAnswerTask subscribe() {
 			CompletableFuture<SpeechAnswerResult> subscriberResult =
 				new CompletableFuture<>();
 			AtomicBoolean subscribed = new AtomicBoolean(true);
@@ -664,7 +664,7 @@ public class SpeechAnswerService implements SmartLifecycle {
 			);
 		}
 
-		private boolean unsubscribe(AtomicBoolean subscribed) {
+		private synchronized boolean unsubscribe(AtomicBoolean subscribed) {
 			if (!subscribed.compareAndSet(true, false)) {
 				return false;
 			}

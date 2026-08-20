@@ -121,6 +121,7 @@ class SpeechAnswerConcurrencyJpaTest {
 
 	@AfterEach
 	void tearDown() {
+		transcriber.releaseCancellation();
 		transcriber.completeAll();
 	}
 
@@ -211,6 +212,60 @@ class SpeechAnswerConcurrencyJpaTest {
 		assertEquals(
 			ErrorCode.STT_PROCESSING_FAILED.getMessage(),
 			failed.getFailureMessage()
+		);
+	}
+
+	@Test
+	void 마지막_구독_취소_중에는_새_구독이_공유_STT에_합류하지_않는다()
+		throws Exception {
+		LearningSession session = saveSession();
+		Long sessionQuestionId = session.getCurrentQuestion().getId();
+		String requestSuffix = "cancel-rejoin-race";
+		transcriber.blockCancellation();
+		SpeechAnswerTask first = upload(
+			session,
+			sessionQuestionId,
+			requestSuffix
+		);
+		CompletableFuture<Boolean> cancellation =
+			CompletableFuture.supplyAsync(first::cancel);
+		assertTrue(transcriber.awaitCancellationStarted());
+
+		CountDownLatch rejoinStarted = new CountDownLatch(1);
+		CompletableFuture<SpeechAnswerTask> rejoin =
+			CompletableFuture.supplyAsync(() -> {
+				rejoinStarted.countDown();
+				return upload(
+					session,
+					sessionQuestionId,
+					requestSuffix
+				);
+			});
+		assertTrue(rejoinStarted.await(2, TimeUnit.SECONDS));
+		try {
+			assertThrows(
+				TimeoutException.class,
+				() -> rejoin.get(200, TimeUnit.MILLISECONDS)
+			);
+		} finally {
+			transcriber.releaseCancellation();
+		}
+
+		assertTrue(cancellation.get(2, TimeUnit.SECONDS));
+		SpeechAnswerTask rejoined = rejoin.get(2, TimeUnit.SECONDS);
+		ApiException timeout = assertThrows(
+			ApiException.class,
+			() -> await(rejoined)
+		);
+		assertEquals(ErrorCode.STT_PROCESSING_TIMEOUT, timeout.getErrorCode());
+		assertEquals(1, transcriber.callCount());
+		assertEquals(1, transcriber.cancellationCount());
+		assertEquals(
+			SpeechProcessingStatus.FAILED,
+			speechAnswerRepository
+				.findByRequestKey(requestKey(requestSuffix))
+				.orElseThrow()
+				.getProcessingStatus()
 		);
 	}
 
@@ -495,10 +550,17 @@ class SpeechAnswerConcurrencyJpaTest {
 		private final List<CompletableFuture<SpeechTranscriptionResult>> requests =
 			new CopyOnWriteArrayList<>();
 		private final AtomicInteger cancellations = new AtomicInteger();
+		private volatile CountDownLatch cancellationStarted =
+			new CountDownLatch(0);
+		private volatile CountDownLatch allowCancellation =
+			new CountDownLatch(0);
 
 		void reset() {
+			releaseCancellation();
 			requests.clear();
 			cancellations.set(0);
+			cancellationStarted = new CountDownLatch(0);
+			allowCancellation = new CountDownLatch(0);
 		}
 
 		int callCount() {
@@ -521,6 +583,19 @@ class SpeechAnswerConcurrencyJpaTest {
 			return requests.get(index).completeExceptionally(exception);
 		}
 
+		void blockCancellation() {
+			cancellationStarted = new CountDownLatch(1);
+			allowCancellation = new CountDownLatch(1);
+		}
+
+		boolean awaitCancellationStarted() throws InterruptedException {
+			return cancellationStarted.await(2, TimeUnit.SECONDS);
+		}
+
+		void releaseCancellation() {
+			allowCancellation.countDown();
+		}
+
 		void completeAll() {
 			requests.forEach(request -> request.complete(successResult()));
 		}
@@ -541,10 +616,27 @@ class SpeechAnswerConcurrencyJpaTest {
 			return new SpeechTranscriptionTask(
 				result,
 				() -> {
+					CountDownLatch started = cancellationStarted;
+					CountDownLatch cancellationAllowed = allowCancellation;
 					cancellations.incrementAndGet();
+					started.countDown();
+					await(cancellationAllowed);
 					return result.cancel(true);
 				}
 			);
+		}
+
+		private void await(CountDownLatch latch) {
+			try {
+				if (!latch.await(2, TimeUnit.SECONDS)) {
+					throw new IllegalStateException(
+						"STT 취소 허용 대기 시간이 초과되었습니다."
+					);
+				}
+			} catch (InterruptedException exception) {
+				Thread.currentThread().interrupt();
+				throw new IllegalStateException(exception);
+			}
 		}
 
 		private static SpeechTranscriptionResult successResult() {
