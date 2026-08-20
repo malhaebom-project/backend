@@ -1,0 +1,292 @@
+[
+  {
+    "name": "STT 표기 차이 - 소문자 yes",
+    "questionText": "Is the elephant big?",
+    "questionTextKo": "코끼리는 큰가요?",
+    "modelAnswer": "Yes, it is.",
+    "acceptedAnswers": ["Yes."],
+    "answerText": "yes",
+    "expectedResult": "CORRECT",
+    "minimumGrammarScore": 18,
+    "forbidSttFormattingAdvice": true
+  },
+  {
+    "name": "STT 표기 차이 - 마침표",
+    "questionText": "Is the elephant big?",
+    "questionTextKo": "코끼리는 큰가요?",
+    "modelAnswer": "Yes, it is.",
+    "acceptedAnswers": ["Yes."],
+    "answerText": "Yes.",
+    "expectedResult": "CORRECT",
+    "minimumGrammarScore": 18,
+    "forbidSttFormattingAdvice": true
+  },
+  {
+    "name": "STT 표기 차이 - 대문자와 느낌표",
+    "questionText": "Is the elephant big?",
+    "questionTextKo": "코끼리는 큰가요?",
+    "modelAnswer": "Yes, it is.",
+    "acceptedAnswers": ["Yes."],
+    "answerText": "YES!",
+    "expectedResult": "CORRECT",
+    "minimumGrammarScore": 18,
+    "forbidSttFormattingAdvice": true
+  },
+  {
+    "name": "현재진행형 허용 답안",
+    "questionText": "What is the boy doing?",
+    "questionTextKo": "남자아이는 무엇을 하고 있나요?",
+    "modelAnswer": "The boy is running.",
+    "acceptedAnswers": ["He is running.", "He's running."],
+    "answerText": "He is running.",
+    "expectedResult": "CORRECT"
+  },
+  {
+    "name": "현재진행형 축약 답안",
+    "questionText": "What is the boy doing?",
+    "questionTextKo": "남자아이는 무엇을 하고 있나요?",
+    "modelAnswer": "The boy is running.",
+    "acceptedAnswers": ["He is running.", "He's running."],
+    "answerText": "He's running.",
+    "expectedResult": "CORRECT"
+  },
+  {
+    "name": "현재진행형 문법 오류",
+    "questionText": "What is the boy doing?",
+    "questionTextKo": "남자아이는 무엇을 하고 있나요?",
+    "modelAnswer": "The boy is running.",
+    "acceptedAnswers": ["He is running.", "He's running."],
+    "answerText": "He is run.",
+    "expectedResult": "PARTIALLY_CORRECT"
+  },
+  {
+    "name": "현재진행형 의미 오답",
+    "questionText": "What is the boy doing?",
+    "questionTextKo": "남자아이는 무엇을 하고 있나요?",
+    "modelAnswer": "The boy is running.",
+    "acceptedAnswers": ["He is running.", "He's running."],
+    "answerText": "He is walking.",
+    "expectedResult": "INCORRECT",
+    "maximumMeaningScore": 29
+  },
+  {
+    "name": "사물 식별 허용 답안",
+    "questionText": "What is this?",
+    "questionTextKo": "이것은 무엇인가요?",
+    "modelAnswer": "It is a book.",
+    "acceptedAnswers": ["It's a book."],
+    "answerText": "It's a book.",
+    "expectedResult": "CORRECT"
+  },
+  {
+    "name": "사물 식별 자연스러운 변형",
+    "questionText": "What is this?",
+    "questionTextKo": "이것은 무엇인가요?",
+    "modelAnswer": "It is a book.",
+    "acceptedAnswers": ["It's a book."],
+    "answerText": "This is a book.",
+    "expectedResult": "CORRECT"
+  },
+  {
+    "name": "사물 식별 문법 오류",
+    "questionText": "What is this?",
+    "questionTextKo": "이것은 무엇인가요?",
+    "modelAnswer": "It is a book.",
+    "acceptedAnswers": ["It's a book."],
+    "answerText": "It is books.",
+    "expectedResult": "PARTIALLY_CORRECT"
+  },
+  {
+    "name": "사물 식별 의미 오답",
+    "questionText": "What is this?",
+    "questionTextKo": "이것은 무엇인가요?",
+    "modelAnswer": "It is a book.",
+    "acceptedAnswers": ["It's a book."],
+    "answerText": "It is a pen.",
+    "expectedResult": "INCORRECT",
+    "maximumMeaningScore": 29
+  },
+  {
+    "name": "동물 식별 모범 답안",
+    "questionText": "What animal is this?",
+    "questionTextKo": "이 동물은 무엇인가요?",
+    "modelAnswer": "It is a lion.",
+    "acceptedAnswers": ["It's a lion."],
+    "answerText": "It is a lion.",
+    "expectedResult": "CORRECT"
+  },
+  {
+    "name": "동물 식별 축약 답안",
+    "questionText": "What animal is this?",
+    "questionTextKo": "이 동물은 무엇인가요?",
+    "modelAnswer": "It is a lion.",
+    "acceptedAnswers": ["It's a lion."],
+    "answerText": "It's a lion.",
+    "expectedResult": "CORRECT"
+  },
+  {
+    "name": "동물 식별 문법 오류",
+    "questionText": "What animal is this?",
+    "questionTextKo": "이 동물은 무엇인가요?",
+    "modelAnswer": "It is a lion.",
+    "acceptedAnswers": ["It's a lion."],
+    "answerText": "It lion.",
+    "expectedResult": "PARTIALLY_CORRECT"
+  },
+  {
+    "name": "동물 식별 의미 오답",
+    "questionText": "What animal is this?",
+    "questionTextKo": "이 동물은 무엇인가요?",
+    "modelAnswer": "It is a lion.",
+    "acceptedAnswers": ["It's a lion."],
+    "answerText": "It is a zebra.",
+    "expectedResult": "INCORRECT",
+    "maximumMeaningScore": 29
+  },
+  {
+    "name": "색깔 묻기 짧은 정답",
+    "questionText": "What color is the apple?",
+    "questionTextKo": "사과는 무슨 색인가요?",
+    "modelAnswer": "It is red.",
+    "acceptedAnswers": ["It's red.", "Red."],
+    "answerText": "Red.",
+    "expectedResult": "CORRECT"
+  },
+  {
+    "name": "색깔 묻기 완전한 정답",
+    "questionText": "What color is the apple?",
+    "questionTextKo": "사과는 무슨 색인가요?",
+    "modelAnswer": "It is red.",
+    "acceptedAnswers": ["It's red.", "Red."],
+    "answerText": "It is red.",
+    "expectedResult": "CORRECT"
+  },
+  {
+    "name": "색깔 묻기 의미 오답",
+    "questionText": "What color is the apple?",
+    "questionTextKo": "사과는 무슨 색인가요?",
+    "modelAnswer": "It is red.",
+    "acceptedAnswers": ["It's red.", "Red."],
+    "answerText": "It is blue.",
+    "expectedResult": "INCORRECT",
+    "maximumMeaningScore": 29
+  },
+  {
+    "name": "능력 묻기 yes 정답",
+    "questionText": "Can a fish swim?",
+    "questionTextKo": "물고기는 수영할 수 있나요?",
+    "modelAnswer": "Yes, it can.",
+    "acceptedAnswers": ["Yes.", "It can swim."],
+    "answerText": "Yes it can",
+    "expectedResult": "CORRECT",
+    "minimumGrammarScore": 18,
+    "forbidSttFormattingAdvice": true
+  },
+  {
+    "name": "능력 묻기 의미 오답",
+    "questionText": "Can a fish swim?",
+    "questionTextKo": "물고기는 수영할 수 있나요?",
+    "modelAnswer": "Yes, it can.",
+    "acceptedAnswers": ["Yes.", "It can swim."],
+    "answerText": "No, it can't.",
+    "expectedResult": "INCORRECT",
+    "maximumMeaningScore": 29
+  },
+  {
+    "name": "위치 묻기 완전한 정답",
+    "questionText": "Where is the cat?",
+    "questionTextKo": "고양이는 어디에 있나요?",
+    "modelAnswer": "The cat is on the chair.",
+    "acceptedAnswers": ["It is on the chair.", "On the chair."],
+    "answerText": "It is on the chair.",
+    "expectedResult": "CORRECT"
+  },
+  {
+    "name": "위치 묻기 짧은 정답",
+    "questionText": "Where is the cat?",
+    "questionTextKo": "고양이는 어디에 있나요?",
+    "modelAnswer": "The cat is on the chair.",
+    "acceptedAnswers": ["It is on the chair.", "On the chair."],
+    "answerText": "On the chair.",
+    "expectedResult": "CORRECT"
+  },
+  {
+    "name": "위치 묻기 어순 오류",
+    "questionText": "Where is the cat?",
+    "questionTextKo": "고양이는 어디에 있나요?",
+    "modelAnswer": "The cat is on the chair.",
+    "acceptedAnswers": ["It is on the chair.", "On the chair."],
+    "answerText": "It on chair.",
+    "expectedResult": "PARTIALLY_CORRECT"
+  },
+  {
+    "name": "위치 묻기 의미 오답",
+    "questionText": "Where is the cat?",
+    "questionTextKo": "고양이는 어디에 있나요?",
+    "modelAnswer": "The cat is on the chair.",
+    "acceptedAnswers": ["It is on the chair.", "On the chair."],
+    "answerText": "It is under the table.",
+    "expectedResult": "INCORRECT",
+    "maximumMeaningScore": 29
+  },
+  {
+    "name": "개수 묻기 짧은 정답",
+    "questionText": "How many dogs are there?",
+    "questionTextKo": "강아지는 몇 마리 있나요?",
+    "modelAnswer": "There are two dogs.",
+    "acceptedAnswers": ["Two dogs.", "There are two."],
+    "answerText": "Two dogs.",
+    "expectedResult": "CORRECT"
+  },
+  {
+    "name": "개수 묻기 문장 정답",
+    "questionText": "How many dogs are there?",
+    "questionTextKo": "강아지는 몇 마리 있나요?",
+    "modelAnswer": "There are two dogs.",
+    "acceptedAnswers": ["Two dogs.", "There are two."],
+    "answerText": "There are two dogs.",
+    "expectedResult": "CORRECT"
+  },
+  {
+    "name": "개수 묻기 의미 오답",
+    "questionText": "How many dogs are there?",
+    "questionTextKo": "강아지는 몇 마리 있나요?",
+    "modelAnswer": "There are two dogs.",
+    "acceptedAnswers": ["Two dogs.", "There are two."],
+    "answerText": "There are three dogs.",
+    "expectedResult": "INCORRECT",
+    "maximumMeaningScore": 29
+  },
+  {
+    "name": "감정 묻기 정답",
+    "questionText": "How does she feel?",
+    "questionTextKo": "그녀의 기분은 어떤가요?",
+    "modelAnswer": "She is happy.",
+    "acceptedAnswers": ["Happy.", "She feels happy."],
+    "answerText": "She is happy.",
+    "expectedResult": "CORRECT"
+  },
+  {
+    "name": "감정 묻기 의미 오답",
+    "questionText": "How does she feel?",
+    "questionTextKo": "그녀의 기분은 어떤가요?",
+    "modelAnswer": "She is happy.",
+    "acceptedAnswers": ["Happy.", "She feels happy."],
+    "answerText": "She is sad.",
+    "expectedResult": "INCORRECT",
+    "maximumMeaningScore": 29
+  },
+  {
+    "name": "무관한 전사문",
+    "questionText": "What is this?",
+    "questionTextKo": "이것은 무엇인가요?",
+    "modelAnswer": "It is a pencil.",
+    "acceptedAnswers": ["It's a pencil.", "A pencil."],
+    "answerText": "asdf qwer banana",
+    "expectedResult": "UNRECOGNIZED",
+    "maximumMeaningScore": 0,
+    "maximumExpressionScore": 0,
+    "maximumGrammarScore": 0,
+    "maximumTotalScore": 0
+  }
+]
