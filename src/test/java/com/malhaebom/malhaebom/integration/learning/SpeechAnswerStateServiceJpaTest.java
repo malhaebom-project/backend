@@ -2,13 +2,19 @@ package com.malhaebom.malhaebom.integration.learning;
 
 import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
@@ -18,12 +24,16 @@ import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionReposit
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
 
+import jakarta.persistence.EntityManager;
+
 @DataJpaTest
 @Import({SpeechAnswerStateService.class, JpaAuditingConfiguration.class})
+@EnableConfigurationProperties(SpeechAnswerAsyncProperties.class)
 class SpeechAnswerStateServiceJpaTest {
 
 	private static final String REQUEST_KEY =
@@ -38,6 +48,10 @@ class SpeechAnswerStateServiceJpaTest {
 	private QuestionRepository questionRepository;
 	@Autowired
 	private SpeechAnswerRepository speechAnswerRepository;
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+	@Autowired
+	private EntityManager entityManager;
 
 	@Test
 	void 요청_식별_키가_비어_있으면_요청을_거부한다() {
@@ -83,12 +97,18 @@ class SpeechAnswerStateServiceJpaTest {
 	void 다시_녹음하면_다음_녹음_순번을_저장한다() {
 		LearningSession session = saveSession();
 		Long sessionQuestionId = currentQuestionId(session);
-		SpeechAnswer first = stateService.start(
+		SpeechAnswerStartResult firstStart = stateService.start(
 			session.getId(),
 			sessionQuestionId,
 			"first-request-key"
-		).speechAnswer();
-		stateService.fail(first.getId(), "인식 실패", STT_PROVIDER);
+		);
+		SpeechAnswer first = firstStart.speechAnswer();
+		stateService.fail(
+			first.getId(),
+			firstStart.processingToken(),
+			"인식 실패",
+			STT_PROVIDER
+		);
 
 		SpeechAnswer second = stateService.start(
 			session.getId(),
@@ -104,13 +124,15 @@ class SpeechAnswerStateServiceJpaTest {
 	void 완료된_멱등_요청은_저장된_결과를_반환한다() {
 		LearningSession session = saveSession();
 		Long sessionQuestionId = currentQuestionId(session);
-		SpeechAnswer started = stateService.start(
+		SpeechAnswerStartResult firstStart = stateService.start(
 			session.getId(),
 			sessionQuestionId,
 			REQUEST_KEY
-		).speechAnswer();
+		);
+		SpeechAnswer started = firstStart.speechAnswer();
 		stateService.complete(
 			started.getId(),
+			firstStart.processingToken(),
 			"He is running.",
 			0.94,
 			STT_PROVIDER
@@ -128,32 +150,109 @@ class SpeechAnswerStateServiceJpaTest {
 	}
 
 	@Test
-	void 처리_중인_멱등_요청은_충돌로_거부한다() {
+	void 처리_중인_멱등_요청은_동일한_처리_토큰으로_반환한다() {
 		LearningSession session = saveSession();
 		Long sessionQuestionId = currentQuestionId(session);
-		stateService.start(session.getId(), sessionQuestionId, REQUEST_KEY);
+		SpeechAnswerStartResult first = stateService.start(
+			session.getId(),
+			sessionQuestionId,
+			REQUEST_KEY
+		);
 
-		assertApiException(
-			ErrorCode.SPEECH_PROCESSING,
-			() -> stateService.start(
-				session.getId(),
-				sessionQuestionId,
-				REQUEST_KEY
-			)
+		SpeechAnswerStartResult existing = stateService.start(
+			session.getId(),
+			sessionQuestionId,
+			REQUEST_KEY
+		);
+
+		assertTrue(first.isClaimed());
+		assertTrue(existing.isProcessing());
+		assertEquals(first.processingToken(), existing.processingToken());
+		assertEquals(
+			first.speechAnswer().getId(),
+			existing.speechAnswer().getId()
 		);
 		assertEquals(1, speechAnswerRepository.count());
+	}
+
+	@Test
+	void 만료된_PROCESSING은_새_토큰으로_회수하고_이전_완료를_차단한다() {
+		LearningSession session = saveSession();
+		Long sessionQuestionId = currentQuestionId(session);
+		SpeechAnswerStartResult first = stateService.start(
+			session.getId(),
+			sessionQuestionId,
+			REQUEST_KEY
+		);
+		Long speechAnswerId = first.speechAnswer().getId();
+		jdbcTemplate.update(
+			"update speech_answers set lease_expires_at = ? where id = ?",
+			Timestamp.from(Instant.now().minusSeconds(1)),
+			speechAnswerId
+		);
+		entityManager.clear();
+
+		SpeechAnswerStartResult reclaimed = stateService.start(
+			session.getId(),
+			sessionQuestionId,
+			REQUEST_KEY
+		);
+
+		assertTrue(reclaimed.isClaimed());
+		assertNotEquals(first.processingToken(), reclaimed.processingToken());
+		assertTrue(stateService.complete(
+			speechAnswerId,
+			first.processingToken(),
+			"old result",
+			0.1,
+			STT_PROVIDER
+		).isEmpty());
+		entityManager.clear();
+		SpeechAnswer processing = speechAnswerRepository.findById(speechAnswerId)
+			.orElseThrow();
+		assertEquals(
+			SpeechProcessingStatus.PROCESSING,
+			processing.getProcessingStatus()
+		);
+		assertEquals(
+			reclaimed.processingToken(),
+			processing.getProcessingToken()
+		);
+
+		assertTrue(stateService.complete(
+			speechAnswerId,
+			reclaimed.processingToken(),
+			"new result",
+			0.9,
+			STT_PROVIDER
+		).isPresent());
+		speechAnswerRepository.flush();
+		entityManager.clear();
+		SpeechAnswer completed = speechAnswerRepository.findById(speechAnswerId)
+			.orElseThrow();
+		assertEquals(
+			SpeechProcessingStatus.COMPLETED,
+			completed.getProcessingStatus()
+		);
+		assertEquals("new result", completed.getTranscript());
 	}
 
 	@Test
 	void 실패한_멱등_요청은_새_행을_만들지_않는다() {
 		LearningSession session = saveSession();
 		Long sessionQuestionId = currentQuestionId(session);
-		SpeechAnswer started = stateService.start(
+		SpeechAnswerStartResult firstStart = stateService.start(
 			session.getId(),
 			sessionQuestionId,
 			REQUEST_KEY
-		).speechAnswer();
-		stateService.fail(started.getId(), "STT 처리 실패", STT_PROVIDER);
+		);
+		SpeechAnswer started = firstStart.speechAnswer();
+		stateService.fail(
+			started.getId(),
+			firstStart.processingToken(),
+			"STT 처리 실패",
+			STT_PROVIDER
+		);
 
 		assertApiException(
 			ErrorCode.STT_PROCESSING_FAILED,
@@ -208,6 +307,7 @@ class SpeechAnswerStateServiceJpaTest {
 			ErrorCode.SPEECH_ANSWER_NOT_FOUND,
 			() -> stateService.complete(
 				999L,
+				"missing-processing-token",
 				"He is running.",
 				0.94,
 				STT_PROVIDER

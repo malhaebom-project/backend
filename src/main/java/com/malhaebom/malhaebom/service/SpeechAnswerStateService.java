@@ -1,6 +1,10 @@
 package com.malhaebom.malhaebom.service;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +17,7 @@ import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionReposit
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
 
 import lombok.RequiredArgsConstructor;
@@ -23,6 +28,7 @@ public class SpeechAnswerStateService {
 
 	private final LearningSessionRepository learningSessionRepository;
 	private final SpeechAnswerRepository speechAnswerRepository;
+	private final SpeechAnswerAsyncProperties asyncProperties;
 
 	@Transactional
 	public SpeechAnswerStartResult start(
@@ -41,16 +47,25 @@ public class SpeechAnswerStateService {
 		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
 		validateCurrentQuestion(currentQuestion, sessionQuestionId);
 
-		SpeechAnswer speechAnswer = speechAnswerRepository
-			.findByRequestKey(requestKey)
-			.map(existing -> resolveExisting(existing, currentQuestion))
+		List<String> adaptationPhrases = currentQuestion.getQuestion()
+			.getAcceptedAnswers()
+			.stream()
+			.toList();
+		Instant now = Instant.now();
+		return speechAnswerRepository
+			.findForUpdateByRequestKey(requestKey)
+			.map(existing -> resolveExisting(
+				existing,
+				currentQuestion,
+				adaptationPhrases,
+				now
+			))
 			.orElseGet(
-				() -> create(currentQuestion, requestKey)
+				() -> SpeechAnswerStartResult.claimed(
+					create(currentQuestion, requestKey, now),
+					adaptationPhrases
+				)
 			);
-		return new SpeechAnswerStartResult(
-			speechAnswer,
-			currentQuestion.getQuestion().getAcceptedAnswers().stream().toList()
-		);
 	}
 
 	private void validateInProgress(LearningSession session) {
@@ -62,31 +77,45 @@ public class SpeechAnswerStateService {
 	}
 
 	@Transactional
-	public SpeechAnswer complete(
+	public Optional<SpeechAnswer> complete(
 		Long speechAnswerId,
+		String processingToken,
 		String transcript,
 		Double confidence,
 		String sttProvider
 	) {
-		SpeechAnswer speechAnswer = getSpeechAnswer(speechAnswerId);
-		speechAnswer.complete(transcript, confidence, sttProvider);
-		return speechAnswer;
+		SpeechAnswer speechAnswer = getSpeechAnswerForUpdate(speechAnswerId);
+		if (!speechAnswer.isProcessingWithToken(processingToken)) {
+			return Optional.empty();
+		}
+		speechAnswer.complete(
+			processingToken,
+			transcript,
+			confidence,
+			sttProvider
+		);
+		return Optional.of(speechAnswer);
 	}
 
 	@Transactional
-	public SpeechAnswer fail(
+	public boolean fail(
 		Long speechAnswerId,
+		String processingToken,
 		String failureMessage,
 		String sttProvider
 	) {
-		SpeechAnswer speechAnswer = getSpeechAnswer(speechAnswerId);
-		speechAnswer.fail(failureMessage, sttProvider);
-		return speechAnswer;
+		SpeechAnswer speechAnswer = getSpeechAnswerForUpdate(speechAnswerId);
+		if (!speechAnswer.isProcessingWithToken(processingToken)) {
+			return false;
+		}
+		speechAnswer.fail(processingToken, failureMessage, sttProvider);
+		return true;
 	}
 
 	private SpeechAnswer create(
 		LearningSessionQuestion currentQuestion,
-		String requestKey
+		String requestKey,
+		Instant claimedAt
 	) {
 		int recordingNo = speechAnswerRepository
 			.findFirstBySessionQuestion_IdOrderByRecordingNoDesc(
@@ -97,38 +126,66 @@ public class SpeechAnswerStateService {
 		SpeechAnswer speechAnswer = SpeechAnswer.start(
 			currentQuestion,
 			requestKey,
-			recordingNo
+			recordingNo,
+			newProcessingToken(),
+			claimedAt,
+			leaseExpiresAt(claimedAt)
 		);
 		return speechAnswerRepository.saveAndFlush(speechAnswer);
 	}
 
-	private SpeechAnswer resolveExisting(
+	private SpeechAnswerStartResult resolveExisting(
 		SpeechAnswer existing,
-		LearningSessionQuestion currentQuestion
+		LearningSessionQuestion currentQuestion,
+		List<String> adaptationPhrases,
+		Instant now
 	) {
 		if (!isSameQuestion(existing.getSessionQuestion(), currentQuestion)) {
 			throw new ApiException(ErrorCode.CURRENT_QUESTION_MISMATCH);
 		}
 
 		if (existing.isCompleted()) {
-			return existing;
+			return SpeechAnswerStartResult.completed(
+				existing,
+				adaptationPhrases
+			);
 		}
 
-		if (
-			existing.getProcessingStatus()
-				== SpeechProcessingStatus.PROCESSING
-		) {
-			throw new ApiException(ErrorCode.SPEECH_PROCESSING);
+		if (existing.getProcessingStatus() == SpeechProcessingStatus.PROCESSING) {
+			if (!existing.isLeaseExpiredAt(now)) {
+				return SpeechAnswerStartResult.processing(
+					existing,
+					adaptationPhrases
+				);
+			}
+
+			existing.reclaim(
+				newProcessingToken(),
+				now,
+				leaseExpiresAt(now)
+			);
+			return SpeechAnswerStartResult.claimed(
+				existing,
+				adaptationPhrases
+			);
 		}
 
 		throw new ApiException(ErrorCode.STT_PROCESSING_FAILED);
 	}
 
-	private SpeechAnswer getSpeechAnswer(Long speechAnswerId) {
-		return speechAnswerRepository.findById(speechAnswerId)
+	private SpeechAnswer getSpeechAnswerForUpdate(Long speechAnswerId) {
+		return speechAnswerRepository.findForUpdateById(speechAnswerId)
 			.orElseThrow(() -> new ApiException(
 				ErrorCode.SPEECH_ANSWER_NOT_FOUND
 			));
+	}
+
+	private String newProcessingToken() {
+		return UUID.randomUUID().toString();
+	}
+
+	private Instant leaseExpiresAt(Instant claimedAt) {
+		return claimedAt.plus(asyncProperties.processingLease());
 	}
 
 	private boolean isSameQuestion(

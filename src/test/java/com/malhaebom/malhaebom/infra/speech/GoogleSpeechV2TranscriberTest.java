@@ -8,6 +8,8 @@ import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,8 +18,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.google.api.gax.rpc.ApiExceptionFactory;
+import com.google.api.core.SettableApiFuture;
 import com.google.api.gax.grpc.GrpcStatusCode;
+import com.google.api.gax.rpc.ApiExceptionFactory;
+import com.google.api.gax.rpc.UnaryCallable;
 import com.google.cloud.speech.v2.RecognizeRequest;
 import com.google.cloud.speech.v2.RecognizeResponse;
 import com.google.cloud.speech.v2.SpeechClient;
@@ -27,6 +31,7 @@ import com.google.protobuf.ByteString;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
+import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 
 import io.grpc.Status;
 
@@ -42,10 +47,14 @@ class GoogleSpeechV2TranscriberTest {
 	@Mock
 	private SpeechClient client;
 
+	@Mock
+	private UnaryCallable<RecognizeRequest, RecognizeResponse> recognizeCallable;
+
 	private GoogleSpeechV2Transcriber transcriber;
 
 	@BeforeEach
 	void setUp() {
+		when(client.recognizeCallable()).thenReturn(recognizeCallable);
 		GoogleSpeechV2Properties properties = new GoogleSpeechV2Properties(
 			"en-US",
 			Duration.ofSeconds(15),
@@ -62,21 +71,32 @@ class GoogleSpeechV2TranscriberTest {
 	}
 
 	@Test
-	void V2_Recognize_요청에_암시적_Recognizer와_음성_바이트를_담는다() {
-		when(client.recognize(any(RecognizeRequest.class)))
-			.thenReturn(response(
-				alternative("He is", 0.94f),
-				alternative("running.", 0.86f)
-			));
+	void Google_future가_완료되기_전에는_음성_변환_작업도_완료되지_않는다()
+		throws Exception {
+		SettableApiFuture<RecognizeResponse> googleFuture = pendingFuture();
 
-		SpeechTranscriptionResult result = transcriber.transcribe(
+		SpeechTranscriptionTask task = transcriber.transcribeAsync(
 			AUDIO,
 			List.of("He is running.", "He's running.")
 		);
 
+		assertThat(task.result().toCompletableFuture()).isNotDone();
+
+		googleFuture.set(response(
+			alternative(" He is ", 0.94f),
+			alternative(" running. ", 0.86f)
+		));
+
+		SpeechTranscriptionResult result = task.result()
+			.toCompletableFuture()
+			.get(1, TimeUnit.SECONDS);
+		assertThat(result.transcript()).isEqualTo("He is running.");
+		assertThat(result.confidence()).isEqualTo(0.9);
+		assertThat(result.provider()).isEqualTo("GOOGLE_CLOUD_STT_V2");
+
 		ArgumentCaptor<RecognizeRequest> requestCaptor =
 			ArgumentCaptor.forClass(RecognizeRequest.class);
-		verify(client).recognize(requestCaptor.capture());
+		verify(recognizeCallable).futureCall(requestCaptor.capture());
 		RecognizeRequest request = requestCaptor.getValue();
 		assertThat(request.getRecognizer()).isEqualTo(
 			"projects/malhaebom-504606/locations/global/recognizers/_"
@@ -84,12 +104,10 @@ class GoogleSpeechV2TranscriberTest {
 		assertThat(request.getContent()).isEqualTo(
 			ByteString.copyFrom(AUDIO_CONTENT)
 		);
-		assertThat(request.hasConfig()).isTrue();
 		assertThat(request.getConfig().hasAutoDecodingConfig()).isTrue();
 		assertThat(request.getConfig().getLanguageCodesList())
 			.containsExactly("en-US");
 		assertThat(request.getConfig().getModel()).isEqualTo("short");
-		assertThat(request.getConfig().hasAdaptation()).isTrue();
 		assertThat(
 			request.getConfig()
 				.getAdaptation()
@@ -105,20 +123,30 @@ class GoogleSpeechV2TranscriberTest {
 				org.assertj.core.groups.Tuple.tuple("He is running.", 5.0f),
 				org.assertj.core.groups.Tuple.tuple("He's running.", 5.0f)
 			);
-		assertThat(result.transcript()).isEqualTo("He is running.");
-		assertThat(result.confidence()).isEqualTo(0.9);
-		assertThat(result.provider()).isEqualTo("GOOGLE_CLOUD_STT_V2");
 		assertThat(transcriber.provider()).isEqualTo(
 			"GOOGLE_CLOUD_STT_V2"
 		);
 	}
 
 	@Test
-	void confidence가_제공되지_않으면_null을_반환한다() {
-		when(client.recognize(any(RecognizeRequest.class)))
-			.thenReturn(response(alternative("Hello.", 0.0f)));
+	void 작업_취소는_진행_중인_Google_future에_전파된다() {
+		SettableApiFuture<RecognizeResponse> googleFuture = pendingFuture();
+		SpeechTranscriptionTask task = transcriber.transcribeAsync(
+			AUDIO,
+			List.of()
+		);
 
-		SpeechTranscriptionResult result = transcriber.transcribe(
+		assertThat(task.cancel()).isTrue();
+
+		assertThat(googleFuture.isCancelled()).isTrue();
+		assertThat(task.result().toCompletableFuture()).isCancelled();
+	}
+
+	@Test
+	void confidence가_제공되지_않으면_null을_반환한다() {
+		completedFuture(response(alternative("Hello.", 0.0f)));
+
+		SpeechTranscriptionResult result = transcribe(
 			AUDIO,
 			List.of()
 		);
@@ -129,24 +157,22 @@ class GoogleSpeechV2TranscriberTest {
 
 	@Test
 	void 유효한_적응_문구가_없으면_adaptation을_설정하지_않는다() {
-		when(client.recognize(any(RecognizeRequest.class)))
-			.thenReturn(response(alternative("Hello.", 0.9f)));
+		completedFuture(response(alternative("Hello.", 0.9f)));
 
-		transcriber.transcribe(AUDIO, List.of());
+		transcribe(AUDIO, List.of());
 
 		ArgumentCaptor<RecognizeRequest> requestCaptor =
 			ArgumentCaptor.forClass(RecognizeRequest.class);
-		verify(client).recognize(requestCaptor.capture());
+		verify(recognizeCallable).futureCall(requestCaptor.capture());
 		assertThat(requestCaptor.getValue().getConfig().hasAdaptation())
 			.isFalse();
 	}
 
 	@Test
 	void 잘못된_문구와_중복을_제외하고_적응_문구를_구성한다() {
-		when(client.recognize(any(RecognizeRequest.class)))
-			.thenReturn(response(alternative("Hello.", 0.9f)));
+		completedFuture(response(alternative("Hello.", 0.9f)));
 
-		transcriber.transcribe(
+		transcribe(
 			AUDIO,
 			java.util.Arrays.asList(
 				"  Hello world  ",
@@ -159,7 +185,7 @@ class GoogleSpeechV2TranscriberTest {
 
 		ArgumentCaptor<RecognizeRequest> requestCaptor =
 			ArgumentCaptor.forClass(RecognizeRequest.class);
-		verify(client).recognize(requestCaptor.capture());
+		verify(recognizeCallable).futureCall(requestCaptor.capture());
 		assertThat(
 			requestCaptor.getValue()
 				.getConfig()
@@ -174,17 +200,16 @@ class GoogleSpeechV2TranscriberTest {
 
 	@Test
 	void 적응_문구는_PhraseSet_한도까지만_사용한다() {
-		when(client.recognize(any(RecognizeRequest.class)))
-			.thenReturn(response(alternative("Hello.", 0.9f)));
+		completedFuture(response(alternative("Hello.", 0.9f)));
 		List<String> phrases = java.util.stream.IntStream.range(0, 1_201)
 			.mapToObj(index -> "phrase " + index)
 			.toList();
 
-		transcriber.transcribe(AUDIO, phrases);
+		transcribe(AUDIO, phrases);
 
 		ArgumentCaptor<RecognizeRequest> requestCaptor =
 			ArgumentCaptor.forClass(RecognizeRequest.class);
-		verify(client).recognize(requestCaptor.capture());
+		verify(recognizeCallable).futureCall(requestCaptor.capture());
 		assertThat(
 			requestCaptor.getValue()
 				.getConfig()
@@ -197,55 +222,77 @@ class GoogleSpeechV2TranscriberTest {
 
 	@Test
 	void 인식된_transcript가_없으면_인식_실패로_변환한다() {
-		when(client.recognize(any(RecognizeRequest.class)))
-			.thenReturn(RecognizeResponse.getDefaultInstance());
+		completedFuture(RecognizeResponse.getDefaultInstance());
 
 		assertApiException(
 			ErrorCode.SPEECH_NOT_RECOGNIZED,
-			() -> transcriber.transcribe(AUDIO, List.of())
+			() -> transcribe(AUDIO, List.of())
 		);
 	}
 
 	@Test
 	void RESOURCE_EXHAUSTED를_요청_제한_예외로_변환한다() {
-		com.google.api.gax.rpc.ApiException googleException = googleException(
-			Status.Code.RESOURCE_EXHAUSTED
-		);
-		when(client.recognize(any(RecognizeRequest.class)))
-			.thenThrow(googleException);
+		failedFuture(googleException(Status.Code.RESOURCE_EXHAUSTED));
 
 		assertApiException(
 			ErrorCode.AI_REQUEST_LIMIT_EXCEEDED,
-			() -> transcriber.transcribe(AUDIO, List.of())
+			() -> transcribe(AUDIO, List.of())
 		);
 	}
 
 	@Test
 	void DEADLINE_EXCEEDED를_타임아웃_예외로_변환한다() {
-		com.google.api.gax.rpc.ApiException googleException = googleException(
-			Status.Code.DEADLINE_EXCEEDED
-		);
-		when(client.recognize(any(RecognizeRequest.class)))
-			.thenThrow(googleException);
+		failedFuture(googleException(Status.Code.DEADLINE_EXCEEDED));
 
 		assertApiException(
 			ErrorCode.STT_PROCESSING_TIMEOUT,
-			() -> transcriber.transcribe(AUDIO, List.of())
+			() -> transcribe(AUDIO, List.of())
 		);
 	}
 
 	@Test
 	void 인증과_그_밖의_Google_오류를_안전한_처리_실패로_변환한다() {
-		com.google.api.gax.rpc.ApiException googleException = googleException(
-			Status.Code.UNAUTHENTICATED
-		);
-		when(client.recognize(any(RecognizeRequest.class)))
-			.thenThrow(googleException);
+		failedFuture(googleException(Status.Code.UNAUTHENTICATED));
 
 		assertApiException(
 			ErrorCode.STT_PROCESSING_FAILED,
-			() -> transcriber.transcribe(AUDIO, List.of())
+			() -> transcribe(AUDIO, List.of())
 		);
+	}
+
+	private SpeechTranscriptionResult transcribe(
+		SpeechAudio audio,
+		List<String> adaptationPhrases
+	) {
+		try {
+			return transcriber.transcribeAsync(audio, adaptationPhrases)
+				.result()
+				.toCompletableFuture()
+				.join();
+		} catch (CompletionException exception) {
+			if (exception.getCause() instanceof RuntimeException cause) {
+				throw cause;
+			}
+			throw exception;
+		}
+	}
+
+	private SettableApiFuture<RecognizeResponse> pendingFuture() {
+		SettableApiFuture<RecognizeResponse> future =
+			SettableApiFuture.create();
+		when(recognizeCallable.futureCall(any(RecognizeRequest.class)))
+			.thenReturn(future);
+		return future;
+	}
+
+	private void completedFuture(RecognizeResponse response) {
+		SettableApiFuture<RecognizeResponse> future = pendingFuture();
+		future.set(response);
+	}
+
+	private void failedFuture(Throwable exception) {
+		SettableApiFuture<RecognizeResponse> future = pendingFuture();
+		future.setException(exception);
 	}
 
 	private RecognizeResponse response(

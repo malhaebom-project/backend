@@ -3,12 +3,16 @@ package com.malhaebom.malhaebom.integration.learning;
 import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
@@ -20,15 +24,19 @@ import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
+import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
+import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
+import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 
 @DataJpaTest
 @Import({SpeechAnswerStateService.class, JpaAuditingConfiguration.class})
+@EnableConfigurationProperties(SpeechAnswerAsyncProperties.class)
 class SpeechAnswerServiceJpaTest {
 
 	private static final String REQUEST_KEY =
@@ -56,9 +64,19 @@ class SpeechAnswerServiceJpaTest {
 	@BeforeEach
 	void setUp() {
 		transcriber = new TestSpeechTranscriber();
+		SpeechAnswerAsyncProperties asyncProperties =
+			new SpeechAnswerAsyncProperties(
+				Duration.ofSeconds(20),
+				8,
+				Duration.ofSeconds(60),
+				Duration.ofSeconds(20)
+			);
 		speechAnswerService = new SpeechAnswerService(
 			stateService,
-			transcriber
+			transcriber,
+			Runnable::run,
+			new SpeechTranscriptionConcurrencyLimiter(asyncProperties),
+			asyncProperties
 		);
 		session = LearningJpaTestFixture.saveSession(
 			questionRepository,
@@ -100,12 +118,23 @@ class SpeechAnswerServiceJpaTest {
 	}
 
 	private SpeechAnswerResult upload() {
-		return speechAnswerService.upload(
+		return await(speechAnswerService.uploadAsync(
 			session.getId(),
 			sessionQuestionId,
 			REQUEST_KEY,
 			AUDIO
-		);
+		).result());
+	}
+
+	private <T> T await(CompletionStage<T> stage) {
+		try {
+			return stage.toCompletableFuture().join();
+		} catch (CompletionException exception) {
+			if (exception.getCause() instanceof RuntimeException cause) {
+				throw cause;
+			}
+			throw exception;
+		}
 	}
 
 	private void assertFailed(String expectedMessage) {
@@ -140,15 +169,15 @@ class SpeechAnswerServiceJpaTest {
 		}
 
 		@Override
-		public SpeechTranscriptionResult transcribe(
+		public SpeechTranscriptionTask transcribeAsync(
 			SpeechAudio audio,
 			List<String> adaptationPhrases
 		) {
 			this.adaptationPhrases = List.copyOf(adaptationPhrases);
 			if (exception != null) {
-				throw exception;
+				return SpeechTranscriptionTask.failed(exception);
 			}
-			return result;
+			return SpeechTranscriptionTask.completed(result);
 		}
 	}
 }

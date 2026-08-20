@@ -3,13 +3,13 @@ package com.malhaebom.malhaebom.service.port;
 import java.util.List;
 
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
-import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
+import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 
 public interface SpeechTranscriber {
 
 	String provider();
 
-	SpeechTranscriptionResult transcribe(
+	SpeechTranscriptionTask transcribeAsync(
 		SpeechAudio audio,
 		List<String> adaptationPhrases
 	);

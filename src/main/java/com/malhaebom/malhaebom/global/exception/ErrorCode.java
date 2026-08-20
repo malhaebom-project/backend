@@ -113,6 +113,10 @@ public enum ErrorCode {
 	STT_PROCESSING_TIMEOUT(
 		HttpStatus.GATEWAY_TIMEOUT,
 		"음성 변환 처리 시간이 초과되었습니다."
+	),
+	STT_PROCESSING_OVERLOADED(
+		HttpStatus.SERVICE_UNAVAILABLE,
+		"음성 변환 요청이 많습니다. 잠시 후 다시 시도해 주세요."
 	);
 
 	private final HttpStatus httpStatus;

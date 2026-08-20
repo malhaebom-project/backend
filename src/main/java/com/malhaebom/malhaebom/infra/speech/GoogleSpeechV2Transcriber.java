@@ -3,7 +3,12 @@ package com.malhaebom.malhaebom.infra.speech;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CancellationException;
 
+import com.google.api.core.ApiFuture;
+import com.google.api.core.ApiFutureCallback;
+import com.google.api.core.ApiFutures;
 import com.google.api.gax.rpc.StatusCode;
 import com.google.cloud.speech.v2.AutoDetectDecodingConfig;
 import com.google.cloud.speech.v2.RecognitionConfig;
@@ -19,6 +24,7 @@ import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
+import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 
 public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
@@ -51,7 +57,7 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 	}
 
 	@Override
-	public SpeechTranscriptionResult transcribe(
+	public SpeechTranscriptionTask transcribeAsync(
 		SpeechAudio audio,
 		List<String> adaptationPhrases
 	) {
@@ -61,19 +67,67 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 			.setContent(ByteString.copyFrom(audio.content()))
 			.build();
 
-		RecognizeResponse response;
+		ApiFuture<RecognizeResponse> googleFuture;
 		try {
-			response = client.recognize(request);
+			googleFuture = client.recognizeCallable().futureCall(request);
 		} catch (com.google.api.gax.rpc.ApiException exception) {
-			throw mapGoogleException(exception);
+			return SpeechTranscriptionTask.failed(
+				mapGoogleException(exception)
+			);
 		} catch (RuntimeException exception) {
-			throw new ApiException(
-				ErrorCode.STT_PROCESSING_FAILED,
-				exception
+			return SpeechTranscriptionTask.failed(
+				new ApiException(
+					ErrorCode.STT_PROCESSING_FAILED,
+					exception
+				)
 			);
 		}
 
-		return normalize(response);
+		CompletableFuture<SpeechTranscriptionResult> result =
+			new CompletableFuture<>();
+		ApiFutures.addCallback(
+			googleFuture,
+			new ApiFutureCallback<>() {
+				@Override
+				public void onFailure(Throwable exception) {
+					if (exception instanceof CancellationException) {
+						result.cancel(true);
+						return;
+					}
+					result.completeExceptionally(mapFailure(exception));
+				}
+
+				@Override
+				public void onSuccess(RecognizeResponse response) {
+					try {
+						result.complete(normalize(response));
+					} catch (RuntimeException exception) {
+						result.completeExceptionally(exception);
+					}
+				}
+			},
+			Runnable::run
+		);
+		return new SpeechTranscriptionTask(
+			result,
+			() -> {
+				boolean cancelled = googleFuture.cancel(true);
+				if (cancelled) {
+					result.cancel(true);
+				}
+				return cancelled;
+			}
+		);
+	}
+
+	private RuntimeException mapFailure(Throwable exception) {
+		if (exception instanceof com.google.api.gax.rpc.ApiException cause) {
+			return mapGoogleException(cause);
+		}
+		if (exception instanceof RuntimeException cause) {
+			return new ApiException(ErrorCode.STT_PROCESSING_FAILED, cause);
+		}
+		return new ApiException(ErrorCode.STT_PROCESSING_FAILED, exception);
 	}
 
 	private RecognitionConfig createRequestConfig(
