@@ -12,7 +12,8 @@ import jakarta.validation.constraints.NotNull;
 @ConfigurationProperties(prefix = "malhaebom.speech.async")
 public record SpeechAnswerAsyncProperties(
 	@NotNull Duration requestTimeout,
-	@Min(1) int maxConcurrentRequests
+	@Min(1) int maxConcurrentRequests,
+	@NotNull Duration processingLease
 ) {
 
 	public SpeechAnswerAsyncProperties {
@@ -20,6 +21,14 @@ public record SpeechAnswerAsyncProperties(
 			&& requestTimeout.compareTo(Duration.ofSeconds(1)) < 0) {
 			throw new IllegalArgumentException(
 				"음성 변환 Servlet 타임아웃은 1초 이상이어야 합니다."
+			);
+		}
+
+		if (requestTimeout != null
+			&& processingLease != null
+			&& processingLease.compareTo(requestTimeout) <= 0) {
+			throw new IllegalArgumentException(
+				"음성 변환 처리 임대 시간은 Servlet 타임아웃보다 길어야 합니다."
 			);
 		}
 	}

@@ -35,6 +35,7 @@ malhaebom:
     async:
       request-timeout: 20s
       max-concurrent-requests: ${STT_MAX_CONCURRENT_REQUESTS:8}
+      processing-lease: 60s
 
 gcp:
   credentials: file:./config/google-credentials.json

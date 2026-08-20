@@ -12,6 +12,7 @@ import java.util.concurrent.CompletionStage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
@@ -35,6 +36,7 @@ import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 
 @DataJpaTest
 @Import({SpeechAnswerStateService.class, JpaAuditingConfiguration.class})
+@EnableConfigurationProperties(SpeechAnswerAsyncProperties.class)
 class SpeechAnswerServiceJpaTest {
 
 	private static final String REQUEST_KEY =
@@ -67,7 +69,11 @@ class SpeechAnswerServiceJpaTest {
 			transcriber,
 			Runnable::run,
 			new SpeechTranscriptionConcurrencyLimiter(
-				new SpeechAnswerAsyncProperties(Duration.ofSeconds(20), 8)
+				new SpeechAnswerAsyncProperties(
+					Duration.ofSeconds(20),
+					8,
+					Duration.ofSeconds(60)
+				)
 			)
 		);
 		session = LearningJpaTestFixture.saveSession(

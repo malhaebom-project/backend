@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -61,6 +62,7 @@ import jakarta.servlet.AsyncListener;
 
 @DataJpaTest
 @Import({SpeechAnswerStateService.class, JpaAuditingConfiguration.class})
+@EnableConfigurationProperties(SpeechAnswerAsyncProperties.class)
 class LearningSpeechControllerJpaTest {
 
 	private static final String REQUEST_KEY =
@@ -88,7 +90,11 @@ class LearningSpeechControllerJpaTest {
 	void setUp() {
 		transcriber = new TestSpeechTranscriber();
 		SpeechAnswerAsyncProperties asyncProperties =
-			new SpeechAnswerAsyncProperties(Duration.ofSeconds(20), 8);
+			new SpeechAnswerAsyncProperties(
+				Duration.ofSeconds(20),
+				8,
+				Duration.ofSeconds(60)
+			);
 		SpeechAnswerService speechAnswerService = new SpeechAnswerService(
 			stateService,
 			transcriber,
@@ -160,6 +166,66 @@ class LearningSpeechControllerJpaTest {
 		assertEquals(
 			"audio/webm;codecs=opus",
 			transcriber.audio.contentType()
+		);
+	}
+
+	@Test
+	void 처리_중인_멱등_요청은_기존_STT_future에_합류한다()
+		throws Exception {
+		transcriber.willWait();
+		MockMultipartFile audio = audio(new byte[] {1}, "audio/webm");
+		MvcResult first = performRequest(audio)
+			.andExpect(request().asyncStarted())
+			.andReturn();
+		MvcResult rejoined = performRequest(audio)
+			.andExpect(request().asyncStarted())
+			.andReturn();
+
+		assertEquals(1, transcriber.callCount);
+		assertTrue(transcriber.completeSuccess());
+
+		mockMvc.perform(asyncDispatch(first))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.transcript")
+				.value("He is running."));
+		mockMvc.perform(asyncDispatch(rejoined))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.transcript")
+				.value("He is running."));
+		assertEquals(1, speechAnswerRepository.count());
+	}
+
+	@Test
+	void 재구독자_존재_시_한_HTTP_타임아웃은_공유_STT를_취소하지_않는다()
+		throws Exception {
+		transcriber.willWait();
+		MockMultipartFile audio = audio(new byte[] {1}, "audio/webm");
+		MvcResult timedOut = performRequest(audio)
+			.andExpect(request().asyncStarted())
+			.andReturn();
+		MvcResult remaining = performRequest(audio)
+			.andExpect(request().asyncStarted())
+			.andReturn();
+
+		MockAsyncContext asyncContext = (MockAsyncContext)timedOut
+			.getRequest()
+			.getAsyncContext();
+		AsyncEvent timeoutEvent = new AsyncEvent(asyncContext);
+		for (AsyncListener listener : asyncContext.getListeners()) {
+			listener.onTimeout(timeoutEvent);
+		}
+
+		mockMvc.perform(asyncDispatch(timedOut))
+			.andExpect(status().isGatewayTimeout());
+		assertEquals(0, transcriber.cancellationCount);
+		assertTrue(transcriber.completeSuccess());
+		mockMvc.perform(asyncDispatch(remaining))
+			.andExpect(status().isOk());
+		assertEquals(
+			SpeechProcessingStatus.COMPLETED,
+			speechAnswerRepository.findByRequestKey(REQUEST_KEY)
+				.orElseThrow()
+				.getProcessingStatus()
 		);
 	}
 

@@ -260,7 +260,8 @@ class SpeechAnswerConcurrencyJpaTest {
 		SpeechAnswerAsyncProperties speechAnswerAsyncProperties() {
 			return new SpeechAnswerAsyncProperties(
 				Duration.ofSeconds(20),
-				MAX_CONCURRENT_REQUESTS
+				MAX_CONCURRENT_REQUESTS,
+				Duration.ofSeconds(60)
 			);
 		}
 

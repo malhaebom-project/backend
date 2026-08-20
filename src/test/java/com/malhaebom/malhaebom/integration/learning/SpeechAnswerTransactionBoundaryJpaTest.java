@@ -156,10 +156,19 @@ class SpeechAnswerTransactionBoundaryJpaTest {
 		}
 
 		@Bean
-		SpeechTranscriptionConcurrencyLimiter concurrencyLimiter() {
-			return new SpeechTranscriptionConcurrencyLimiter(
-				new SpeechAnswerAsyncProperties(Duration.ofSeconds(20), 8)
+		SpeechAnswerAsyncProperties speechAnswerAsyncProperties() {
+			return new SpeechAnswerAsyncProperties(
+				Duration.ofSeconds(20),
+				8,
+				Duration.ofSeconds(60)
 			);
+		}
+
+		@Bean
+		SpeechTranscriptionConcurrencyLimiter concurrencyLimiter(
+			SpeechAnswerAsyncProperties properties
+		) {
+			return new SpeechTranscriptionConcurrencyLimiter(properties);
 		}
 	}
 
