@@ -49,6 +49,20 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	testAnnotationProcessor 'org.projectlombok:lombok'
 }
+
+sourceSets {
+	loadTest {
+		java.srcDir 'src/loadTest/java'
+		resources.srcDir 'src/loadTest/resources'
+		compileClasspath += sourceSets.main.output
+		runtimeClasspath += sourceSets.main.output
+	}
+}
+
+configurations {
+	loadTestImplementation.extendsFrom implementation
+	loadTestRuntimeOnly.extendsFrom runtimeOnly
+}
 dependencyManagement {
 	imports {
 		mavenBom "org.springframework.ai:spring-ai-bom:$springAiVersion"
@@ -70,6 +84,32 @@ tasks.register('liveTest', Test) {
 		includeTags 'live'
 	}
 	shouldRunAfter tasks.named('test')
+}
+
+tasks.register('loadTestFixtures', JavaExec) {
+	description = 'Creates or removes answer-submission load-test fixtures.'
+	group = 'verification'
+	dependsOn tasks.named('loadTestClasses')
+	classpath = sourceSets.loadTest.runtimeClasspath
+	mainClass = 'com.malhaebom.malhaebom.loadtest.AnswerSubmissionLoadFixtureTool'
+	systemProperty 'load.test.action',
+		providers.gradleProperty('loadTestAction').getOrElse('seed')
+	systemProperty 'load.test.run-id',
+		providers.gradleProperty('loadTestRunId').getOrElse('')
+	systemProperty 'load.test.stages',
+		providers.gradleProperty('loadTestStages').getOrElse('10,100,200,300')
+	systemProperty 'load.test.manifest',
+		providers.gradleProperty('loadTestManifest').getOrElse(
+			'load-tests/results/fixture-manifest.json'
+		)
+}
+
+tasks.register('loadTestServer', JavaExec) {
+	description = 'Runs the backend with load-test-only support beans.'
+	group = 'verification'
+	dependsOn tasks.named('loadTestClasses')
+	classpath = sourceSets.loadTest.runtimeClasspath
+	mainClass = 'com.malhaebom.malhaebom.MalhaebomApplication'
 }
 
 tasks.named('bootJar') {
