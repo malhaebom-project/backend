@@ -2,7 +2,9 @@ package com.malhaebom.malhaebom.domain.learning.repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.malhaebom.malhaebom.domain.learning.Difficulty;
@@ -26,7 +28,11 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
 			Collection<QuestionType> types
 	);
 
-	List<Question> findAllByActiveTrueOrderByIdDesc();
+	@EntityGraph(attributePaths = "acceptedAnswers")
+	List<Question> findAllForAdminByActiveTrueOrderByIdDesc();
 
-	java.util.Optional<Question> findByIdAndActiveTrue(Long id);
+	@EntityGraph(attributePaths = "acceptedAnswers")
+	Optional<Question> findForAdminByIdAndActiveTrue(Long id);
+
+	Optional<Question> findByIdAndActiveTrue(Long id);
 }
