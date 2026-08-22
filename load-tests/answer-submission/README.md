@@ -440,32 +440,15 @@ $gradleWrapper = if ($IsWindows) { './gradlew.bat' } else { './gradlew' }
   -PloadTestManifest=load-tests/results/local/fixture-manifest.json
 ```
 
-## OSIV 원인 교차 검증
+## OSIV 설정
 
-기본 실행에서 Hikari pending이 지속되면 preparation limiter를 추가하기 전에
-OSIV가 비동기 요청 수명 동안 JPA 자원을 유지하는지 확인한다. 백엔드 실행
-PowerShell에 다음 환경변수를 추가하고 전체 단계를 다시 실행한다.
+공통 설정은 `spring.jpa.open-in-view=false`를 사용한다. 트랜잭션이 끝난 뒤에도
+웹 요청과 비동기 dispatch 수명까지 JPA 자원이 유지되어 DB connection 반환이
+늦어지는 것을 막기 위한 설정이며 local, prod와 test 프로필에 동일하게 적용된다.
 
-```powershell
-$env:SPRING_JPA_OPEN_IN_VIEW = 'false'
-```
-
-비교 실행은 새로운 H2 파일, run-id, manifest와 결과 디렉터리를 사용한다. 이미
-제출에 성공한 fixture를 재사용하면 동시성 결과가 달라지므로 두 실행의 fixture를
-섞지 않는다.
-
-다음 변화가 함께 나타나면 OSIV를 우선 원인으로 판단할 수 있다.
-
-* 장시간 Hikari pending이 사라지고 단계 종료 후 connection이 복구된다.
-* OpenAI active가 limiter 한도까지 도달하고 초과 요청이 정상 503으로
-  분류된다.
-
-* OpenAI 대기 중 Tomcat busy가 내려가며 max thread 포화가 사라진다.
-* probe 성공률과 p95가 기준 안으로 돌아온다.
-
-이 비교는 자원 병목의 원인을 좁히는 테스트다. `open-in-view=false`가 lazy
-loading을 사용하는 조회 API에 미치는 기능 영향은 일반 테스트와 별도 smoke
-test로 확인한다.
+부하 테스트를 실행할 때 `SPRING_JPA_OPEN_IN_VIEW=true`로 덮어쓰지 않는다.
+OSIV 비활성화로 lazy loading에 의존하던 조회 API가 영향을 받지 않는지는 일반
+테스트와 별도 smoke test로 확인한다.
 
 ## AWS 실행
 

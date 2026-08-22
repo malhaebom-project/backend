@@ -1,6 +1,8 @@
 spring:
   application:
     name: malhaebom
+  jpa:
+    open-in-view: false
   profiles:
     default: local
   config:
