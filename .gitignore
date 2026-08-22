@@ -18,8 +18,13 @@ bin/
 !**/src/test/**/bin/
 
 ### IntelliJ IDEA ###
-.idea
-.run
+.idea/*
+!.idea/icon.svg
+.run/*
+!.run/MalhaebomApplication.run.xml
+!.run/Test.run.xml
+!.run/Live Test.run.xml
+!.run/Load Test Server.run.xml
 *.iws
 *.iml
 *.ipr
