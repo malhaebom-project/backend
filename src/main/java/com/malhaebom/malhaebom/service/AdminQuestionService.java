@@ -54,7 +54,8 @@ public class AdminQuestionService {
 
 	public List<Question> getAll(Long userId) {
 		validateAdmin(userId);
-		return questionRepository.findAllByActiveTrueOrderByIdDesc();
+		return questionRepository
+			.findAllForAdminByActiveTrueOrderByIdDesc();
 	}
 
 	public Question get(Long userId, Long questionId) {
@@ -116,7 +117,7 @@ public class AdminQuestionService {
 	}
 
 	private Question getActiveQuestion(Long questionId) {
-		return questionRepository.findByIdAndActiveTrue(questionId)
+		return questionRepository.findForAdminByIdAndActiveTrue(questionId)
 			.orElseThrow(() -> new ApiException(ErrorCode.QUESTION_NOT_FOUND));
 	}
 }
