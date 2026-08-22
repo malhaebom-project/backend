@@ -26,6 +26,7 @@ import com.openai.models.chat.completions.ChatCompletionMessage;
 import com.openai.services.async.ChatServiceAsync;
 import com.openai.services.async.chat.ChatCompletionServiceAsync;
 import org.junit.jupiter.api.Test;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.mockito.ArgumentCaptor;
 
 import com.malhaebom.malhaebom.domain.learning.AnswerResult;
@@ -195,7 +196,8 @@ class OpenAiAnswerAssessmentGeneratorTest {
 			new AnswerAssessmentConcurrencyLimiter(
 				new AnswerAssessmentConcurrencyProperties(
 					maxConcurrentRequests
-				)
+				),
+				new SimpleMeterRegistry()
 			)
 		);
 	}

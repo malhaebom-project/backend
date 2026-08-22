@@ -2,7 +2,12 @@ package com.malhaebom.malhaebom.infra.ai;
 
 import java.util.Objects;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
+
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import org.springframework.stereotype.Component;
 
@@ -14,11 +19,41 @@ import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 public class AnswerAssessmentConcurrencyLimiter {
 
 	private final Semaphore permits;
+	private final int maxConcurrentRequests;
+	private final AtomicInteger activeRequests = new AtomicInteger();
+	private final Counter acceptedRequests;
+	private final Counter rejectedRequests;
+	private final Counter completedRequests;
+	private final Counter failedRequests;
 
 	public AnswerAssessmentConcurrencyLimiter(
-		AnswerAssessmentConcurrencyProperties properties
+		AnswerAssessmentConcurrencyProperties properties,
+		MeterRegistry meterRegistry
 	) {
-		permits = new Semaphore(properties.maxConcurrentRequests());
+		maxConcurrentRequests = properties.maxConcurrentRequests();
+		permits = new Semaphore(maxConcurrentRequests);
+		acceptedRequests = meterRegistry.counter(
+			"malhaebom.answer.assessment.accepted"
+		);
+		rejectedRequests = meterRegistry.counter(
+			"malhaebom.answer.assessment.rejected"
+		);
+		completedRequests = meterRegistry.counter(
+			"malhaebom.answer.assessment.completed"
+		);
+		failedRequests = meterRegistry.counter(
+			"malhaebom.answer.assessment.failed"
+		);
+		Gauge.builder(
+			"malhaebom.answer.assessment.active",
+			activeRequests,
+			AtomicInteger::get
+		).register(meterRegistry);
+		Gauge.builder(
+			"malhaebom.answer.assessment.limit",
+			this,
+			limiter -> limiter.maxConcurrentRequests
+		).register(meterRegistry);
 	}
 
 	public AnswerAssessmentTask execute(
@@ -29,10 +64,13 @@ public class AnswerAssessmentConcurrencyLimiter {
 			"제한할 작업은 null일 수 없습니다."
 		);
 		if (!permits.tryAcquire()) {
+			rejectedRequests.increment();
 			return AnswerAssessmentTask.failed(
 				new ApiException(ErrorCode.ANSWER_ASSESSMENT_OVERLOADED)
 			);
 		}
+		activeRequests.incrementAndGet();
+		acceptedRequests.increment();
 
 		AnswerAssessmentTask task;
 		try {
@@ -41,13 +79,24 @@ public class AnswerAssessmentConcurrencyLimiter {
 				"제한된 작업은 null을 반환할 수 없습니다."
 			);
 		} catch (RuntimeException exception) {
-			permits.release();
+			releasePermit();
+			failedRequests.increment();
 			return AnswerAssessmentTask.failed(exception);
 		}
 
-		task.result().whenComplete(
-			(result, exception) -> permits.release()
-		);
+		task.result().whenComplete((result, exception) -> {
+			releasePermit();
+			if (exception == null) {
+				completedRequests.increment();
+				return;
+			}
+			failedRequests.increment();
+		});
 		return task;
+	}
+
+	private void releasePermit() {
+		activeRequests.decrementAndGet();
+		permits.release();
 	}
 }

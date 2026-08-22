@@ -30,6 +30,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmission;
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionStatus;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
@@ -339,7 +341,8 @@ class LearningAnswerConcurrencyJpaTest {
 		@Bean
 		AnswerAssessmentConcurrencyLimiter answerAssessmentConcurrencyLimiter() {
 			return new AnswerAssessmentConcurrencyLimiter(
-				new AnswerAssessmentConcurrencyProperties(1)
+				new AnswerAssessmentConcurrencyProperties(1),
+				new SimpleMeterRegistry()
 			);
 		}
 
