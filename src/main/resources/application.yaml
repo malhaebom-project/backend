@@ -21,6 +21,25 @@ spring:
         verbosity: low
         max-completion-tokens: 300
 
+server:
+  tomcat:
+    mbeanregistry:
+      enabled: true
+
+management:
+  server:
+    port: ${MANAGEMENT_SERVER_PORT:9090}
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+  endpoint:
+    health:
+      show-details: never
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
 malhaebom:
   assets:
     base-url: https://malhaebom-assets-prod-514090179227-ap-northeast-2-an.s3.ap-northeast-2.amazonaws.com

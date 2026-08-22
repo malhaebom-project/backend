@@ -45,4 +45,5 @@ out/
 ### Local LLM ###
 AGENTS.md
 .private
+load-tests/results/
 prompts/

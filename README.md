@@ -5,6 +5,8 @@ Java 21과 Spring Boot 기반의 말해봄 백엔드 애플리케이션입니다
 ## 프로젝트 문서
 
 - [학습 기록 API 집계 기준](docs/learning-record-api.md)
+- [답안 평가 동시성 제한 지표](docs/answer-assessment-metrics.md)
+- [답안 제출 비동기 부하 테스트](load-tests/answer-submission/README.md)
 
 ## 애플리케이션 설정
 
@@ -192,6 +194,10 @@ macOS 및 Linux:
 ```bash
 ./gradlew test
 ```
+
+답안 제출 비동기 부하 테스트는 CI/CD에서 자동 실행하지 않습니다. 별도의 실행
+환경과 fixture가 필요하고 테스트 시간이 오래 걸리며, 실제 OpenAI 호출 비용 및
+실행 시점을 통제해야 하므로 필요할 때 수동으로 실행합니다.
 
 ## 비밀정보 관리
 
