@@ -1,5 +1,6 @@
 plugins {
 	id 'java'
+	id 'idea'
 	id 'org.springframework.boot' version '4.1.0'
 	id 'io.spring.dependency-management' version '1.1.7'
 }
@@ -63,6 +64,14 @@ configurations {
 	loadTestImplementation.extendsFrom implementation
 	loadTestRuntimeOnly.extendsFrom runtimeOnly
 }
+
+idea {
+	module {
+		testSources.from(sourceSets.loadTest.java.srcDirs)
+		testResources.from(sourceSets.loadTest.resources.srcDirs)
+	}
+}
+
 dependencyManagement {
 	imports {
 		mavenBom "org.springframework.ai:spring-ai-bom:$springAiVersion"
