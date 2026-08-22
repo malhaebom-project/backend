@@ -195,6 +195,12 @@ macOS 및 Linux:
 ./gradlew test
 ```
 
+IntelliJ IDEA에서 Gradle 동기화를 마치면 로컬 기본 프로필로 실행되는
+`MalhaebomApplication`이 자동으로 감지됩니다. 저장소에서는 `Test`, `Live Test`,
+`Load Test Server` Run Configuration을 공유합니다. `Load Test Server`는 부하
+테스트용 백엔드만 실행하며 전체 답안 제출 부하 테스트는
+[전용 실행 문서](load-tests/answer-submission/README.md)를 따릅니다.
+
 답안 제출 비동기 부하 테스트는 CI/CD에서 자동 실행하지 않습니다. 별도의 실행
 환경과 fixture가 필요하고 테스트 시간이 오래 걸리며, 실제 OpenAI 호출 비용 및
 실행 시점을 통제해야 하므로 필요할 때 수동으로 실행합니다.
