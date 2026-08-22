@@ -9,6 +9,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.malhaebom.malhaebom.domain.User;
+import com.malhaebom.malhaebom.domain.child.ChildLevel;
+import com.malhaebom.malhaebom.domain.child.ChildProfile;
+import com.malhaebom.malhaebom.domain.child.repository.ChildProfileRepository;
 import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
@@ -19,6 +23,7 @@ import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
+import com.malhaebom.malhaebom.domain.repository.UserRepository;
 import com.malhaebom.malhaebom.loadtest.AnswerSubmissionLoadFixtureManifest.Fixture;
 import com.malhaebom.malhaebom.loadtest.AnswerSubmissionLoadFixtureManifest.StageFixtures;
 
@@ -26,19 +31,27 @@ import com.malhaebom.malhaebom.loadtest.AnswerSubmissionLoadFixtureManifest.Stag
 public class AnswerSubmissionLoadFixtureService {
 
 	private static final String TRANSCRIPT = "He is running.";
-	private static final long LOAD_TEST_CHILD_ID_BASE = 9_000_000_000L;
+	private static final String OWNER_EMAIL =
+		"loadtest-answer@malhaebom.invalid";
+	private static final String CHILD_NICKNAME = "load-test";
 
+	private final UserRepository userRepository;
+	private final ChildProfileRepository childProfileRepository;
 	private final QuestionRepository questionRepository;
 	private final LearningSessionRepository learningSessionRepository;
 	private final SpeechAnswerRepository speechAnswerRepository;
 	private final JdbcTemplate jdbcTemplate;
 
 	public AnswerSubmissionLoadFixtureService(
+		UserRepository userRepository,
+		ChildProfileRepository childProfileRepository,
 		QuestionRepository questionRepository,
 		LearningSessionRepository learningSessionRepository,
 		SpeechAnswerRepository speechAnswerRepository,
 		JdbcTemplate jdbcTemplate
 	) {
+		this.userRepository = userRepository;
+		this.childProfileRepository = childProfileRepository;
 		this.questionRepository = questionRepository;
 		this.learningSessionRepository = learningSessionRepository;
 		this.speechAnswerRepository = speechAnswerRepository;
@@ -52,6 +65,26 @@ public class AnswerSubmissionLoadFixtureService {
 	) {
 		validateRunId(runId);
 		validateStages(stages);
+		User owner = userRepository.findByEmail(OWNER_EMAIL)
+			.orElseGet(() -> userRepository.save(User.create(
+				"Load Test",
+				OWNER_EMAIL,
+				"load-test-login-disabled"
+			)));
+		ChildProfile child = childProfileRepository
+			.findAllByUserIdAndActiveTrueOrderByCreatedAtAsc(owner.getId())
+			.stream()
+			.filter(profile -> CHILD_NICKNAME.equals(profile.getNickname()))
+			.findFirst()
+			.orElseGet(() -> childProfileRepository.save(
+				ChildProfile.create(
+					owner,
+					CHILD_NICKNAME,
+					10,
+					3,
+					ChildLevel.BEGINNER
+				)
+			));
 		Question question = questionRepository.save(Question.create(
 			LearningTopic.DAILY_LIFE,
 			Difficulty.EASY,
@@ -69,14 +102,12 @@ public class AnswerSubmissionLoadFixtureService {
 		));
 
 		List<StageFixtures> stageFixtures = new ArrayList<>();
-		long fixtureIndex = 0;
 		for (int concurrency : stages) {
 			List<Fixture> fixtures = new ArrayList<>(concurrency);
 			for (int index = 0; index < concurrency; index++) {
-				fixtureIndex++;
 				LearningSession session = learningSessionRepository.save(
 					LearningSession.create(
-						LOAD_TEST_CHILD_ID_BASE + fixtureIndex,
+						child.getId(),
 						LearningTopic.DAILY_LIFE,
 						Difficulty.EASY,
 						List.of(question)

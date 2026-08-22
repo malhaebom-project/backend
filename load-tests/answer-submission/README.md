@@ -91,6 +91,20 @@ DB 작업, JPA 자원 수명, Tomcat dispatch와 외부 호출 제한이 함께 
 응답의 `sessionQuestionId`를 fixture와 비교해 다른 사용자의 결과가 섞였는지
 검증할 수 있다.
 
+AWS·Supabase fixture는 다음 전용 계정과 자녀 프로필을 생성하거나 재사용한다.
+
+| 항목 | 값 |
+| --- | --- |
+| 계정 이메일 | `loadtest-answer@malhaebom.invalid` |
+| 자녀 프로필 닉네임 | `load-test` |
+| 현재 AWS·Supabase `userId` | `9` |
+| 현재 AWS·Supabase `profileId` | `12` |
+
+ID는 현재 운영 테스트 DB에서 확인한 참고값이며 환경이나 데이터 재생성에 따라
+달라질 수 있다. fixture 도구는 이 값을 하드코딩하지 않고 이메일과 닉네임으로
+대상을 찾는다. cleanup은 실행별 세션·답안 fixture를 삭제하지만, 다음 테스트에서
+재사용할 수 있도록 전용 계정과 자녀 프로필은 유지한다.
+
 ```text
 답안 제출 burst
   → 제출 대상 조회·처리 예약
