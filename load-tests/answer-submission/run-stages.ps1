@@ -13,9 +13,13 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    throw "run-stages.ps1 requires PowerShell 7 or later."
+}
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $k6Script = Join-Path $scriptRoot "answer-submission.js"
 $collectorScript = Join-Path $scriptRoot "collect-metrics.ps1"
+$powerShellExecutable = (Get-Process -Id $PID).Path
 $manifestPath = [System.IO.Path]::GetFullPath($Manifest)
 $resultRootPath = [System.IO.Path]::GetFullPath($ResultRoot)
 $failedStages = @()
@@ -49,9 +53,11 @@ foreach ($stage in $Stages) {
         }
     }
 
-    $collectorArguments = @(
-        "-NoProfile",
-        "-ExecutionPolicy", "Bypass",
+    $collectorArguments = @("-NoProfile")
+    if ($IsWindows) {
+        $collectorArguments += @("-ExecutionPolicy", "Bypass")
+    }
+    $collectorArguments += @(
         "-File", $collectorScript,
         "-ManagementUrl", $ManagementUrl,
         "-OutputDirectory", $metricsDirectory,
@@ -67,10 +73,15 @@ foreach ($stage in $Stages) {
     if ($SshIdentityFile) {
         $collectorArguments += @("-SshIdentityFile", $SshIdentityFile)
     }
-    $collector = Start-Process powershell.exe `
-        -ArgumentList $collectorArguments `
-        -WindowStyle Hidden `
-        -PassThru
+    $collectorProcessParameters = @{
+        FilePath = $powerShellExecutable
+        ArgumentList = $collectorArguments
+        PassThru = $true
+    }
+    if ($IsWindows) {
+        $collectorProcessParameters.WindowStyle = "Hidden"
+    }
+    $collector = Start-Process @collectorProcessParameters
 
     $stageExitCode = 0
     $probeP95 = $null
