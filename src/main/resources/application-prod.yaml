@@ -2,8 +2,8 @@ spring:
   lifecycle:
     timeout-per-shutdown-phase: 25s
   datasource:
-    url: jdbc:postgresql://aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require
-    username: postgres.gkbjfdrnxtngxnaqnkto
+    url: jdbc:postgresql://aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres?sslmode=require
+    username: postgres.ucehgosajxusjvfvmkbm
     password: "${DB_PASSWORD}"
     driver-class-name: org.postgresql.Driver
   jpa:
