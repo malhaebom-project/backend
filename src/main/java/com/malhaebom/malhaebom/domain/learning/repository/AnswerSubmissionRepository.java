@@ -49,11 +49,6 @@ public interface AnswerSubmissionRepository
 		@Param("speechAnswerId") Long speechAnswerId
 	);
 
-	Optional<AnswerSubmission> findBySessionQuestion_IdAndAttemptNo(
-		Long sessionQuestionId,
-		int attemptNo
-	);
-
 	Optional<AnswerSubmission> findFirstBySessionQuestion_IdOrderByAttemptNoDesc(
 		Long sessionQuestionId
 	);

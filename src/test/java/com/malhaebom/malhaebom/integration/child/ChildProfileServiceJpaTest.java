@@ -1,5 +1,6 @@
 package com.malhaebom.malhaebom.integration.child;
 
+import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -23,6 +24,7 @@ import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.repository.UserRepository;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.ChildProfileService;
 
@@ -54,6 +56,47 @@ class ChildProfileServiceJpaTest {
 		);
 		userId = user.getId();
 		childId = profile.getId();
+	}
+
+	@Test
+	void 프로필_생성_시_별명_공백을_제거하고_빈_통계를_반환한다() {
+		var result = childProfileService.create(
+			userId,
+			"  영희  ",
+			9,
+			2,
+			ChildLevel.ELEMENTARY
+		);
+		childProfileRepository.flush();
+
+		assertThat(result.profile().getNickname()).isEqualTo("영희");
+		assertThat(result.statistics().totalStudyCount()).isZero();
+		assertThat(childProfileRepository.findById(result.profile().getId()))
+			.isPresent();
+	}
+
+	@Test
+	void 활성_프로필과_같은_별명은_새로_저장하지_않는다() {
+		assertApiException(
+			ErrorCode.CHILD_NICKNAME_ALREADY_EXISTS,
+			() -> childProfileService.create(
+				userId,
+				"  민수  ",
+				9,
+				2,
+				ChildLevel.ELEMENTARY
+			)
+		);
+
+		assertThat(childProfileRepository.count()).isEqualTo(1);
+	}
+
+	@Test
+	void 다른_보호자의_프로필에는_접근할_수_없다() {
+		assertApiException(
+			ErrorCode.CHILD_ACCESS_DENIED,
+			() -> childProfileService.getOwnedActive(userId + 1, childId)
+		);
 	}
 
 	@Test

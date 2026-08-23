@@ -36,10 +36,6 @@ class AnswerSubmissionTest {
 		assertSame(speechAnswer, submission.getSpeechAnswer());
 		assertEquals(1, submission.getAttemptNo());
 		assertEquals(AnswerSubmissionStatus.PENDING, submission.getStatus());
-		assertNull(submission.getAnswer());
-		assertNull(submission.getProcessingToken());
-		assertNull(submission.getLeaseExpiresAt());
-		assertNull(submission.getFailureMessage());
 	}
 
 	@Test

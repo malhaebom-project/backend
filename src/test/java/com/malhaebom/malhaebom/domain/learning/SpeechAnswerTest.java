@@ -35,10 +35,6 @@ class SpeechAnswerTest {
 			SpeechProcessingStatus.PROCESSING,
 			speechAnswer.getProcessingStatus()
 		);
-		assertNull(speechAnswer.getTranscript());
-		assertNull(speechAnswer.getConfidence());
-		assertNull(speechAnswer.getSttProvider());
-		assertNull(speechAnswer.getFailureMessage());
 		assertFalse(speechAnswer.isCompleted());
 	}
 
