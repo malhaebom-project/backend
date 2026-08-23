@@ -21,6 +21,12 @@ import org.springframework.context.annotation.Configuration;
 public class OpenAiAnswerAssessmentConfiguration {
 
 	@Bean(destroyMethod = "close")
+	ExecutorAnswerAssessmentQueueTimeoutScheduler
+	answerAssessmentQueueTimeoutScheduler() {
+		return new ExecutorAnswerAssessmentQueueTimeoutScheduler();
+	}
+
+	@Bean(destroyMethod = "close")
 	OpenAIClientAsync answerAssessmentOpenAiClient(
 		OpenAiAnswerAssessmentProperties properties,
 		ObjectProvider<ObservationRegistry> observationRegistries,

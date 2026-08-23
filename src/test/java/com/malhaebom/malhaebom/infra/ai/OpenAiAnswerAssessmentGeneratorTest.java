@@ -13,6 +13,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -101,14 +102,19 @@ class OpenAiAnswerAssessmentGeneratorTest {
 	}
 
 	@Test
-	void 동시_채점_한도를_초과하면_OpenAI를_호출하지_않고_즉시_거절한다() {
+	void active와_queue가_차면_그_다음_요청은_OpenAI_호출_없이_거절한다() {
 		AsyncClientFixture fixture = asyncClientFixture();
 		OpenAiAnswerAssessmentGenerator generator = generator(
 			fixture.client(),
+			1,
 			1
 		);
 
 		CompletableFuture<AnswerAssessment> first = generator
+			.generateAsync(assessmentInput("He is running."))
+			.result()
+			.toCompletableFuture();
+		CompletableFuture<AnswerAssessment> queued = generator
 			.generateAsync(assessmentInput("He is running."))
 			.result()
 			.toCompletableFuture();
@@ -135,11 +141,65 @@ class OpenAiAnswerAssessmentGeneratorTest {
 
 		fixture.response().complete(chatCompletion());
 		first.join();
-		generator.generateAsync(assessmentInput("He is running."))
-			.result()
-			.toCompletableFuture()
-			.join();
+		queued.join();
 		verify(fixture.completions(), times(2)).create(
+			any(ChatCompletionCreateParams.class)
+		);
+	}
+
+	@Test
+	void queued_상태에서는_OpenAI를_호출하지_않고_active_완료_후에만_시작한다() {
+		AsyncClientFixture fixture = asyncClientFixture();
+		OpenAiAnswerAssessmentGenerator generator = generator(
+			fixture.client(),
+			1,
+			1
+		);
+		CompletableFuture<AnswerAssessment> first = generator
+			.generateAsync(assessmentInput("He is running."))
+			.result()
+			.toCompletableFuture();
+		CompletableFuture<AnswerAssessment> queued = generator
+			.generateAsync(assessmentInput("He is running."))
+			.result()
+			.toCompletableFuture();
+
+		assertFalse(queued.isDone());
+		verify(fixture.completions(), times(1)).create(
+			any(ChatCompletionCreateParams.class)
+		);
+
+		fixture.response().complete(chatCompletion());
+		first.join();
+		queued.join();
+		verify(fixture.completions(), times(2)).create(
+			any(ChatCompletionCreateParams.class)
+		);
+	}
+
+	@Test
+	void queued_작업_취소는_OpenAI를_호출하지_않고_대기열에서_제거한다() {
+		AsyncClientFixture fixture = asyncClientFixture();
+		OpenAiAnswerAssessmentGenerator generator = generator(
+			fixture.client(),
+			1,
+			1
+		);
+		AnswerAssessmentTask first = generator.generateAsync(
+			assessmentInput("He is running.")
+		);
+		AnswerAssessmentTask queued = generator.generateAsync(
+			assessmentInput("He is running.")
+		);
+
+		assertTrue(queued.cancel());
+		verify(fixture.completions(), times(1)).create(
+			any(ChatCompletionCreateParams.class)
+		);
+
+		fixture.response().complete(chatCompletion());
+		first.result().toCompletableFuture().join();
+		verify(fixture.completions(), times(1)).create(
 			any(ChatCompletionCreateParams.class)
 		);
 	}
@@ -190,14 +250,29 @@ class OpenAiAnswerAssessmentGeneratorTest {
 		OpenAIClientAsync client,
 		int maxConcurrentRequests
 	) {
+		return generator(client, maxConcurrentRequests, 0);
+	}
+
+	private OpenAiAnswerAssessmentGenerator generator(
+		OpenAIClientAsync client,
+		int maxConcurrentRequests,
+		int queueCapacity
+	) {
 		return new OpenAiAnswerAssessmentGenerator(
 			client,
 			properties(),
 			new AnswerAssessmentConcurrencyLimiter(
 				new AnswerAssessmentConcurrencyProperties(
-					maxConcurrentRequests
+					maxConcurrentRequests,
+					queueCapacity,
+					queueCapacity == 0
+						? Duration.ZERO
+						: Duration.ofSeconds(10)
 				),
-				new SimpleMeterRegistry()
+				new SimpleMeterRegistry(),
+				(task, delay) -> () -> {
+				},
+				System::nanoTime
 			)
 		);
 	}

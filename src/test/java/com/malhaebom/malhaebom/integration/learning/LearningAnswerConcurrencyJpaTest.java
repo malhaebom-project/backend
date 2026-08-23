@@ -9,13 +9,22 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Timestamp;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.ArrayDeque;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
@@ -27,8 +36,11 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
@@ -45,8 +57,8 @@ import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.ai.AnswerAssessmentConcurrencyLimiter;
 import com.malhaebom.malhaebom.infra.ai.AnswerAssessmentConcurrencyProperties;
+import com.malhaebom.malhaebom.infra.ai.AnswerAssessmentQueueTimeoutScheduler;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
-import com.malhaebom.malhaebom.infra.time.TimeConfiguration;
 import com.malhaebom.malhaebom.service.AnswerAssessmentService;
 import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
@@ -59,12 +71,15 @@ import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 
 @DataJpaTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
+@TestPropertySource(properties = {
+	"malhaebom.answer-submission.processing-timeout=25s",
+	"malhaebom.answer-submission.processing-lease=60s"
+})
 @Import({
 	JpaAuditingConfiguration.class,
 	LearningAnswerService.class,
 	AnswerSubmissionTransactionService.class,
 	AnswerAssessmentService.class,
-	TimeConfiguration.class,
 	LearningAnswerConcurrencyJpaTest.AssessmentTestConfiguration.class
 })
 class LearningAnswerConcurrencyJpaTest {
@@ -95,11 +110,19 @@ class LearningAnswerConcurrencyJpaTest {
 	@Autowired
 	private BlockingAnswerAssessmentGenerator assessmentGenerator;
 	@Autowired
+	private ControllableQueueTimeoutScheduler queueTimeoutScheduler;
+	@Autowired
+	private TestClock clock;
+	@Autowired
 	private JdbcTemplate jdbcTemplate;
+	@Autowired
+	private PlatformTransactionManager transactionManager;
 
 	@BeforeEach
 	void setUp() {
 		assessmentGenerator.reset();
+		queueTimeoutScheduler.reset();
+		clock.reset();
 	}
 
 	@AfterEach
@@ -199,7 +222,7 @@ class LearningAnswerConcurrencyJpaTest {
 		);
 		int updatedRows = jdbcTemplate.update(
 			"update answer_submissions set lease_expires_at = ? where id = ?",
-			Timestamp.from(Instant.now().minusSeconds(1)),
+			Timestamp.from(clock.instant().minusSeconds(1)),
 			expired.submissionId()
 		);
 
@@ -240,7 +263,7 @@ class LearningAnswerConcurrencyJpaTest {
 	}
 
 	@Test
-	void 동시_한도_초과로_실패한_제출은_자리가_나면_재시도한다()
+	void queue에_여유가_있으면_제출은_pending으로_기다린_뒤_FIFO로_완료된다()
 		throws Exception {
 		LearningSession firstSession = saveSession();
 		LearningSessionQuestion firstQuestion = firstSession
@@ -250,6 +273,8 @@ class LearningAnswerConcurrencyJpaTest {
 		LearningSessionQuestion secondQuestion = secondSession
 			.getCurrentQuestion();
 		SpeechAnswer secondSpeech = saveCompletedSpeechAnswer(secondQuestion, 1);
+		long answersBefore = answerRepository.count();
+		long submissionsBefore = answerSubmissionRepository.count();
 
 		CompletionStage<AnswerSubmissionResult> firstRequest =
 			learningAnswerService.submitAsync(
@@ -260,16 +285,61 @@ class LearningAnswerConcurrencyJpaTest {
 		assertTrue(assessmentGenerator.awaitAssessmentStarted());
 		assertFalse(firstRequest.toCompletableFuture().isDone());
 
-		assertApiException(
-			ErrorCode.ANSWER_ASSESSMENT_OVERLOADED,
-			() -> await(learningAnswerService.submitAsync(
+		CompletionStage<AnswerSubmissionResult> secondRequest =
+			learningAnswerService.submitAsync(
 				secondSession.getId(),
 				secondQuestion.getId(),
 				secondSpeech.getId()
-			).result())
+			).result();
+		AnswerSubmission queued = answerSubmissionRepository
+			.findBySpeechAnswer_Id(secondSpeech.getId())
+			.orElseThrow();
+
+		assertFalse(secondRequest.toCompletableFuture().isDone());
+		assertEquals(AnswerSubmissionStatus.PROCESSING, queued.getStatus());
+		assertEquals(1, assessmentGenerator.callCount());
+		assertEquals(1, queueTimeoutScheduler.scheduledCount());
+		assertEquals(answersBefore, answerRepository.count());
+
+		assessmentGenerator.releaseAssessment(0);
+		await(firstRequest);
+		assertEquals(2, assessmentGenerator.callCount());
+		assertFalse(secondRequest.toCompletableFuture().isDone());
+		assertEquals(0, queueTimeoutScheduler.scheduledCount());
+
+		assessmentGenerator.releaseAssessment(1);
+		AnswerSubmissionResult secondResult = await(secondRequest);
+		AnswerSubmission completed = answerSubmissionRepository.findById(
+			queued.getId()
+		).orElseThrow();
+
+		assertEquals(AnswerSubmissionStatus.COMPLETED, completed.getStatus());
+		assertEquals(secondResult.answerId(), completed.getAnswer().getId());
+		assertEquals(answersBefore + 2, answerRepository.count());
+		assertEquals(
+			submissionsBefore + 2,
+			answerSubmissionRepository.count()
+		);
+	}
+
+	@Test
+	void active와_queue가_차면_그_다음_제출을_실패시키고_같은_예약으로_재시도한다()
+		throws Exception {
+		SubmissionFixture first = submissionFixture(1);
+		SubmissionFixture second = submissionFixture(1);
+		SubmissionFixture third = submissionFixture(1);
+		long answersBefore = answerRepository.count();
+		long submissionsBefore = answerSubmissionRepository.count();
+		CompletionStage<AnswerSubmissionResult> firstRequest = submitAsync(first);
+		assertTrue(assessmentGenerator.awaitAssessmentStarted());
+		CompletionStage<AnswerSubmissionResult> secondRequest = submitAsync(second);
+
+		assertApiException(
+			ErrorCode.ANSWER_ASSESSMENT_OVERLOADED,
+			() -> await(submitAsync(third))
 		);
 		AnswerSubmission failed = answerSubmissionRepository
-			.findBySpeechAnswer_Id(secondSpeech.getId())
+			.findBySpeechAnswer_Id(third.speechAnswer().getId())
 			.orElseThrow();
 		assertEquals(AnswerSubmissionStatus.FAILED, failed.getStatus());
 		assertEquals(
@@ -277,30 +347,236 @@ class LearningAnswerConcurrencyJpaTest {
 			failed.getFailureMessage()
 		);
 		assertEquals(1, assessmentGenerator.callCount());
-		assertEquals(0, answerRepository.count());
+		assertEquals(1, queueTimeoutScheduler.scheduledCount());
+		assertEquals(answersBefore, answerRepository.count());
 
 		assessmentGenerator.releaseAssessment(0);
 		await(firstRequest);
-		CompletionStage<AnswerSubmissionResult> retried = learningAnswerService
-			.submitAsync(
-				secondSession.getId(),
-				secondQuestion.getId(),
-				secondSpeech.getId()
-			)
-			.result();
 		assertEquals(2, assessmentGenerator.callCount());
+		CompletionStage<AnswerSubmissionResult> retried = submitAsync(third);
+		AnswerSubmission processingRetry = answerSubmissionRepository.findById(
+			failed.getId()
+		).orElseThrow();
+		assertEquals(
+			AnswerSubmissionStatus.PROCESSING,
+			processingRetry.getStatus()
+		);
 		assertFalse(retried.toCompletableFuture().isDone());
 
 		assessmentGenerator.releaseAssessment(1);
+		await(secondRequest);
+		assertEquals(3, assessmentGenerator.callCount());
+		assessmentGenerator.releaseAssessment(2);
 		AnswerSubmissionResult recovered = await(retried);
-		AnswerSubmission completed = answerSubmissionRepository
-			.findById(failed.getId())
-			.orElseThrow();
+		AnswerSubmission completed = answerSubmissionRepository.findById(
+			failed.getId()
+		).orElseThrow();
 
 		assertEquals(AnswerSubmissionStatus.COMPLETED, completed.getStatus());
 		assertEquals(recovered.answerId(), completed.getAnswer().getId());
-		assertEquals(2, answerRepository.count());
-		assertEquals(2, answerSubmissionRepository.count());
+		assertEquals(answersBefore + 3, answerRepository.count());
+		assertEquals(
+			submissionsBefore + 3,
+			answerSubmissionRepository.count()
+		);
+	}
+
+	@Test
+	void queue_wait_timeout은_503으로_예약을_실패시키고_provider를_호출하지_않는다()
+		throws Exception {
+		SubmissionFixture first = submissionFixture(1);
+		SubmissionFixture queued = submissionFixture(1);
+		long answersBefore = answerRepository.count();
+		CompletionStage<AnswerSubmissionResult> firstRequest = submitAsync(first);
+		assertTrue(assessmentGenerator.awaitAssessmentStarted());
+		CompletionStage<AnswerSubmissionResult> queuedRequest = submitAsync(queued);
+
+		queueTimeoutScheduler.expireNext();
+
+		assertApiException(
+			ErrorCode.ANSWER_ASSESSMENT_OVERLOADED,
+			() -> await(queuedRequest)
+		);
+		AnswerSubmission failed = answerSubmissionRepository
+			.findBySpeechAnswer_Id(queued.speechAnswer().getId())
+			.orElseThrow();
+		assertEquals(AnswerSubmissionStatus.FAILED, failed.getStatus());
+		assertEquals(
+			ErrorCode.ANSWER_ASSESSMENT_OVERLOADED.getMessage(),
+			failed.getFailureMessage()
+		);
+		assertEquals(1, assessmentGenerator.callCount());
+		assertEquals(0, queueTimeoutScheduler.scheduledCount());
+
+		assessmentGenerator.releaseAssessment(0);
+		await(firstRequest);
+		CompletionStage<AnswerSubmissionResult> retried = submitAsync(queued);
+		assertEquals(2, assessmentGenerator.callCount());
+		assessmentGenerator.releaseAssessment(1);
+		AnswerSubmissionResult recovered = await(retried);
+		AnswerSubmission completed = answerSubmissionRepository.findById(
+			failed.getId()
+		).orElseThrow();
+
+		assertEquals(AnswerSubmissionStatus.COMPLETED, completed.getStatus());
+		assertEquals(recovered.answerId(), completed.getAnswer().getId());
+		assertEquals(answersBefore + 2, answerRepository.count());
+	}
+
+	@Test
+	void queued_제출을_취소하면_provider_호출_없이_제거하고_504로_실패시킨다()
+		throws Exception {
+		SubmissionFixture first = submissionFixture(1);
+		SubmissionFixture queued = submissionFixture(1);
+		CompletionStage<AnswerSubmissionResult> firstRequest = submitAsync(first);
+		assertTrue(assessmentGenerator.awaitAssessmentStarted());
+		var queuedTask = learningAnswerService.submitAsync(
+			queued.session().getId(),
+			queued.question().getId(),
+			queued.speechAnswer().getId()
+		);
+
+		assertTrue(queuedTask.cancel());
+		assertApiException(
+			ErrorCode.ANSWER_SUBMISSION_TIMEOUT,
+			() -> await(queuedTask.result())
+		);
+		AnswerSubmission failed = answerSubmissionRepository
+			.findBySpeechAnswer_Id(queued.speechAnswer().getId())
+			.orElseThrow();
+		assertEquals(AnswerSubmissionStatus.FAILED, failed.getStatus());
+		assertEquals(
+			ErrorCode.ANSWER_SUBMISSION_TIMEOUT.getMessage(),
+			failed.getFailureMessage()
+		);
+		assertEquals(1, assessmentGenerator.callCount());
+		assertEquals(0, queueTimeoutScheduler.scheduledCount());
+
+		assessmentGenerator.releaseAssessment(0);
+		await(firstRequest);
+		assertEquals(1, assessmentGenerator.callCount());
+	}
+
+	@Test
+	void 호출자_취소는_실패_기록의_row_lock보다_queue_용량을_먼저_반환한다()
+		throws Exception {
+		SubmissionFixture first = submissionFixture(1);
+		SubmissionFixture cancelled = submissionFixture(1);
+		SubmissionFixture replacement = submissionFixture(1);
+		CompletionStage<AnswerSubmissionResult> firstRequest = submitAsync(first);
+		assertTrue(assessmentGenerator.awaitAssessmentStarted());
+		var cancelledTask = learningAnswerService.submitAsync(
+			cancelled.session().getId(),
+			cancelled.question().getId(),
+			cancelled.speechAnswer().getId()
+		);
+		Long cancelledSubmissionId = answerSubmissionRepository
+			.findBySpeechAnswer_Id(cancelled.speechAnswer().getId())
+			.orElseThrow()
+			.getId();
+		CountDownLatch rowLocked = new CountDownLatch(1);
+		CountDownLatch releaseRowLock = new CountDownLatch(1);
+		ExecutorService executor = Executors.newFixedThreadPool(2);
+
+		try {
+			Future<?> lock = executor.submit(() -> {
+				TransactionTemplate transaction = new TransactionTemplate(
+					transactionManager
+				);
+				transaction.executeWithoutResult(status -> {
+					jdbcTemplate.queryForObject(
+						"select id from answer_submissions "
+							+ "where id = ? for update",
+						Long.class,
+						cancelledSubmissionId
+					);
+					rowLocked.countDown();
+					await(releaseRowLock);
+				});
+			});
+			assertTrue(rowLocked.await(5, SECONDS));
+			Future<Boolean> cancellation = executor.submit(cancelledTask::cancel);
+
+			assertTrue(queueTimeoutScheduler.awaitCancellation());
+			var replacementTask = learningAnswerService.submitAsync(
+				replacement.session().getId(),
+				replacement.question().getId(),
+				replacement.speechAnswer().getId()
+			);
+			assertFalse(replacementTask.result().toCompletableFuture().isDone());
+
+			releaseRowLock.countDown();
+			lock.get(5, SECONDS);
+			assertTrue(cancellation.get(5, SECONDS));
+			assertApiException(
+				ErrorCode.ANSWER_SUBMISSION_TIMEOUT,
+				() -> await(cancelledTask.result())
+			);
+
+			assessmentGenerator.releaseAssessment(0);
+			await(firstRequest);
+			assertEquals(2, assessmentGenerator.callCount());
+			assessmentGenerator.releaseAssessment(1);
+			await(replacementTask.result());
+		} finally {
+			releaseRowLock.countDown();
+			assessmentGenerator.releaseAllAssessments();
+			executor.shutdownNow();
+			assertTrue(executor.awaitTermination(5, SECONDS));
+		}
+	}
+
+	@Test
+	void queue에서_사용한_시간은_기존_25초_deadline에서_차감된다()
+		throws Exception {
+		SubmissionFixture first = submissionFixture(1);
+		SubmissionFixture queued = submissionFixture(1);
+		long answersBefore = answerRepository.count();
+		CompletionStage<AnswerSubmissionResult> firstRequest = submitAsync(first);
+		assertTrue(assessmentGenerator.awaitAssessmentStarted());
+		CompletionStage<AnswerSubmissionResult> queuedRequest = submitAsync(queued);
+
+		clock.advance(Duration.ofSeconds(10));
+		assessmentGenerator.releaseAssessment(0);
+		await(firstRequest);
+		assertEquals(2, assessmentGenerator.callCount());
+
+		clock.advance(Duration.ofSeconds(15));
+		assessmentGenerator.releaseAssessment(1);
+
+		assertApiException(
+			ErrorCode.ANSWER_SUBMISSION_TIMEOUT,
+			() -> await(queuedRequest)
+		);
+		AnswerSubmission failed = answerSubmissionRepository
+			.findBySpeechAnswer_Id(queued.speechAnswer().getId())
+			.orElseThrow();
+		assertEquals(AnswerSubmissionStatus.FAILED, failed.getStatus());
+		assertEquals(
+			ErrorCode.ANSWER_SUBMISSION_TIMEOUT.getMessage(),
+			failed.getFailureMessage()
+		);
+		assertEquals(answersBefore + 1, answerRepository.count());
+	}
+
+	private SubmissionFixture submissionFixture(int recordingNo) {
+		LearningSession session = saveSession();
+		LearningSessionQuestion question = session.getCurrentQuestion();
+		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(
+			question,
+			recordingNo
+		);
+		return new SubmissionFixture(session, question, speechAnswer);
+	}
+
+	private CompletionStage<AnswerSubmissionResult> submitAsync(
+		SubmissionFixture fixture
+	) {
+		return learningAnswerService.submitAsync(
+			fixture.session().getId(),
+			fixture.question().getId(),
+			fixture.speechAnswer().getId()
+		).result();
 	}
 
 	private LearningSession saveSession() {
@@ -339,11 +615,28 @@ class LearningAnswerConcurrencyJpaTest {
 	static class AssessmentTestConfiguration {
 
 		@Bean
-		AnswerAssessmentConcurrencyLimiter answerAssessmentConcurrencyLimiter() {
+		AnswerAssessmentConcurrencyLimiter answerAssessmentConcurrencyLimiter(
+			ControllableQueueTimeoutScheduler timeoutScheduler
+		) {
 			return new AnswerAssessmentConcurrencyLimiter(
-				new AnswerAssessmentConcurrencyProperties(1),
-				new SimpleMeterRegistry()
+				new AnswerAssessmentConcurrencyProperties(
+					1,
+					1,
+					Duration.ofSeconds(10)
+				),
+				new SimpleMeterRegistry(),
+				timeoutScheduler
 			);
+		}
+
+		@Bean
+		ControllableQueueTimeoutScheduler queueTimeoutScheduler() {
+			return new ControllableQueueTimeoutScheduler();
+		}
+
+		@Bean
+		TestClock clock() {
+			return new TestClock();
 		}
 
 		@Bean
@@ -351,6 +644,113 @@ class LearningAnswerConcurrencyJpaTest {
 			AnswerAssessmentConcurrencyLimiter concurrencyLimiter
 		) {
 			return new BlockingAnswerAssessmentGenerator(concurrencyLimiter);
+		}
+	}
+
+	private void await(CountDownLatch latch) {
+		try {
+			assertTrue(latch.await(5, SECONDS));
+		} catch (InterruptedException exception) {
+			Thread.currentThread().interrupt();
+			throw new AssertionError(exception);
+		}
+	}
+
+	private record SubmissionFixture(
+		LearningSession session,
+		LearningSessionQuestion question,
+		SpeechAnswer speechAnswer
+	) {
+	}
+
+	private static final class ControllableQueueTimeoutScheduler
+		implements AnswerAssessmentQueueTimeoutScheduler {
+
+		private final Queue<ScheduledTimeout> timeouts = new ArrayDeque<>();
+		private CountDownLatch cancellationObserved = new CountDownLatch(1);
+
+		@Override
+		public synchronized TimeoutHandle schedule(
+			Runnable task,
+			Duration delay
+		) {
+			ScheduledTimeout timeout = new ScheduledTimeout(task);
+			timeouts.add(timeout);
+			return () -> cancel(timeout);
+		}
+
+		void expireNext() {
+			ScheduledTimeout timeout;
+			synchronized (this) {
+				timeout = timeouts.poll();
+			}
+			if (timeout != null && !timeout.cancelled) {
+				timeout.task.run();
+			}
+		}
+
+		synchronized int scheduledCount() {
+			return timeouts.size();
+		}
+
+		synchronized void reset() {
+			timeouts.clear();
+			cancellationObserved = new CountDownLatch(1);
+		}
+
+		boolean awaitCancellation() throws InterruptedException {
+			return cancellationObserved.await(5, SECONDS);
+		}
+
+		private synchronized void cancel(ScheduledTimeout timeout) {
+			timeout.cancelled = true;
+			timeouts.remove(timeout);
+			cancellationObserved.countDown();
+		}
+
+		private static final class ScheduledTimeout {
+
+			private final Runnable task;
+			private volatile boolean cancelled;
+
+			private ScheduledTimeout(Runnable task) {
+				this.task = task;
+			}
+		}
+	}
+
+	private static final class TestClock extends Clock {
+
+		private static final Instant INITIAL_INSTANT = Instant.parse(
+			"2026-08-23T00:00:00Z"
+		);
+
+		private Instant current = INITIAL_INSTANT;
+
+		synchronized void reset() {
+			current = INITIAL_INSTANT;
+		}
+
+		synchronized void advance(Duration duration) {
+			current = current.plus(duration);
+		}
+
+		@Override
+		public ZoneId getZone() {
+			return ZoneOffset.UTC;
+		}
+
+		@Override
+		public Clock withZone(ZoneId zone) {
+			if (ZoneOffset.UTC.equals(zone)) {
+				return this;
+			}
+			return Clock.fixed(instant(), zone);
+		}
+
+		@Override
+		public synchronized Instant instant() {
+			return current;
 		}
 	}
 
@@ -388,9 +788,9 @@ class LearningAnswerConcurrencyJpaTest {
 		}
 
 		void releaseAllAssessments() {
-			assessments.forEach(assessment ->
-				assessment.complete(CORRECT_ASSESSMENT)
-			);
+			for (int index = 0; index < assessments.size(); index++) {
+				assessments.get(index).complete(CORRECT_ASSESSMENT);
+			}
 		}
 
 		int callCount() {
