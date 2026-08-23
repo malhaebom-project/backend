@@ -1,8 +1,9 @@
 # 답안 제출 비동기 부하 테스트
 
 실제 답안 제출 HTTP 경로에 같은 텍스트를 가진 서로 다른 세션을 병렬로
-전송한다. OpenAI 응답 대기 중 Tomcat 요청 스레드가 반환되는지, 동시 제한 48건과
-과부하 응답이 지켜지는지, 동시에 호출한 다른 API가 영향을 받는지 확인한다.
+전송한다. OpenAI 응답 대기 중 Tomcat 요청 스레드가 반환되는지, active 32건과
+FIFO queue 64건의 경계가 지켜지는지, 동시에 호출한 다른 API가 영향을 받는지
+확인한다.
 
 ## 용어
 
@@ -20,9 +21,9 @@
 | Probe             | 답안 제출 부하와 동시에 반복 호출하는 `GET /api/v1/question-types` 요청. 답안 제출과 무관한 일반 API의 성공률과 지연을 측정해 서버 전체가 영향을 받는지 확인한다.             |
 | Latency (지연 시간)   | 요청을 보낸 시점부터 응답을 받을 때까지 걸린 시간. 이 문서의 응답 시간과 duration은 이 값을 뜻한다.                                                          |
 | p95               | 측정값을 빠른 순서로 정렬했을 때 95%가 이 값 이하라는 뜻. 극단적인 일부 값보다 대부분 사용자가 경험한 상위 지연을 보는 데 사용한다.                                          |
-| Threshold         | 테스트 통과 여부를 자동으로 결정하는 기준. 예를 들어 예상 밖 응답 0건, probe 성공률 100%, 과부하 503 p95 5초 이내가 있다.                                       |
+| Threshold         | 테스트 통과 여부를 자동으로 결정하는 기준. 예를 들어 예상 밖 응답 0건, probe 성공률 100%, raw 과부하 503 p95 12초 이내가 있다.                                  |
 | 운영 목표 (SLO)       | 서비스가 달성하려는 측정 가능한 목표. 테스트와 모니터링 결과로 달성 여부를 판단하며, 운영 측정 결과와 서비스 요구에 따라 조정할 수 있다.                                         |
-| Overload          | 설정한 동시 처리 한도를 넘은 상태. 이 테스트에서는 무한정 대기시키지 않고 특정 오류 코드의 503으로 빠르게 거절하는 것이 정상 동작이다.                                         |
+| Overload          | active와 bounded queue의 합인 수용 가능량을 넘었거나 queue 대기 제한을 넘은 상태. 둘 다 특정 오류 코드의 503으로 종료한다. HTTP만으로 원인을 구분할 수 없어 서버 queue 지표를 함께 본다. |
 | Timeout           | 정해진 시간 안에 응답을 받지 못해 호출자가 기다리기를 중단한 상태. 이 테스트에서는 예상 밖 실패로 분류한다.                                                          |
 | Run ID            | 한 번 생성한 fixture 집합을 식별하는 값. 다른 실행의 테스트 데이터를 구분하고 정확히 정리하는 데 사용한다.                                                       |
 | Manifest          | run-id와 단계별 `sessionId`, `sessionQuestionId`, `speechAnswerId`를 기록한 JSON 파일. k6 실행과 fixture cleanup이 같은 대상을 사용하도록 연결한다. |
@@ -33,7 +34,8 @@
 | 용어                                | 의미                                                                                                                                                                                    |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Limiter                           | 특정 작업이 동시에 너무 많이 실행되지 않도록 입장 수를 제한하는 장치. 현재 답안 평가 limiter는 OpenAI 평가 구간을 보호한다.                                                                                                        |
-| Permit                            | OpenAI 평가를 동시에 실행할 수 있는 논리적인 권한표. 기본 48개이며 작업이 permit을 얻지 못하면 기다리지 않고 `ANSWER_ASSESSMENT_OVERLOADED` 503을 반환한다. 완료·실패한 작업은 permit을 반환하므로 누적 성공 수는 48을 넘을 수 있지만 순간 active는 48 이하여야 한다. |
+| Permit                            | OpenAI 평가를 동시에 실행할 수 있는 논리적인 권한표. 기본 32개다. 완료·실패한 작업은 permit을 정확히 한 번 반환하므로 순간 active는 항상 32 이하여야 한다.                                                                       |
+| Bounded queue                     | permit을 즉시 얻지 못한 제출을 최대 64건, 10초 동안 FIFO로 보관한다. `CompletableFuture`만 보관해 request thread, 평가 executor thread, DB connection을 점유하지 않는다. queue full·timeout은 provider 호출 전 503이다.                  |
 | Active                            | 현재 사용 중인 자원의 수. OpenAI active는 permit을 점유한 평가 수이고 Hikari active는 사용 중인 DB connection 수이므로 지표의 주체를 함께 봐야 한다.                                                                           |
 | HikariCP                          | 애플리케이션의 DB connection pool. 제한된 실제 DB 연결을 빌려주고 트랜잭션이 끝나면 회수한다.                                                                                                                        |
 | Hikari active connections         | pool에서 빌려줘 현재 애플리케이션이 점유 중인 DB connection 수. SQL 실행이 끝났어도 열린 트랜잭션이나 OSIV 때문에 반환하지 않았다면 active에 포함된다.                                                                                  |
@@ -45,7 +47,7 @@
 | Async dispatch                    | Tomcat 요청 스레드가 OpenAI 완료를 직접 기다리지 않고 반환된 뒤, 비동기 결과가 준비되면 다시 HTTP 응답 처리를 이어가는 흐름.                                                                                                      |
 | OSIV (Open EntityManager in View) | 웹 요청 동안 JPA EntityManager를 유지하는 기능. 편리한 lazy loading을 지원하지만 비동기 요청에서는 DB connection 수명이 요청 완료까지 길어지는 원인이 될 수 있다.                                                                      |
 | Preparation limiter               | OpenAI permit을 얻기 전 DB 조회·제출 예약 같은 준비 구간의 동시 진입도 제한하는 장치. 현재는 구현하지 않았으며 OSIV 같은 자원 수명 문제를 제외한 뒤에도 준비 구간 병목이 재현될 때만 검토한다.                                                              |
-| Recovery                          | 한 단계가 끝난 뒤 OpenAI active와 Hikari pending이 10초 연속 0인지 확인하는 과정. permit과 DB connection이 정상 반환됐음을 확인한다.                                                                                   |
+| Recovery                          | 한 단계가 끝난 뒤 OpenAI active, queue size, Hikari pending이 10초 연속 0인지 확인하는 과정. permit, 대기 항목, DB connection이 정상 반환됐음을 확인한다.                                                                |
 
 ### 관측 및 실행 환경
 
@@ -70,14 +72,14 @@ DB 작업, JPA 자원 수명, Tomcat dispatch와 외부 호출 제한이 함께 
 이 테스트는 다음 질문에 답하기 위한 것이다.
 
 * OpenAI가 느려도 요청 스레드와 DB 연결이 대기 시간 내내 점유되지 않는가?
-* OpenAI 평가는 동시에 설정된 48건까지만 실행되고 permit을 얻지 못한 요청은
-  명시적인 503으로 빠르게 거절되는가?
+* OpenAI 평가는 동시에 32건까지만 실행되고, 다음 64건은 비차단 FIFO queue가
+  흡수하며, queue full·timeout은 provider 호출 전 명시적인 503으로 끝나는가?
 
 * 10·100·200·300명이 동시에 제출해도 사용자별 응답과 DB 대상이 섞이지
   않는가?
 
 * 답안 제출 부하가 관계없는 일반 API까지 지연시키거나 실패시키지 않는가?
-* 단계 종료 후 OpenAI permit과 DB connection이 모두 반환되는가?
+* 단계 종료 후 OpenAI permit, queue 항목과 DB connection이 모두 반환되는가?
 * 문제가 발생했을 때 OpenAI, DB, Tomcat 중 어느 구간이 먼저 병목이 되는가?
 
 이 테스트는 OpenAI 답변 품질, STT 업로드, 장시간 지속 부하의 최대 TPS를
@@ -108,7 +110,7 @@ ID는 현재 운영 테스트 DB에서 확인한 참고값이며 환경이나 �
 ```text
 답안 제출 burst
   → 제출 대상 조회·처리 예약
-  → OpenAI 동시 제한 획득
+  → OpenAI permit 즉시 획득 또는 비차단 FIFO queue 대기
   → OpenAI 평가 대기
   → 성공·실패 결과 기록
 
@@ -130,7 +132,8 @@ ID는 현재 운영 테스트 DB에서 확인한 참고값이며 환경이나 �
   대응시켜 최초 호출 실패가 재시도 성공으로 가려지거나, 토큰 과금과 API
   quota 사용량이 증가하는 것을 막기 위함이다.
 
-* 단계 사이에는 OpenAI active와 Hikari pending이 10초 연속 0인지 확인한다.
+* 단계 사이에는 OpenAI active, queue size, Hikari pending이 10초 연속 0인지
+  확인한다.
 
 ## 테스트 코드 실행 순서
 
@@ -149,8 +152,8 @@ ID는 현재 운영 테스트 DB에서 확인한 참고값이며 환경이나 �
 4. `run-stages.ps1`이 manifest를 읽어 10, 100, 200, 300 단계를 순서대로
    실행한다.
 
-5. 각 단계가 끝나면 OpenAI active와 Hikari pending이 10초 연속 0이 될 때까지
-   기다린 후 다음 단계로 이동한다.
+5. 각 단계가 끝나면 OpenAI active, queue size, Hikari pending이 10초 연속
+   0이 될 때까지 기다린 후 다음 단계로 이동한다.
 
 6. 성공·실패와 관계없이 `loadTestFixtures`의 `cleanup` 작업을 manifest로
    실행해 fixture를 삭제한다.
@@ -187,9 +190,9 @@ Stage start
 |                                     +-- N answer submissions ------+
 ```
 
-위 시간표는 재시도 0회의 기본 실행이다. 재시도 모드에서는 각 raw 503의 5초
-관측 예산과 jitter 최대 대기 시간을 반영해 answer와 부하 중 probe 시나리오를
-자동으로 연장한다.
+위 시간표는 재시도 0회의 기본 실행이다. 재시도 모드에서는 각 raw 503의 최대
+queue wait 10초와 응답 여유 2초, jitter 최대 대기를 반영해 answer와 부하 중
+probe 시나리오를 자동으로 연장한다.
 
 4. 답안 제출 VU는 manifest에서 자기 fixture를 하나 선택하고 실제 답안 제출
    endpoint를 호출한다. 클라이언트 재시도 모드에서는 정상 과부하 503에만
@@ -204,9 +207,9 @@ Stage start
 7. `run-stages.ps1`이 `max(baseline p95 × 2, 1초)`로 해당 단계의 probe p95
    허용값을 계산해 추가 판정한다.
 
-8. OpenAI active와 Hikari pending이 10초 연속 0인지 확인한다. 해당 단계의 k6
-   실행 시작 시점부터 기본 300초 안에 복구되지 않으면 다음 단계로 진행하지
-   않는다.
+8. OpenAI active, queue size, Hikari pending이 10초 연속 0인지 확인한다. 해당
+   단계의 k6 실행 시작 시점부터 기본 300초 안에 복구되지 않으면 다음 단계로
+   진행하지 않는다.
 
 9. 지표 수집기를 종료하고 `stage-evaluation.json`과 `k6-exit-code.txt`를
    기록한다.
@@ -257,25 +260,28 @@ answer_unexpected_response`는 항상 사용자 기준 논리적 제출 수와 �
 | `answer_retry_attempts`      | 최초 요청 이후 추가로 전송한 HTTP 요청 수                                                               |
 | `answer_retry_recovered`     | 한 번 이상 정상 503을 받은 뒤 최종 200으로 회복한 논리적 제출 수                                                |
 | `answer_classified`          | 최종 200, 최종 503 또는 예상 밖 응답으로 분류를 마친 논리적 제출 수. 동시 제출 수보다 작으면 timeout이나 누락이 있음             |
-| `answer_success`             | 최종 HTTP 200인 논리적 제출 수. 48건 이하 단계에서는 전부 성공해야 함                                             |
+| `answer_success`             | 최종 HTTP 200인 논리적 제출 수. active 제한 이하 단계에서는 전부 성공하고 100단계에서는 과반이어야 함                         |
 | `answer_expected_overload`   | 재시도 없음 또는 재시도 소진 뒤에도 `ANSWER_ASSESSMENT_OVERLOADED`인 최종 제출 수                               |
 | `answer_raw_expected_overload` | 재시도 중간 응답을 포함한 모든 `ANSWER_ASSESSMENT_OVERLOADED` HTTP 응답 수                                    |
 | `answer_unexpected_response` | 그 외 상태와 timeout·연결 실패 수. 항상 0이어야 함                                                       |
 | `answer_response_mismatch`   | 200 응답을 파싱할 수 없거나 `sessionQuestionId`가 해당 VU fixture와 다른 수. 응답 계약 위반·혼합을 의미하므로 항상 0이어야 함 |
 
-성공 수가 동시 제출 수보다 작다는 사실만으로 실패라고 판정하지 않는다. 48건
-초과 단계에서는 성공과 raw 정상 과부하 503이 모두 관찰되어야 한다. 재시도 후
-모든 논리적 제출이 성공할 수도 있으므로 최종 503은 필수 관찰값이 아니다. 먼저 완료된
-작업의 permit을 늦게 도착한 요청이 다시 사용할 수 있으므로 누적 성공 수가
-48을 넘을 수 있지만, 어느 순간에도 active가 48을 넘으면 안 된다. 성공,
-최종 503, 예상 밖 응답의 합은 논리적 제출 수와 같아야 하며 누락은 없어야 한다.
+성공 수가 동시 제출 수보다 작다는 사실만으로 실패라고 판정하지 않는다. 기본
+active 32 + queue 64 = 96건을 즉시 수용할 수 있으므로 100단계는 queue 경계에서
+대부분 흡수되는지를 과반 성공으로 판정하며 100% 성공을 hard threshold로 두지
+않는다. 수용량을 충분히 넘는 200·300단계에서는 성공과 raw 정상 과부하 503이
+모두 관찰되어야 한다. 재시도 후 모든 논리적 제출이 성공할 수도 있으므로 retry
+모드의 최종 503은 필수 관찰값이 아니다. 어느 순간에도 active는 32, queue size는
+64를 넘으면 안 된다. 최종 200, 최종 503, 예상 밖 응답의 합은 논리적 제출 수와
+같아야 하며 누락은 없어야 한다. raw 503은 HTTP 응답 수이지 provider 호출 수가
+아니다.
 
 ### 응답 시간과 probe
 
 | 측정 항목                                     | 의미                                                                   |
 | ----------------------------------------- | -------------------------------------------------------------------- |
 | `answer_success_duration`                 | 성공한 답안 제출의 전체 HTTP 처리 시간. 서버 비동기 요청의 hard deadline에 따라 최대 30초 이내여야 함 |
-| `answer_overload_duration`                | raw 정상 과부하 503 하나를 반환하는 시간. 빠른 거절을 위한 초기 운영 목표로 p95 5초 이내여야 함          |
+| `answer_overload_duration`                | raw 정상 과부하 503 하나를 반환하는 시간. p95는 최대 queue wait 10초 + 응답 여유 2초인 12초 이내여야 함 |
 | `answer_final_success_duration`           | 최초 요청부터 jitter 대기와 재시도를 포함해 최종 200까지 걸린 사용자 체감 시간                            |
 | `answer_final_overload_duration`          | 최초 요청부터 재시도를 모두 소진하고 최종 503을 받을 때까지의 사용자 체감 시간                              |
 | `probe_baseline_duration`                 | 답안 부하가 없을 때 일반 API의 기준 응답 시간                                         |
@@ -297,10 +303,11 @@ OpenAI 호출 timeout 20초
 ```
 
 성공 응답 최대 30초는 `malhaebom.answer-submission.async.request-timeout`에서
-도출된 필수 계약이다. 반면 과부하 503 p95 5초는 설정으로 강제되는 timeout이
-아니라, permit을 얻지 못한 요청이 provider 응답을 기다리는 것처럼 오래
-머무르지 않아야 한다는 초기 운영 목표다. 실제 AWS 결과가 충분히 쌓이면 더
-엄격한 값으로 조정할 수 있다.
+도출된 필수 계약이다. raw 과부하 503 p95 12초는 HTTP 응답만으로 즉시 queue
+full과 10초 queue timeout을 구분할 수 없기 때문에 두 경로를 모두 수용하는
+기준이다. 서버의 `queue.full`, `queue.timeout`, `queue.cancelled` 카운터로 원인을
+분리한다. queue 대기는 제출 시작 기준 답안 처리 25초 deadline 안에 포함되며
+deadline을 연장하지 않는다.
 
 ### 서버 자원과 외부 호출 제한
 
@@ -311,6 +318,8 @@ OpenAI 호출 timeout 20초
 | HTTP 상태별 처리 시간                            | 어떤 API와 상태 코드가 느려졌는지 확인하는 Actuator 원시 지표                                      |
 | JVM CPU·메모리·GC                            | 스레드·DB 병목과 별개로 JVM 계산량이나 GC 정지가 원인인지 확인하는 보조 지표                               |
 | 컨테이너 CPU·메모리                              | EC2 컨테이너 한도 또는 호스트 자원 부족 여부를 확인하는 보조 지표                                       |
+| OpenAI active / queue size                     | 실제 provider 평가 수와 FIFO 대기 수. 각각 설정값 32와 64 이하여야 함                                  |
+| queue full / timeout / cancelled               | provider 호출 전 종료 원인을 구분하는 서버 누적 카운터. 단계별 첫·마지막 snapshot 차이로 집계함                  |
 
 Hikari `최대 pending`은 특정 1초 표본에서 기다린 스레드 수이고,
 `pending 지속 시간`은 pending이 0보다 큰 상태가 연속된 시간이다. 순간적인
@@ -320,7 +329,7 @@ pending이 발생해도 2초 전에 해소되고 단계 종료 후 0으로 복�
 OpenAI 답안 평가 limiter가 제공하는 Micrometer 지표의 이름과 의미는
 [답안 평가 동시성 제한 지표](../../docs/answer-assessment-metrics.md)를 참고한다.
 
-`active`가 48 이하라는 사실만으로 테스트가 성공한 것은 아니다. Hikari와
+`active`가 32 이하라는 사실만으로 테스트가 성공한 것은 아니다. Hikari와
 Tomcat이 먼저 포화되면 요청이 limiter에 도달하지 못해 active가 낮게 보일 수
 있다. 따라서 limiter, DB, Tomcat과 probe를 함께 해석해야 한다.
 
@@ -328,39 +337,41 @@ Tomcat이 먼저 포화되면 요청이 limiter에 도달하지 못해 active가
 
 | 관측 조합                                                     | 해석                                       |
 | --------------------------------------------------------- | ---------------------------------------- |
-| active가 48에 도달하고 permit을 얻지 못한 요청이 빠른 정상 503이며 probe가 안정적 | OpenAI limiter와 서버 자원 격리가 의도대로 동작        |
-| active가 48보다 낮은데 Hikari pending이 지속되고 Tomcat·probe가 악화    | limiter 앞의 DB 준비 또는 JPA 자원 수명이 우선 병목     |
+| active가 32, queue가 64 경계에 도달하고 바깥 요청이 정상 503이며 probe가 안정적 | limiter, bounded queue와 서버 자원 격리가 의도대로 동작 |
+| active가 32보다 낮은데 Hikari pending이 지속되고 Tomcat·probe가 악화    | limiter 앞의 DB 준비 또는 JPA 자원 수명이 우선 병목     |
 | Hikari는 안정적이지만 Tomcat busy가 OpenAI 대기 중 내려가지 않음           | 비동기 dispatch 또는 요청 스레드 반환 경로 점검 필요       |
-| active가 48이고 서버 자원은 안정적이지만 성공 응답만 느림                      | 실제 provider 지연 또는 답안 평가 timeout 정책 점검 필요 |
-| 단계 종료 후 active나 pending이 0으로 돌아오지 않음                      | permit 또는 DB connection 누수 가능성           |
+| active가 32이고 서버 자원은 안정적이지만 성공 응답만 느림                      | 실제 provider 지연 또는 답안 평가 timeout 정책 점검 필요 |
+| 단계 종료 후 active, queue, pending 중 하나가 0으로 돌아오지 않음          | permit, queue 항목 또는 DB connection 누수 가능성       |
 
 자동 판정 기준은 다음과 같다.
 
 * 예상하지 못한 상태, 응답 누락, 응답 혼합은 0건이다.
-* OpenAI active는 항상 48 이하이고 48건 초과 단계에서 raw 정상 과부하 503이
-  관찰된다.
+* OpenAI active는 항상 32 이하, queue size는 64 이하이다.
+* 100단계는 과반 성공으로 queue 경계를 대부분 흡수하고, 수용량 96을 충분히 넘는
+  200·300단계에서는 raw 정상 과부하 503이 관찰된다.
 
-* 성공 응답은 30초 이내이고 정상 과부하 503 p95는 5초 이내다.
+* 성공 응답은 30초 이내이고 raw 정상 과부하 503 p95는 12초 이내다.
 * probe 성공률은 100%이고 p95는 허용값 이하다.
 * Tomcat max thread 포화와 Hikari pending이 2초 이상 지속되지 않는다.
 * OpenAI 대기 중 Tomcat busy가 max의 25% 아래로 내려간 표본이 존재한다.
-* 단계 종료 후 OpenAI active와 Hikari pending이 모두 0으로 복구된다.
+* 단계 종료 후 OpenAI active, queue size, Hikari pending이 모두 0으로 복구된다.
 
 각 기준의 성격과 숫자의 근거는 다음과 같다.
 
 | 판정 기준                                | 성격               | 근거와 의미                                                                                              |
 | ------------------------------------ | ---------------- | --------------------------------------------------------------------------------------------------- |
 | 예상 밖 상태·누락·응답 혼합 0건                  | 동작 계약            | 하나라도 발생하면 HTTP 계약 또는 사용자 격리가 깨진 것이므로 허용하지 않는다.                                                      |
-| OpenAI active 48 이하                  | 설정 불변식           | `max-concurrent-requests=48`을 limiter가 항상 지켜야 한다.                                                   |
-| 48건 초과 단계에서 정상 503 관찰                | 동작 계약            | 동시 한도를 넘었을 때 요청이 무제한 대기하거나 provider까지 전달되지 않고 명시적으로 거절되는지 증명한다.                                     |
+| OpenAI active 32·queue size 64 이하      | 설정 불변식           | limiter와 bounded queue가 각각 설정 경계를 항상 지켜야 한다.                                                     |
+| 100단계 과반 성공                        | queue 경계 관찰       | active + queue 96건이 짧은 burst를 대부분 흡수하는지 확인하되 100% 성공을 강제하지 않는다.                               |
+| 200·300단계에서 정상 503 관찰              | 동작 계약            | 수용량을 충분히 넘을 때 queue 바깥 요청이 provider까지 전달되지 않고 명시적으로 거절되는지 증명한다.                                |
 | 성공 응답 최대 30초                         | hard deadline    | 서버 비동기 요청 timeout 30초에서 도출한다. 성공한 모든 요청에 적용하므로 p95가 아니라 최대값을 사용한다.                                  |
-| 과부하 503 p95 5초                       | 초기 운영 목표         | permit 초과 요청의 fail-fast 여부를 판단하는 여유 있는 기준이다. 코드 설정에서 도출된 값은 아니며 AWS 측정 후 조정할 수 있다.                  |
+| raw 과부하 503 p95 12초                 | queue 계약 + 응답 여유 | HTTP로 구분할 수 없는 queue full과 최대 10초 timeout을 함께 판정하기 위해 응답 여유 2초를 더한다. 서버 카운터로 원인을 분리한다.                |
 | probe 성공률 100%                       | 통제된 부하 테스트 합격 기준 | 점검 시간의 격리된 테스트에서는 답안 제출 때문에 관계없는 API가 한 건이라도 실패하는 것을 허용하지 않는다. 일반 운영 전체의 가용성 SLO를 100%로 선언한 것은 아니다. |
 | probe p95 `max(baseline × 2, 1초)` 이하 | 상대적 초기 운영 목표     | 환경별 기본 지연을 반영하고 매우 짧은 baseline의 측정 오차에는 1초 하한을 적용한다. AWS 결과 후 조정할 수 있다.                             |
 | Hikari pending 지속 2초 미만              | 진단 기준            | 순간적인 connection 경쟁과 지속적인 pool 고갈을 구분하기 위한 값이다. Hikari 설정에서 자동으로 도출된 값은 아니다. AWS 결과 후 조정할 수 있다.      |
 | Tomcat max thread 포화 2초 미만           | 진단 기준            | 순간 burst와 다른 API까지 막는 지속 포화를 구분한다. Tomcat 설정에서 자동으로 도출된 값은 아니다. AWS 결과 후 조정할 수 있다.                  |
 | OpenAI 대기 중 Tomcat busy 25% 미만 관찰    | 비동기 구조 검증 기준     | provider 대기 동안 요청 스레드가 반환되는지 확인한다. max 200개 기준으로 busy가 50개 아래로 내려간 표본이 있어야 한다.                      |
-| 종료 후 active·pending 10초 연속 0         | 자원 복구 계약         | permit과 DB connection이 최종적으로 모두 반환돼야 한다. 10초는 일시적인 완료 순서 차이를 흡수하는 안정화 관찰 구간이다.                      |
+| 종료 후 active·queue·pending 10초 연속 0   | 자원 복구 계약         | permit, queue 항목과 DB connection이 모두 반환돼야 한다. 10초는 일시적인 완료 순서 차이를 흡수하는 안정화 구간이다.                         |
 
 JVM CPU·메모리·GC와 컨테이너 CPU·메모리는 현재 자동 합격선을 두지 않은 진단
 지표다. HTTP 판정이 실패하거나 지연이 커졌을 때 애플리케이션 내부 병목과
@@ -369,6 +380,10 @@ JVM CPU·메모리·GC와 컨테이너 CPU·메모리는 현재 자동 합격선
 
 준비 구간 limiter는 위 지표에서 OSIV 같은 자원 수명 문제를 먼저 제외한 뒤에도
 Tomcat 또는 Hikari 포화와 probe 저하가 재현될 때만 검토한다.
+
+bounded queue는 짧은 burst의 사용자 체감 성공률을 높일 뿐 provider 처리량을
+늘리지 않는다. 따라서 300단계 전부 성공을 보장하지 않으며, queue 대기를 이유로
+제출 시작 기준 25초 답안 처리 deadline을 연장하지도 않는다.
 
 ## 생성되는 결과 파일
 
@@ -404,9 +419,11 @@ macOS에서 Gradle Wrapper 실행 권한이 없다면 프로젝트 루트에서 
 PowerShell과 k6, Python은 로컬 Windows 또는 macOS에 설치하며 EC2에는 설치하지
 않는다. DB 파일 이름은 실행마다 새 값으로 바꿔 이전 결과와 격리한다.
 
-기본 평가 동시 제한은 48이다. 다른 제한을 계측할 때는 백엔드의
-`ANSWER_ASSESSMENT_MAX_CONCURRENT_REQUESTS`와 `run-stages.ps1`,
-`build-report.ps1`의 `-AssessmentLimit`에 같은 값을 지정한다.
+기본값은 active 32, queue capacity 64, max queue wait 10초다. 다른 설정을
+계측할 때는 백엔드의 `ANSWER_ASSESSMENT_MAX_CONCURRENT_REQUESTS`,
+`ANSWER_ASSESSMENT_QUEUE_CAPACITY`, `ANSWER_ASSESSMENT_MAX_QUEUE_WAIT`와 두
+PowerShell 스크립트의 `-AssessmentLimit`, `-AssessmentQueueCapacity`,
+`-AssessmentMaxQueueWaitSeconds`를 각각 같은 값으로 지정한다.
 
 클라이언트 재시도 모드는 기본적으로 꺼져 있다. `-ClientMaxRetries 1` 또는
 `2`로 활성화하며 프런트 정책과 같은 간격을 사용한다.
@@ -445,6 +462,9 @@ $env:SPRING_AI_OPENAI_API_KEY = 'load-test-local'
 $env:SPRING_AI_OPENAI_BASE_URL = 'http://127.0.0.1:18080'
 $env:SPRING_AI_OPENAI_TIMEOUT = '20s'
 $env:SPRING_AI_OPENAI_MAX_RETRIES = '0'
+$env:ANSWER_ASSESSMENT_MAX_CONCURRENT_REQUESTS = '32'
+$env:ANSWER_ASSESSMENT_QUEUE_CAPACITY = '64'
+$env:ANSWER_ASSESSMENT_MAX_QUEUE_WAIT = '10s'
 $env:GCP_STT_ENABLED = 'false'
 New-Item -ItemType Directory -Force load-tests/results/local | Out-Null
 & $gradleWrapper loadTestServer --no-daemon 2>&1 `
@@ -468,6 +488,9 @@ $gradleWrapper = if ($IsWindows) { './gradlew.bat' } else { './gradlew' }
 ./load-tests/answer-submission/run-stages.ps1 `
   -Manifest load-tests/results/local/fixture-manifest.json `
   -ResultRoot load-tests/results/local `
+  -AssessmentLimit 32 `
+  -AssessmentQueueCapacity 64 `
+  -AssessmentMaxQueueWaitSeconds 10 `
   -ClientMaxRetries 0
 ```
 
@@ -477,12 +500,15 @@ $gradleWrapper = if ($IsWindows) { './gradlew.bat' } else { './gradlew' }
 ./load-tests/answer-submission/run-stages.ps1 `
   -Manifest load-tests/results/local-retry2/fixture-manifest.json `
   -ResultRoot load-tests/results/local-retry2 `
+  -AssessmentLimit 32 `
+  -AssessmentQueueCapacity 64 `
+  -AssessmentMaxQueueWaitSeconds 10 `
   -ClientMaxRetries 2
 ```
 
 각 단계는 부하 전 probe와 부하 중 probe를 분리해 기록한다. 단계 종료 후
-OpenAI active와 Hikari pending이 10초 연속 0이 될 때까지 기다리며, 기본
-300초 안에 회복하지 않으면 다음 단계로 넘어가지 않는다. probe 지연 판정은
+OpenAI active, queue size, Hikari pending이 10초 연속 0이 될 때까지 기다리며,
+기본 300초 안에 회복하지 않으면 다음 단계로 넘어가지 않는다. probe 지연 판정은
 `max(baseline p95 × 2, 1초)`를 사용한다. 같은 결과 디렉터리에 다시 실행하면
 해당 단계에서 생성한 파일만 새 결과로 교체된다.
 
@@ -552,13 +578,20 @@ $sshKey = '<로컬 EC2 접속 키 경로>'
   -DockerContainer backend-was-1 `
   -SshHost ubuntu@3.35.11.125 `
   -SshIdentityFile $sshKey `
-  -ClientMaxRetries 2
+  -AssessmentLimit 32 `
+  -AssessmentQueueCapacity 64 `
+  -AssessmentMaxQueueWaitSeconds 10 `
+  -ClientMaxRetries 0
 ```
 
-실행 중 일반 사용자 요청을 피하고, 종료 후에는 fixture cleanup과
-`malhaebom.answer.assessment.active=0`, `hikaricp.connections.pending=0`을
-확인한다. 실제 OpenAI는 완료된 permit을 뒤 요청이 다시 사용할 수 있으므로 네
-단계 합계 최대 610회의 과금 호출이 발생할 수 있다.
+queue 자체의 동작을 먼저 보기 위해 재시도 0회를 기준 실행으로 삼고, 최대 2회
+재시도는 새 fixture와 결과 경로에서 보조 비교로 실행한다. 실행 중 일반 사용자
+요청을 피하고, 종료 후에는 fixture cleanup과
+`malhaebom.answer.assessment.active=0`,
+`malhaebom.answer.assessment.queue.size=0`,
+`hikaricp.connections.pending=0`을 확인한다. 실제 OpenAI는 완료된 permit을 뒤
+요청이 다시 사용할 수 있으므로 네 단계 합계 최대 610회의 과금 호출이 발생할 수
+있다.
 최대 2회 재시도에서는 답안 제출 HTTP 요청이 최대 1,830회까지 증가할 수 있지만,
 raw 정상 503은 OpenAI 호출 전에 거절되므로 그 자체는 provider 과금 호출이 아니다.
 `DockerContainer`를 지정하면 단계별 Docker CPU·메모리와 해당 단계의 컨테이너
@@ -573,7 +606,10 @@ raw 정상 503은 OpenAI 호출 전에 거절되므로 그 자체는 provider �
   -Environment local-fake-openai `
   -GitCommit (git rev-parse --short HEAD) `
   -FixtureRunId local-20260821 `
-  -ClientMaxRetries 2
+  -AssessmentLimit 32 `
+  -AssessmentQueueCapacity 64 `
+  -AssessmentMaxQueueWaitSeconds 10 `
+  -ClientMaxRetries 0
 ```
 
 자동 생성된 표에 원시 지표의 지속 시간과 결론을 보완한다. 준비 limiter는

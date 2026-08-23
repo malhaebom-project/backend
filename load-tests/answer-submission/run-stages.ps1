@@ -6,7 +6,11 @@ param(
     [string]$ResultRoot = "load-tests/results",
     [int[]]$Stages = @(10, 100, 200, 300),
     [ValidateRange(1, 10000)]
-    [int]$AssessmentLimit = 48,
+    [int]$AssessmentLimit = 32,
+    [ValidateRange(0, 10000)]
+    [int]$AssessmentQueueCapacity = 64,
+    [ValidateRange(1, 3600)]
+    [int]$AssessmentMaxQueueWaitSeconds = 10,
     [ValidateRange(0, 2)]
     [int]$ClientMaxRetries = 0,
     [int]$ProbeP95FloorMillis = 1000,
@@ -34,6 +38,18 @@ function K6-MetricValue($summary, [string]$name, [string]$field) {
         return $null
     }
     return [double]$metric.values.$field
+}
+
+function Actuator-GaugeValue([string]$endpoint, [bool]$optional = $false) {
+    try {
+        $metric = Invoke-RestMethod -Uri $endpoint -TimeoutSec 3
+        return [double]$metric.measurements[0].value
+    } catch {
+        if ($optional) {
+            return 0.0
+        }
+        throw
+    }
 }
 
 foreach ($stage in $Stages) {
@@ -95,6 +111,9 @@ foreach ($stage in $Stages) {
     $recoveryStarted = [DateTimeOffset]::UtcNow
     $recoveryTimedOut = $false
     $collectorExitCode = $null
+    $lastActiveValue = $null
+    $lastQueueSizeValue = $null
+    $lastPendingValue = $null
     try {
         $k6Arguments = @(
             "run",
@@ -103,6 +122,9 @@ foreach ($stage in $Stages) {
             "-e", ("MANIFEST=" + $manifestPath.Replace('\', '/')),
             "-e", "CONCURRENCY=$stage",
             "-e", "ASSESSMENT_LIMIT=$AssessmentLimit",
+            "-e", "ASSESSMENT_QUEUE_CAPACITY=$AssessmentQueueCapacity",
+            "-e", ("ASSESSMENT_MAX_QUEUE_WAIT_SECONDS=" `
+                + $AssessmentMaxQueueWaitSeconds),
             "-e", "CLIENT_MAX_RETRIES=$ClientMaxRetries",
             "-e", ("SUMMARY_PATH=" + $summaryPath.Replace('\', '/')),
             "--out", ("json=" + $rawPath),
@@ -134,13 +156,17 @@ foreach ($stage in $Stages) {
             $managementBase = $ManagementUrl.TrimEnd('/')
             $activeEndpoint = $managementBase `
                 + "/actuator/metrics/malhaebom.answer.assessment.active"
+            $queueSizeEndpoint = $managementBase `
+                + "/actuator/metrics/malhaebom.answer.assessment.queue.size"
             $pendingEndpoint = $managementBase `
                 + "/actuator/metrics/hikaricp.connections.pending"
-            $active = Invoke-RestMethod -Uri $activeEndpoint -TimeoutSec 3
-            $pending = Invoke-RestMethod -Uri $pendingEndpoint -TimeoutSec 3
-            $activeValue = [double]$active.measurements[0].value
-            $pendingValue = [double]$pending.measurements[0].value
-            if ($activeValue -eq 0 -and $pendingValue -eq 0) {
+            $lastActiveValue = Actuator-GaugeValue $activeEndpoint
+            $lastQueueSizeValue = Actuator-GaugeValue `
+                $queueSizeEndpoint $true
+            $lastPendingValue = Actuator-GaugeValue $pendingEndpoint
+            if ($lastActiveValue -eq 0 `
+                -and $lastQueueSizeValue -eq 0 `
+                -and $lastPendingValue -eq 0) {
                 if ($null -eq $idleStarted) {
                     $idleStarted = [DateTimeOffset]::UtcNow
                 }
@@ -174,6 +200,11 @@ foreach ($stage in $Stages) {
         -Value $stageExitCode -Encoding ascii
     [pscustomobject]@{
         stage = $stage
+        assessmentLimit = $AssessmentLimit
+        assessmentQueueCapacity = $AssessmentQueueCapacity
+        assessmentMaxQueueWaitSeconds = $AssessmentMaxQueueWaitSeconds
+        immediateAdmissionCapacity = $AssessmentLimit `
+            + $AssessmentQueueCapacity
         clientMaxRetries = $ClientMaxRetries
         probeBaselineP95Millis = $baselineProbeP95
         probeLoadedP95Millis = $probeP95
@@ -181,6 +212,9 @@ foreach ($stage in $Stages) {
         probeLatencyPassed = $probeLatencyPassed
         metricsCollectorExitCode = $collectorExitCode
         recoveryTimedOut = $recoveryTimedOut
+        recoveredActive = $lastActiveValue
+        recoveredQueueSize = $lastQueueSizeValue
+        recoveredHikariPending = $lastPendingValue
         recoveryElapsedSeconds = [math]::Round(
             ([DateTimeOffset]::UtcNow - $recoveryStarted).TotalSeconds,
             1

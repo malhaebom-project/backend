@@ -5,7 +5,13 @@ import { Counter, Rate, Trend } from 'k6/metrics';
 
 const manifestPath = __ENV.MANIFEST;
 const concurrency = Number(__ENV.CONCURRENCY || '10');
-const assessmentLimit = Number(__ENV.ASSESSMENT_LIMIT || '48');
+const assessmentLimit = Number(__ENV.ASSESSMENT_LIMIT || '32');
+const assessmentQueueCapacity = Number(
+  __ENV.ASSESSMENT_QUEUE_CAPACITY || '64'
+);
+const assessmentMaxQueueWaitSeconds = Number(
+  __ENV.ASSESSMENT_MAX_QUEUE_WAIT_SECONDS || '10'
+);
 const clientMaxRetries = Number(__ENV.CLIENT_MAX_RETRIES || '0');
 const baseUrl = (__ENV.BASE_URL || 'http://127.0.0.1:8080').replace(/\/$/, '');
 const probeRate = Number(__ENV.PROBE_RATE || '20');
@@ -17,6 +23,25 @@ const retryDelayWindows = [
 
 if (!manifestPath) {
   throw new Error('MANIFEST environment variable is required.');
+}
+if (!Number.isInteger(assessmentLimit) || assessmentLimit < 1) {
+  throw new Error('ASSESSMENT_LIMIT must be an integer greater than 0.');
+}
+if (
+  !Number.isInteger(assessmentQueueCapacity)
+  || assessmentQueueCapacity < 0
+) {
+  throw new Error(
+    'ASSESSMENT_QUEUE_CAPACITY must be an integer greater than or equal to 0.'
+  );
+}
+if (
+  !Number.isFinite(assessmentMaxQueueWaitSeconds)
+  || assessmentMaxQueueWaitSeconds <= 0
+) {
+  throw new Error(
+    'ASSESSMENT_MAX_QUEUE_WAIT_SECONDS must be greater than 0.'
+  );
 }
 if (
   !Number.isInteger(clientMaxRetries)
@@ -62,6 +87,10 @@ const probeSuccess = new Rate('probe_success');
 const probeDuration = new Trend('probe_duration', true);
 const baselineProbeSuccess = new Rate('probe_baseline_success');
 const baselineProbeDuration = new Trend('probe_baseline_duration', true);
+const immediateAdmissionCapacity = assessmentLimit + assessmentQueueCapacity;
+const overloadObservationStage = concurrency >= 200
+  && concurrency > immediateAdmissionCapacity;
+const overloadP95LimitMillis = assessmentMaxQueueWaitSeconds * 1000 + 2000;
 
 const thresholds = {
   answer_unexpected_response: ['count==0'],
@@ -76,20 +105,31 @@ const thresholds = {
   probe_success: ['rate==1'],
 };
 
-if (concurrency > assessmentLimit) {
+if (concurrency <= assessmentLimit) {
+  thresholds.answer_success = [`count==${concurrency}`];
+} else if (concurrency === 100) {
+  thresholds.answer_success = [`count>=${Math.floor(concurrency / 2) + 1}`];
+} else {
   thresholds.answer_success = ['count>0'];
+}
+
+if (overloadObservationStage) {
   thresholds.answer_raw_expected_overload = ['count>0'];
   if (clientMaxRetries === 0) {
     thresholds.answer_expected_overload = ['count>0'];
   }
-  thresholds.answer_overload_duration = ['p(95)<=5000'];
-} else {
-  thresholds.answer_success = [`count==${concurrency}`];
+  thresholds.answer_overload_duration = [
+    `p(95)<=${overloadP95LimitMillis}`,
+  ];
 }
 
 const retryBudgetSeconds = retryDelayWindows
   .slice(0, clientMaxRetries)
-  .reduce((total, delay) => total + 5 + delay.maxMillis / 1000, 0);
+  .reduce(
+    (total, delay) => total
+      + assessmentMaxQueueWaitSeconds + 2 + delay.maxMillis / 1000,
+    0
+  );
 const answerMaxDurationSeconds = 33 + retryBudgetSeconds;
 const loadedProbeDurationSeconds = answerMaxDurationSeconds + 2;
 
@@ -249,6 +289,9 @@ export function handleSummary(data) {
     runId: manifest.runId,
     concurrency,
     assessmentLimit,
+    assessmentQueueCapacity,
+    assessmentMaxQueueWaitSeconds,
+    immediateAdmissionCapacity,
     clientMaxRetries,
     retryDelayWindowsMillis: retryDelayWindows.slice(0, clientMaxRetries),
     generatedAt: new Date().toISOString(),
@@ -268,6 +311,7 @@ function summaryLine(data) {
       : 0;
   return [
     `answer load stage=${concurrency}`,
+    `admission_capacity=${immediateAdmissionCapacity}`,
     `attempts=${value('answer_attempts')}`,
     `retries=${value('answer_retry_attempts')}`,
     `retry_recovered=${value('answer_retry_recovered')}`,
