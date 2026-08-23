@@ -5,7 +5,9 @@ param(
     [string]$OutputPath,
     [string]$Environment = "local",
     [string]$GitCommit = "",
-    [string]$FixtureRunId = ""
+    [string]$FixtureRunId = "",
+    [ValidateRange(1, 10000)]
+    [int]$AssessmentLimit = 48
 )
 
 $ErrorActionPreference = "Stop"
@@ -165,7 +167,7 @@ $lines = @(
     "- 실행 환경: $Environment",
     "- Git commit: $GitCommit",
     "- fixture run-id: $FixtureRunId",
-    "- OpenAI 동시 제한: 32",
+    "- OpenAI 동시 제한: $AssessmentLimit",
     "",
     "| 동시 제출 | 200 성공 | 예상 503 | 기타 오류 | 누락 | 응답 혼합 | 성공 p95(ms) | 503 p95(ms) | baseline p95(ms) | 부하 중 probe p95(ms) | probe 성공률 | OpenAI 최대 active | Tomcat 최대 busy / max | Hikari 최대 pending |",
     "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
@@ -209,7 +211,7 @@ $allStagesHaveSuccess = ($rows | Where-Object {
     $_.Success -le 0
 }).Count -eq 0
 $allUnderLimitSucceeded = ($rows | Where-Object {
-    $_.Stage -le 32 -and $_.Success -ne $_.Stage
+    $_.Stage -le $AssessmentLimit -and $_.Success -ne $_.Stage
 }).Count -eq 0
 $allProbeSucceeded = ($rows | Where-Object {
     $_.ProbeRate -lt 1 -or $_.BaselineProbeRate -lt 1
@@ -219,7 +221,7 @@ $allProbeLatencyPassed = ($rows | Where-Object {
     $_.ProbeP95 -gt $limit
 }).Count -eq 0
 $overloadObserved = ($rows | Where-Object {
-    $_.Stage -gt 32 -and $_.Overload -le 0
+    $_.Stage -gt $AssessmentLimit -and $_.Overload -le 0
 }).Count -eq 0
 $successDeadlinePassed = ($rows | Where-Object {
     $_.Success -gt 0 -and $_.SuccessMax -ge 30000
@@ -246,9 +248,9 @@ $lines += @(
     "- 누락 응답 0건: $($missingTotal -eq 0)",
     "- 응답 혼합 0건: $($mismatchTotal -eq 0)",
     "- 각 단계에서 성공 응답 관찰: $allStagesHaveSuccess",
-    "- 32건 이하 단계는 전부 성공: $allUnderLimitSucceeded",
-    "- OpenAI active 32 이하: $($maxOpenAi -le 32)",
-    "- 32건 초과 단계에서 예상 503 관찰: $overloadObserved",
+    "- $($AssessmentLimit)건 이하 단계는 전부 성공: $allUnderLimitSucceeded",
+    "- OpenAI active $AssessmentLimit 이하: $($maxOpenAi -le $AssessmentLimit)",
+    "- $($AssessmentLimit)건 초과 단계에서 예상 503 관찰: $overloadObserved",
     "- 성공 응답 30초 이내: $successDeadlinePassed",
     "- 예상 503 p95 5초 이내: $overloadLatencyPassed",
     "- probe 성공률 100%: $allProbeSucceeded",

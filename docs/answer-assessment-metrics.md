@@ -6,7 +6,7 @@
 | 지표                                      | 종류    | 의미                                                                    |
 | ----------------------------------------- | ------- | ----------------------------------------------------------------------- |
 | `malhaebom.answer.assessment.active`      | Gauge   | 현재 permit을 점유하고 평가 중인 작업 수                                |
-| `malhaebom.answer.assessment.limit`       | Gauge   | 허용된 최대 동시 평가 수. 기본값은 32                                   |
+| `malhaebom.answer.assessment.limit`       | Gauge   | 허용된 최대 동시 평가 수. 기본값은 48                                   |
 | `malhaebom.answer.assessment.accepted`    | Counter | permit을 획득해 평가를 시작한 누적 수                                   |
 | `malhaebom.answer.assessment.rejected`    | Counter | permit을 얻지 못해 OpenAI 호출 전에 과부하로 거절된 누적 수              |
 | `malhaebom.answer.assessment.completed`   | Counter | permit을 점유한 비동기 작업이 정상적으로 완료된 누적 수                  |
