@@ -301,15 +301,18 @@ public class AnswerAssessmentConcurrencyLimiter {
 
 		if (exception == null) {
 			completedRequests.increment();
-			entry.result.complete(result);
 		} else {
 			failedRequests.increment();
-			entry.result.completeExceptionally(exception);
 		}
 		if (promoted != null) {
 			promotedRequests.increment();
 			recordWait(promoted, promotedWait);
 			start(promoted);
+		}
+		if (exception == null) {
+			entry.result.complete(result);
+		} else {
+			entry.result.completeExceptionally(exception);
 		}
 	}
 

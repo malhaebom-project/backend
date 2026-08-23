@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -121,6 +122,44 @@ class AnswerAssessmentConcurrencyLimiterTest {
 		secondQueued.future().complete(assessment());
 		assertEquals(List.of("first", "second", "late"), starts);
 		late.future().complete(assessment());
+
+		assertEquals(0.0, gauge(fixture, "active"));
+		assertEquals(0.0, gauge(fixture, "queue.size"));
+	}
+
+	@Test
+	void 승격된_task는_이전_result의_동기_callback보다_먼저_시작한다()
+		throws Exception {
+		LimiterFixture fixture = fixture(1, 1);
+		ControlledTask active = controlledTask();
+		ControlledTask promoted = controlledTask();
+		AnswerAssessmentTask first = fixture.limiter().execute(supplier(active));
+		AnswerAssessmentTask queued = fixture.limiter().execute(
+			supplier(promoted)
+		);
+		CountDownLatch callbackEntered = new CountDownLatch(1);
+		CountDownLatch releaseCallback = new CountDownLatch(1);
+		first.result().whenComplete((result, exception) -> {
+			callbackEntered.countDown();
+			await(releaseCallback);
+		});
+
+		ExecutorService completionExecutor = Executors.newSingleThreadExecutor();
+		try {
+			Future<?> completion = completionExecutor.submit(
+				() -> active.future().complete(assessment())
+			);
+			assertTrue(callbackEntered.await(5, SECONDS));
+			assertEquals(1, promoted.started().get());
+			releaseCallback.countDown();
+			completion.get(5, SECONDS);
+			promoted.future().complete(assessment());
+			queued.result().toCompletableFuture().get(5, SECONDS);
+		} finally {
+			releaseCallback.countDown();
+			completionExecutor.shutdownNow();
+			assertTrue(completionExecutor.awaitTermination(5, SECONDS));
+		}
 
 		assertEquals(0.0, gauge(fixture, "active"));
 		assertEquals(0.0, gauge(fixture, "queue.size"));
@@ -504,6 +543,15 @@ class AnswerAssessmentConcurrencyLimiterTest {
 		try {
 			barrier.await(5, SECONDS);
 		} catch (Exception exception) {
+			throw new AssertionError(exception);
+		}
+	}
+
+	private void await(CountDownLatch latch) {
+		try {
+			assertTrue(latch.await(5, SECONDS));
+		} catch (InterruptedException exception) {
+			Thread.currentThread().interrupt();
 			throw new AssertionError(exception);
 		}
 	}
