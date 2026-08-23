@@ -7,7 +7,9 @@ param(
     [string]$GitCommit = "",
     [string]$FixtureRunId = "",
     [ValidateRange(1, 10000)]
-    [int]$AssessmentLimit = 48
+    [int]$AssessmentLimit = 48,
+    [ValidateRange(0, 2)]
+    [int]$ClientMaxRetries = 0
 )
 
 $ErrorActionPreference = "Stop"
@@ -106,6 +108,11 @@ foreach ($stage in $stages) {
         continue
     }
     $summary = Get-Content -LiteralPath $summaryPath -Raw | ConvertFrom-Json
+    if ($null -ne $summary.clientMaxRetries `
+        -and [int]$summary.clientMaxRetries -ne $ClientMaxRetries) {
+        throw "Summary retry setting does not match -ClientMaxRetries: " `
+            + "$summaryPath"
+    }
     $snapshots = @(Read-PrometheusSnapshots $prometheusPath)
     $waitingSnapshots = @($snapshots | Where-Object {
         $_.OpenAiActive -gt 0 -and $_.TomcatMax -gt 0
@@ -122,16 +129,33 @@ foreach ($stage in $stages) {
         $recovered = $last.OpenAiActive -eq 0 `
             -and $last.HikariPending -eq 0
     }
+    $finalOverload = Metric-Value $summary `
+        "answer_expected_overload" "count"
+    $rawOverload = Metric-Value $summary `
+        "answer_raw_expected_overload" "count"
+    if ($ClientMaxRetries -eq 0 -and $rawOverload -eq 0) {
+        $rawOverload = $finalOverload
+    }
     $rows += [pscustomobject]@{
         Stage = $stage
         Attempts = Metric-Value $summary "answer_attempts" "count"
+        Classified = Metric-Value $summary "answer_classified" "count"
+        RetryAttempts = Metric-Value $summary `
+            "answer_retry_attempts" "count"
+        RetryRecovered = Metric-Value $summary `
+            "answer_retry_recovered" "count"
         Success = Metric-Value $summary "answer_success" "count"
-        Overload = Metric-Value $summary "answer_expected_overload" "count"
+        Overload = $finalOverload
+        RawOverload = $rawOverload
         Unexpected = Metric-Value $summary "answer_unexpected_response" "count"
         Mismatch = Metric-Value $summary "answer_response_mismatch" "count"
         SuccessP95 = Metric-Value $summary "answer_success_duration" "p(95)"
         SuccessMax = Metric-Value $summary "answer_success_duration" "max"
         OverloadP95 = Metric-Value $summary "answer_overload_duration" "p(95)"
+        FinalSuccessP95 = Metric-Value $summary `
+            "answer_final_success_duration" "p(95)"
+        FinalOverloadP95 = Metric-Value $summary `
+            "answer_final_overload_duration" "p(95)"
         BaselineProbeP95 = Metric-Value $summary `
             "probe_baseline_duration" "p(95)"
         ProbeP95 = Metric-Value $summary "probe_duration" "p(95)"
@@ -168,18 +192,36 @@ $lines = @(
     "- Git commit: $GitCommit",
     "- fixture run-id: $FixtureRunId",
     "- OpenAI 동시 제한: $AssessmentLimit",
+    "- 클라이언트 최대 재시도: $ClientMaxRetries",
     "",
-    "| 동시 제출 | 200 성공 | 예상 503 | 기타 오류 | 누락 | 응답 혼합 | 성공 p95(ms) | 503 p95(ms) | baseline p95(ms) | 부하 중 probe p95(ms) | probe 성공률 | OpenAI 최대 active | Tomcat 최대 busy / max | Hikari 최대 pending |",
-    "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
+    "| 동시 제출 | HTTP 시도 | 평균 시도 | 재시도 | 재시도 회복 | 최종 200 | 최종 503 | raw 503 | 기타 오류 | 누락 | 응답 혼합 |",
+    "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
 )
 
 foreach ($row in $rows) {
-    $classified = $row.Success + $row.Overload + $row.Unexpected
-    $missing = $row.Stage - $classified
-    $lines += "| $($row.Stage) | $($row.Success) | $($row.Overload) | " `
-        + "$($row.Unexpected) | $missing | $($row.Mismatch) | " `
+    $missing = $row.Stage - $row.Classified
+    $averageAttempts = if ($row.Stage -gt 0) {
+        [math]::Round($row.Attempts / $row.Stage, 2)
+    } else {
+        0
+    }
+    $lines += "| $($row.Stage) | $($row.Attempts) | $averageAttempts | " `
+        + "$($row.RetryAttempts) | $($row.RetryRecovered) | " `
+        + "$($row.Success) | $($row.Overload) | $($row.RawOverload) | " `
+        + "$($row.Unexpected) | $missing | $($row.Mismatch) |"
+}
+
+$lines += @(
+    "",
+    "| 동시 제출 | 성공 HTTP p95(ms) | raw 503 p95(ms) | 최종 성공 p95(ms) | 최종 503 p95(ms) | baseline p95(ms) | 부하 중 probe p95(ms) | probe 성공률 | OpenAI 최대 active | Tomcat 최대 busy / max | Hikari 최대 pending |",
+    "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
+)
+foreach ($row in $rows) {
+    $lines += "| $($row.Stage) | " `
         + "$([math]::Round($row.SuccessP95, 1)) | " `
         + "$([math]::Round($row.OverloadP95, 1)) | " `
+        + "$([math]::Round($row.FinalSuccessP95, 1)) | " `
+        + "$([math]::Round($row.FinalOverloadP95, 1)) | " `
         + "$([math]::Round($row.BaselineProbeP95, 1)) | " `
         + "$([math]::Round($row.ProbeP95, 1)) | " `
         + "$([math]::Round($row.ProbeRate, 4)) | " `
@@ -202,7 +244,7 @@ foreach ($row in $rows) {
 $unexpectedTotal = ($rows | Measure-Object -Property Unexpected -Sum).Sum
 $mismatchTotal = ($rows | Measure-Object -Property Mismatch -Sum).Sum
 $missingTotal = ($rows | ForEach-Object {
-    $_.Stage - ($_.Success + $_.Overload + $_.Unexpected)
+    $_.Stage - $_.Classified
 } |
     Measure-Object -Sum).Sum
 $maxOpenAi = ($rows | Measure-Object -Property OpenAiActive -Maximum).Maximum
@@ -221,13 +263,23 @@ $allProbeLatencyPassed = ($rows | Where-Object {
     $_.ProbeP95 -gt $limit
 }).Count -eq 0
 $overloadObserved = ($rows | Where-Object {
-    $_.Stage -gt $AssessmentLimit -and $_.Overload -le 0
+    $_.Stage -gt $AssessmentLimit -and $_.RawOverload -le 0
+}).Count -eq 0
+$attemptsBounded = ($rows | Where-Object {
+    $_.Attempts -lt $_.Stage `
+        -or $_.Attempts -gt $_.Stage * ($ClientMaxRetries + 1)
+}).Count -eq 0
+$retryAccountingPassed = ($rows | Where-Object {
+    $_.RetryAttempts -ne ($_.Attempts - $_.Stage) `
+        -or $_.RawOverload -ne ($_.RetryAttempts + $_.Overload) `
+        -or $_.RetryRecovered -gt $_.RetryAttempts `
+        -or $_.RetryRecovered -gt $_.Success
 }).Count -eq 0
 $successDeadlinePassed = ($rows | Where-Object {
     $_.Success -gt 0 -and $_.SuccessMax -ge 30000
 }).Count -eq 0
 $overloadLatencyPassed = ($rows | Where-Object {
-    $_.Overload -gt 0 -and $_.OverloadP95 -ge 5000
+    $_.RawOverload -gt 0 -and $_.OverloadP95 -ge 5000
 }).Count -eq 0
 $hikariPassed = ($rows | Where-Object {
     $_.HikariPendingSeconds -ge 2
@@ -236,6 +288,20 @@ $tomcatPassed = ($rows | Where-Object {
     $_.TomcatSaturatedSeconds -ge 2
 }).Count -eq 0
 $allRecovered = ($rows | Where-Object { -not $_.Recovered }).Count -eq 0
+$logicalTotal = ($rows | Measure-Object -Property Stage -Sum).Sum
+$attemptsTotal = ($rows | Measure-Object -Property Attempts -Sum).Sum
+$retryAttemptsTotal = ($rows | Measure-Object `
+    -Property RetryAttempts -Sum).Sum
+$retryRecoveredTotal = ($rows | Measure-Object `
+    -Property RetryRecovered -Sum).Sum
+$successTotal = ($rows | Measure-Object -Property Success -Sum).Sum
+$finalOverloadTotal = ($rows | Measure-Object -Property Overload -Sum).Sum
+$rawOverloadTotal = ($rows | Measure-Object -Property RawOverload -Sum).Sum
+$finalSuccessRate = if ($logicalTotal -gt 0) {
+    [math]::Round(100 * $successTotal / $logicalTotal, 1)
+} else {
+    0
+}
 $tomcatReturnedDuringWait = ($rows | Where-Object {
     $_.OpenAiActive -gt 0 -and $_.WaitingMinimumBusyPercent -ge 25
 }).Count -eq 0
@@ -247,10 +313,17 @@ $lines += @(
     "- 예상하지 못한 상태 0건: $($unexpectedTotal -eq 0)",
     "- 누락 응답 0건: $($missingTotal -eq 0)",
     "- 응답 혼합 0건: $($mismatchTotal -eq 0)",
+    "- HTTP 시도 수가 제출당 최대 $($ClientMaxRetries + 1)회: $attemptsBounded",
+    "- 재시도·회복 집계 일치: $retryAccountingPassed",
+    "- 논리적 제출 / HTTP 시도: $logicalTotal / $attemptsTotal",
+    "- 재시도 / 재시도 회복: $retryAttemptsTotal / $retryRecoveredTotal",
+    ("- 최종 성공 / 최종 503 / raw 503: " `
+        + "$successTotal / $finalOverloadTotal / $rawOverloadTotal"),
+    "- 최종 성공률: $finalSuccessRate%",
     "- 각 단계에서 성공 응답 관찰: $allStagesHaveSuccess",
     "- $($AssessmentLimit)건 이하 단계는 전부 성공: $allUnderLimitSucceeded",
     "- OpenAI active $AssessmentLimit 이하: $($maxOpenAi -le $AssessmentLimit)",
-    "- $($AssessmentLimit)건 초과 단계에서 예상 503 관찰: $overloadObserved",
+    "- $($AssessmentLimit)건 초과 단계에서 raw 정상 503 관찰: $overloadObserved",
     "- 성공 응답 30초 이내: $successDeadlinePassed",
     "- 예상 503 p95 5초 이내: $overloadLatencyPassed",
     "- probe 성공률 100%: $allProbeSucceeded",

@@ -187,8 +187,13 @@ Stage start
 |                                     +-- N answer submissions ------+
 ```
 
+위 시간표는 재시도 0회의 기본 실행이다. 재시도 모드에서는 각 raw 503의 5초
+관측 예산과 jitter 최대 대기 시간을 반영해 answer와 부하 중 probe 시나리오를
+자동으로 연장한다.
+
 4. 답안 제출 VU는 manifest에서 자기 fixture를 하나 선택하고 실제 답안 제출
-   endpoint를 한 번 호출한다.
+   endpoint를 호출한다. 클라이언트 재시도 모드에서는 정상 과부하 503에만
+   같은 `speechAnswerId`로 최대 1~2회 다시 호출한다.
 
 5. k6는 응답을 200 성공, 정상 과부하 503 또는 예상 밖 응답 중 하나로 분류한다.
    200 응답은 `sessionQuestionId`가 해당 VU fixture와 일치하는지도 확인한다.
@@ -219,18 +224,28 @@ answer_attempts 증가
   → 자기 fixture로 POST /answers
   ├─ 200
   │   → answer_classified, answer_success 증가
+  │   → 재시도 후 성공이면 answer_retry_recovered 증가
   │   → sessionQuestionId 불일치 시 answer_response_mismatch 증가
   ├─ 503 + ANSWER_ASSESSMENT_OVERLOADED
-  │   → answer_classified, answer_expected_overload 증가
+  │   → answer_raw_expected_overload 증가
+  │   ├─ 재시도 잔여 횟수 있음
+  │   │   → jitter 대기 후 answer_attempts, answer_retry_attempts 증가
+  │   │   → 같은 fixture로 다시 POST
+  │   └─ 재시도 소진
+  │       → answer_classified, answer_expected_overload 증가
   └─ 그 외 상태·timeout·연결 실패
       → answer_classified, answer_unexpected_response 증가
 ```
 
-정상 실행에서는 `answer_attempts = answer_classified`이고,
+재시도가 없으면 `answer_attempts = answer_classified`다. 재시도 모드에서는
+`answer_attempts = answer_classified + answer_retry_attempts`이며,
 `answer_classified = answer_success + answer_expected_overload +
-answer_unexpected_response`다. VU가 분류 전에 중단되면 attempts와 classified가
-달라지며 누락 응답으로 판정한다. `answer_response_mismatch`는 200 성공 응답에
-추가로 표시되는 별도 오류 지표다.
+answer_unexpected_response`는 항상 사용자 기준 논리적 제출 수와 같아야 한다.
+`answer_raw_expected_overload`는 재시도 중간 응답을 포함한 모든 정상 503이고,
+`answer_expected_overload`는 재시도를 소진한 최종 503만 센다. 정상 집계에서는
+`answer_raw_expected_overload`가 `answer_retry_attempts`와
+`answer_expected_overload`의 합과 같아야 한다.
+`answer_response_mismatch`는 200 성공 응답에 추가로 표시되는 별도 오류 지표다.
 
 ## 측정 항목과 의미
 
@@ -238,25 +253,31 @@ answer_unexpected_response`다. VU가 분류 전에 중단되면 attempts와 cla
 
 | 측정 항목                        | 의미                                                                                       |
 | ---------------------------- | ---------------------------------------------------------------------------------------- |
-| `answer_attempts`            | 해당 단계에서 실제로 시도한 답안 제출 수                                                                  |
-| `answer_classified`          | 200, 예상된 503 또는 예상 밖 응답으로 분류를 마친 수. 동시 제출 수보다 작으면 timeout이나 누락이 있음                       |
-| `answer_success`             | HTTP 200 응답 수. 48건 이하 단계에서는 전부 성공해야 함                                                    |
-| `answer_expected_overload`   | HTTP 503이면서 오류 코드가 `ANSWER_ASSESSMENT_OVERLOADED`인 수. 의도한 과부하 제어로 취급                     |
+| `answer_attempts`            | 재시도를 포함해 실제로 전송한 답안 제출 HTTP 요청 수                                                        |
+| `answer_retry_attempts`      | 최초 요청 이후 추가로 전송한 HTTP 요청 수                                                               |
+| `answer_retry_recovered`     | 한 번 이상 정상 503을 받은 뒤 최종 200으로 회복한 논리적 제출 수                                                |
+| `answer_classified`          | 최종 200, 최종 503 또는 예상 밖 응답으로 분류를 마친 논리적 제출 수. 동시 제출 수보다 작으면 timeout이나 누락이 있음             |
+| `answer_success`             | 최종 HTTP 200인 논리적 제출 수. 48건 이하 단계에서는 전부 성공해야 함                                             |
+| `answer_expected_overload`   | 재시도 없음 또는 재시도 소진 뒤에도 `ANSWER_ASSESSMENT_OVERLOADED`인 최종 제출 수                               |
+| `answer_raw_expected_overload` | 재시도 중간 응답을 포함한 모든 `ANSWER_ASSESSMENT_OVERLOADED` HTTP 응답 수                                    |
 | `answer_unexpected_response` | 그 외 상태와 timeout·연결 실패 수. 항상 0이어야 함                                                       |
 | `answer_response_mismatch`   | 200 응답을 파싱할 수 없거나 `sessionQuestionId`가 해당 VU fixture와 다른 수. 응답 계약 위반·혼합을 의미하므로 항상 0이어야 함 |
 
 성공 수가 동시 제출 수보다 작다는 사실만으로 실패라고 판정하지 않는다. 48건
-초과 단계에서는 성공과 정상 과부하 503이 모두 관찰되어야 한다. 먼저 완료된
+초과 단계에서는 성공과 raw 정상 과부하 503이 모두 관찰되어야 한다. 재시도 후
+모든 논리적 제출이 성공할 수도 있으므로 최종 503은 필수 관찰값이 아니다. 먼저 완료된
 작업의 permit을 늦게 도착한 요청이 다시 사용할 수 있으므로 누적 성공 수가
 48을 넘을 수 있지만, 어느 순간에도 active가 48을 넘으면 안 된다. 성공,
-정상 503, 예상 밖 응답의 합은 시도 수와 같아야 하며 누락은 없어야 한다.
+최종 503, 예상 밖 응답의 합은 논리적 제출 수와 같아야 하며 누락은 없어야 한다.
 
 ### 응답 시간과 probe
 
 | 측정 항목                                     | 의미                                                                   |
 | ----------------------------------------- | -------------------------------------------------------------------- |
 | `answer_success_duration`                 | 성공한 답안 제출의 전체 HTTP 처리 시간. 서버 비동기 요청의 hard deadline에 따라 최대 30초 이내여야 함 |
-| `answer_overload_duration`                | 정상 과부하 503을 반환하는 시간. 빠른 거절을 위한 초기 운영 목표로 p95 5초 이내여야 함               |
+| `answer_overload_duration`                | raw 정상 과부하 503 하나를 반환하는 시간. 빠른 거절을 위한 초기 운영 목표로 p95 5초 이내여야 함          |
+| `answer_final_success_duration`           | 최초 요청부터 jitter 대기와 재시도를 포함해 최종 200까지 걸린 사용자 체감 시간                            |
+| `answer_final_overload_duration`          | 최초 요청부터 재시도를 모두 소진하고 최종 503을 받을 때까지의 사용자 체감 시간                              |
 | `probe_baseline_duration`                 | 답안 부하가 없을 때 일반 API의 기준 응답 시간                                         |
 | `probe_duration`                          | 답안 부하 중 일반 API의 응답 시간                                                |
 | `probe_baseline_success`, `probe_success` | probe HTTP 200 비율. 둘 다 100%여야 함                                      |
@@ -316,7 +337,7 @@ Tomcat이 먼저 포화되면 요청이 limiter에 도달하지 못해 active가
 자동 판정 기준은 다음과 같다.
 
 * 예상하지 못한 상태, 응답 누락, 응답 혼합은 0건이다.
-* OpenAI active는 항상 48 이하이고 48건 초과 단계에서 정상 과부하 503이
+* OpenAI active는 항상 48 이하이고 48건 초과 단계에서 raw 정상 과부하 503이
   관찰된다.
 
 * 성공 응답은 30초 이내이고 정상 과부하 503 p95는 5초 이내다.
@@ -387,6 +408,18 @@ PowerShell과 k6, Python은 로컬 Windows 또는 macOS에 설치하며 EC2에�
 `ANSWER_ASSESSMENT_MAX_CONCURRENT_REQUESTS`와 `run-stages.ps1`,
 `build-report.ps1`의 `-AssessmentLimit`에 같은 값을 지정한다.
 
+클라이언트 재시도 모드는 기본적으로 꺼져 있다. `-ClientMaxRetries 1` 또는
+`2`로 활성화하며 프런트 정책과 같은 간격을 사용한다.
+
+| 재시도 | 정상 과부하 503 뒤의 jitter 대기 |
+| ---: | --- |
+| 1차 | 1~2초 |
+| 2차 | 3~5초 |
+
+재시도 없음과 재시도 1·2회를 비교할 때는 각 실행마다 새 fixture run-id, DB 파일과
+결과 디렉터리를 사용한다. 앞선 실행에서 최종 성공한 `speechAnswerId`를 다시
+제출하면 기존 완료 결과가 반환되므로 같은 fixture를 A/B 비교에 재사용하지 않는다.
+
 ```powershell
 $pythonCommand = if (Get-Command python3 -ErrorAction SilentlyContinue) {
   'python3'
@@ -434,7 +467,17 @@ $gradleWrapper = if ($IsWindows) { './gradlew.bat' } else { './gradlew' }
 ```powershell
 ./load-tests/answer-submission/run-stages.ps1 `
   -Manifest load-tests/results/local/fixture-manifest.json `
-  -ResultRoot load-tests/results/local
+  -ResultRoot load-tests/results/local `
+  -ClientMaxRetries 0
+```
+
+프런트 후보 정책인 최대 2회 재시도는 별도 fixture와 결과 경로에서 실행한다.
+
+```powershell
+./load-tests/answer-submission/run-stages.ps1 `
+  -Manifest load-tests/results/local-retry2/fixture-manifest.json `
+  -ResultRoot load-tests/results/local-retry2 `
+  -ClientMaxRetries 2
 ```
 
 각 단계는 부하 전 probe와 부하 중 probe를 분리해 기록한다. 단계 종료 후
@@ -508,13 +551,16 @@ $sshKey = '<로컬 EC2 접속 키 경로>'
   -ResultRoot load-tests/results/aws `
   -DockerContainer backend-was-1 `
   -SshHost ubuntu@3.35.11.125 `
-  -SshIdentityFile $sshKey
+  -SshIdentityFile $sshKey `
+  -ClientMaxRetries 2
 ```
 
 실행 중 일반 사용자 요청을 피하고, 종료 후에는 fixture cleanup과
 `malhaebom.answer.assessment.active=0`, `hikaricp.connections.pending=0`을
 확인한다. 실제 OpenAI는 완료된 permit을 뒤 요청이 다시 사용할 수 있으므로 네
 단계 합계 최대 610회의 과금 호출이 발생할 수 있다.
+최대 2회 재시도에서는 답안 제출 HTTP 요청이 최대 1,830회까지 증가할 수 있지만,
+raw 정상 503은 OpenAI 호출 전에 거절되므로 그 자체는 provider 과금 호출이 아니다.
 `DockerContainer`를 지정하면 단계별 Docker CPU·메모리와 해당 단계의 컨테이너
 로그도 함께 보관된다.
 
@@ -526,7 +572,8 @@ $sshKey = '<로컬 EC2 접속 키 경로>'
   -OutputPath .private/docs/backend-architecture/answer-submission-load-test.md `
   -Environment local-fake-openai `
   -GitCommit (git rev-parse --short HEAD) `
-  -FixtureRunId local-20260821
+  -FixtureRunId local-20260821 `
+  -ClientMaxRetries 2
 ```
 
 자동 생성된 표에 원시 지표의 지속 시간과 결론을 보완한다. 준비 limiter는
