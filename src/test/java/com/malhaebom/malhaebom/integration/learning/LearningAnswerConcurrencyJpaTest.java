@@ -22,6 +22,9 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
@@ -34,8 +37,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
@@ -110,6 +115,8 @@ class LearningAnswerConcurrencyJpaTest {
 	private TestClock clock;
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
+	@Autowired
+	private PlatformTransactionManager transactionManager;
 
 	@BeforeEach
 	void setUp() {
@@ -451,6 +458,75 @@ class LearningAnswerConcurrencyJpaTest {
 	}
 
 	@Test
+	void 호출자_취소는_실패_기록의_row_lock보다_queue_용량을_먼저_반환한다()
+		throws Exception {
+		SubmissionFixture first = submissionFixture(1);
+		SubmissionFixture cancelled = submissionFixture(1);
+		SubmissionFixture replacement = submissionFixture(1);
+		CompletionStage<AnswerSubmissionResult> firstRequest = submitAsync(first);
+		assertTrue(assessmentGenerator.awaitAssessmentStarted());
+		var cancelledTask = learningAnswerService.submitAsync(
+			cancelled.session().getId(),
+			cancelled.question().getId(),
+			cancelled.speechAnswer().getId()
+		);
+		Long cancelledSubmissionId = answerSubmissionRepository
+			.findBySpeechAnswer_Id(cancelled.speechAnswer().getId())
+			.orElseThrow()
+			.getId();
+		CountDownLatch rowLocked = new CountDownLatch(1);
+		CountDownLatch releaseRowLock = new CountDownLatch(1);
+		ExecutorService executor = Executors.newFixedThreadPool(2);
+
+		try {
+			Future<?> lock = executor.submit(() -> {
+				TransactionTemplate transaction = new TransactionTemplate(
+					transactionManager
+				);
+				transaction.executeWithoutResult(status -> {
+					jdbcTemplate.queryForObject(
+						"select id from answer_submissions "
+							+ "where id = ? for update",
+						Long.class,
+						cancelledSubmissionId
+					);
+					rowLocked.countDown();
+					await(releaseRowLock);
+				});
+			});
+			assertTrue(rowLocked.await(5, SECONDS));
+			Future<Boolean> cancellation = executor.submit(cancelledTask::cancel);
+
+			assertTrue(queueTimeoutScheduler.awaitCancellation());
+			var replacementTask = learningAnswerService.submitAsync(
+				replacement.session().getId(),
+				replacement.question().getId(),
+				replacement.speechAnswer().getId()
+			);
+			assertFalse(replacementTask.result().toCompletableFuture().isDone());
+
+			releaseRowLock.countDown();
+			lock.get(5, SECONDS);
+			assertTrue(cancellation.get(5, SECONDS));
+			assertApiException(
+				ErrorCode.ANSWER_SUBMISSION_TIMEOUT,
+				() -> await(cancelledTask.result())
+			);
+
+			assessmentGenerator.releaseAssessment(0);
+			await(firstRequest);
+			assertEquals(2, assessmentGenerator.callCount());
+			assessmentGenerator.releaseAssessment(1);
+			await(replacementTask.result());
+		} finally {
+			releaseRowLock.countDown();
+			assessmentGenerator.releaseAllAssessments();
+			executor.shutdownNow();
+			assertTrue(executor.awaitTermination(5, SECONDS));
+		}
+	}
+
+	@Test
 	void queue에서_사용한_시간은_기존_25초_deadline에서_차감된다()
 		throws Exception {
 		SubmissionFixture first = submissionFixture(1);
@@ -571,6 +647,15 @@ class LearningAnswerConcurrencyJpaTest {
 		}
 	}
 
+	private void await(CountDownLatch latch) {
+		try {
+			assertTrue(latch.await(5, SECONDS));
+		} catch (InterruptedException exception) {
+			Thread.currentThread().interrupt();
+			throw new AssertionError(exception);
+		}
+	}
+
 	private record SubmissionFixture(
 		LearningSession session,
 		LearningSessionQuestion question,
@@ -582,6 +667,7 @@ class LearningAnswerConcurrencyJpaTest {
 		implements AnswerAssessmentQueueTimeoutScheduler {
 
 		private final Queue<ScheduledTimeout> timeouts = new ArrayDeque<>();
+		private CountDownLatch cancellationObserved = new CountDownLatch(1);
 
 		@Override
 		public synchronized TimeoutHandle schedule(
@@ -609,11 +695,17 @@ class LearningAnswerConcurrencyJpaTest {
 
 		synchronized void reset() {
 			timeouts.clear();
+			cancellationObserved = new CountDownLatch(1);
+		}
+
+		boolean awaitCancellation() throws InterruptedException {
+			return cancellationObserved.await(5, SECONDS);
 		}
 
 		private synchronized void cancel(ScheduledTimeout timeout) {
 			timeout.cancelled = true;
 			timeouts.remove(timeout);
+			cancellationObserved.countDown();
 		}
 
 		private static final class ScheduledTimeout {

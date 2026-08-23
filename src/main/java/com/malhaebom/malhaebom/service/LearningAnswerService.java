@@ -189,12 +189,12 @@ public class LearningAnswerService {
 		}
 
 		try {
-			fail(processing, timeout);
+			task.cancel();
 		} catch (RuntimeException exception) {
 			timeout.addSuppressed(exception);
 		}
 		try {
-			task.cancel();
+			fail(processing, timeout);
 		} catch (RuntimeException exception) {
 			timeout.addSuppressed(exception);
 		}
