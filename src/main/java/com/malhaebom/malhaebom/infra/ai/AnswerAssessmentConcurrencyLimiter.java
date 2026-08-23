@@ -285,6 +285,7 @@ public class AnswerAssessmentConcurrencyLimiter {
 		AnswerAssessment result,
 		Throwable exception
 	) {
+		List<QueueEntry> expiredEntries = new ArrayList<>();
 		QueueEntry promoted;
 		synchronized (lock) {
 			if (entry.state != State.STARTING && entry.state != State.ACTIVE) {
@@ -292,7 +293,9 @@ public class AnswerAssessmentConcurrencyLimiter {
 			}
 			entry.state = State.TERMINAL;
 			activeRequests.decrementAndGet();
-			promoted = accepting ? pollQueuedForPromotion() : null;
+			promoted = accepting
+				? pollQueuedForPromotion(expiredEntries)
+				: null;
 			if (promoted != null) {
 				promoted.state = State.STARTING;
 				activeRequests.incrementAndGet();
@@ -309,6 +312,9 @@ public class AnswerAssessmentConcurrencyLimiter {
 			recordWait(promoted, promotedWait);
 			start(promoted);
 		}
+		for (QueueEntry expired : expiredEntries) {
+			completeTimeout(expired);
+		}
 		if (exception == null) {
 			entry.result.complete(result);
 		} else {
@@ -316,7 +322,10 @@ public class AnswerAssessmentConcurrencyLimiter {
 		}
 	}
 
-	private QueueEntry pollQueuedForPromotion() {
+	private QueueEntry pollQueuedForPromotion(
+		List<QueueEntry> expiredEntries
+	) {
+		long now = nanoTime.getAsLong();
 		Iterator<QueueEntry> iterator = queue.iterator();
 		while (iterator.hasNext()) {
 			QueueEntry candidate = iterator.next();
@@ -324,6 +333,11 @@ public class AnswerAssessmentConcurrencyLimiter {
 			queuedRequests.decrementAndGet();
 			if (candidate.state == State.QUEUED) {
 				cancelTimeout(candidate);
+				if (queueWaitExpired(candidate, now)) {
+					candidate.state = State.TERMINAL;
+					expiredEntries.add(candidate);
+					continue;
+				}
 				return candidate;
 			}
 		}
@@ -371,6 +385,10 @@ public class AnswerAssessmentConcurrencyLimiter {
 			queuedRequests.decrementAndGet();
 			entry.state = State.TERMINAL;
 		}
+		completeTimeout(entry);
+	}
+
+	private void completeTimeout(QueueEntry entry) {
 		queueTimeoutRequests.increment();
 		rejectedRequests.increment();
 		recordWait(entry, timeoutWait);
@@ -399,6 +417,11 @@ public class AnswerAssessmentConcurrencyLimiter {
 		if (handle != null) {
 			handle.cancel();
 		}
+	}
+
+	private boolean queueWaitExpired(QueueEntry entry, long now) {
+		long elapsed = Math.max(0, now - entry.enqueuedAtNanos);
+		return elapsed >= maxQueueWait.toNanos();
 	}
 
 	private void recordWait(QueueEntry entry, Timer timer) {

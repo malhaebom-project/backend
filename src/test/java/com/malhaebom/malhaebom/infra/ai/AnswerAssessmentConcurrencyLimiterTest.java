@@ -226,6 +226,40 @@ class AnswerAssessmentConcurrencyLimiterTest {
 	}
 
 	@Test
+	void scheduler가_늦어도_만료된_head는_건너뛰고_유효한_FIFO만_승격한다() {
+		LimiterFixture fixture = fixture(1, 2);
+		ControlledTask active = controlledTask();
+		ControlledTask eligible = controlledTask();
+		AtomicInteger expiredCalls = new AtomicInteger();
+		AnswerAssessmentTask first = fixture.limiter().execute(supplier(active));
+		AnswerAssessmentTask expired = fixture.limiter().execute(() -> {
+			expiredCalls.incrementAndGet();
+			return completedTask();
+		});
+		fixture.ticker().addAndGet(Duration.ofSeconds(9).toNanos());
+		AnswerAssessmentTask queued = fixture.limiter().execute(
+			supplier(eligible)
+		);
+		fixture.ticker().addAndGet(Duration.ofSeconds(1).toNanos());
+
+		active.future().complete(assessment());
+		first.result().toCompletableFuture().join();
+
+		assertOverloaded(expired);
+		assertEquals(0, expiredCalls.get());
+		assertEquals(1, eligible.started().get());
+		assertEquals(1.0, counter(fixture, "queue.timeout"));
+		assertEquals(1.0, counter(fixture, "rejected"));
+		assertEquals(1.0, counter(fixture, "queue.promoted"));
+		assertEquals(0.0, gauge(fixture, "queue.size"));
+		assertEquals(0, fixture.scheduler().scheduledCount());
+
+		eligible.future().complete(assessment());
+		queued.result().toCompletableFuture().join();
+		assertEquals(0.0, gauge(fixture, "active"));
+	}
+
+	@Test
 	void promotion과_cancel이_경합해도_supplier와_active_반환은_한_번뿐이다()
 		throws Exception {
 		LimiterFixture fixture = fixture(1, 1);
