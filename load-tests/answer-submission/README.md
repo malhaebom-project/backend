@@ -1,7 +1,7 @@
 # 답안 제출 비동기 부하 테스트
 
 실제 답안 제출 HTTP 경로에 같은 텍스트를 가진 서로 다른 세션을 병렬로
-전송한다. OpenAI 응답 대기 중 Tomcat 요청 스레드가 반환되는지, 동시 제한 32건과
+전송한다. OpenAI 응답 대기 중 Tomcat 요청 스레드가 반환되는지, 동시 제한 48건과
 과부하 응답이 지켜지는지, 동시에 호출한 다른 API가 영향을 받는지 확인한다.
 
 ## 용어
@@ -33,7 +33,7 @@
 | 용어                                | 의미                                                                                                                                                                                    |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Limiter                           | 특정 작업이 동시에 너무 많이 실행되지 않도록 입장 수를 제한하는 장치. 현재 답안 평가 limiter는 OpenAI 평가 구간을 보호한다.                                                                                                        |
-| Permit                            | OpenAI 평가를 동시에 실행할 수 있는 논리적인 권한표. 기본 32개이며 작업이 permit을 얻지 못하면 기다리지 않고 `ANSWER_ASSESSMENT_OVERLOADED` 503을 반환한다. 완료·실패한 작업은 permit을 반환하므로 누적 성공 수는 32를 넘을 수 있지만 순간 active는 32 이하여야 한다. |
+| Permit                            | OpenAI 평가를 동시에 실행할 수 있는 논리적인 권한표. 기본 48개이며 작업이 permit을 얻지 못하면 기다리지 않고 `ANSWER_ASSESSMENT_OVERLOADED` 503을 반환한다. 완료·실패한 작업은 permit을 반환하므로 누적 성공 수는 48을 넘을 수 있지만 순간 active는 48 이하여야 한다. |
 | Active                            | 현재 사용 중인 자원의 수. OpenAI active는 permit을 점유한 평가 수이고 Hikari active는 사용 중인 DB connection 수이므로 지표의 주체를 함께 봐야 한다.                                                                           |
 | HikariCP                          | 애플리케이션의 DB connection pool. 제한된 실제 DB 연결을 빌려주고 트랜잭션이 끝나면 회수한다.                                                                                                                        |
 | Hikari active connections         | pool에서 빌려줘 현재 애플리케이션이 점유 중인 DB connection 수. SQL 실행이 끝났어도 열린 트랜잭션이나 OSIV 때문에 반환하지 않았다면 active에 포함된다.                                                                                  |
@@ -70,7 +70,7 @@ DB 작업, JPA 자원 수명, Tomcat dispatch와 외부 호출 제한이 함께 
 이 테스트는 다음 질문에 답하기 위한 것이다.
 
 * OpenAI가 느려도 요청 스레드와 DB 연결이 대기 시간 내내 점유되지 않는가?
-* OpenAI 평가는 동시에 설정된 32건까지만 실행되고 permit을 얻지 못한 요청은
+* OpenAI 평가는 동시에 설정된 48건까지만 실행되고 permit을 얻지 못한 요청은
   명시적인 503으로 빠르게 거절되는가?
 
 * 10·100·200·300명이 동시에 제출해도 사용자별 응답과 DB 대상이 섞이지
@@ -240,15 +240,15 @@ answer_unexpected_response`다. VU가 분류 전에 중단되면 attempts와 cla
 | ---------------------------- | ---------------------------------------------------------------------------------------- |
 | `answer_attempts`            | 해당 단계에서 실제로 시도한 답안 제출 수                                                                  |
 | `answer_classified`          | 200, 예상된 503 또는 예상 밖 응답으로 분류를 마친 수. 동시 제출 수보다 작으면 timeout이나 누락이 있음                       |
-| `answer_success`             | HTTP 200 응답 수. 32건 이하 단계에서는 전부 성공해야 함                                                    |
+| `answer_success`             | HTTP 200 응답 수. 48건 이하 단계에서는 전부 성공해야 함                                                    |
 | `answer_expected_overload`   | HTTP 503이면서 오류 코드가 `ANSWER_ASSESSMENT_OVERLOADED`인 수. 의도한 과부하 제어로 취급                     |
 | `answer_unexpected_response` | 그 외 상태와 timeout·연결 실패 수. 항상 0이어야 함                                                       |
 | `answer_response_mismatch`   | 200 응답을 파싱할 수 없거나 `sessionQuestionId`가 해당 VU fixture와 다른 수. 응답 계약 위반·혼합을 의미하므로 항상 0이어야 함 |
 
-성공 수가 동시 제출 수보다 작다는 사실만으로 실패라고 판정하지 않는다. 32건
+성공 수가 동시 제출 수보다 작다는 사실만으로 실패라고 판정하지 않는다. 48건
 초과 단계에서는 성공과 정상 과부하 503이 모두 관찰되어야 한다. 먼저 완료된
 작업의 permit을 늦게 도착한 요청이 다시 사용할 수 있으므로 누적 성공 수가
-32를 넘을 수 있지만, 어느 순간에도 active가 32를 넘으면 안 된다. 성공,
+48을 넘을 수 있지만, 어느 순간에도 active가 48을 넘으면 안 된다. 성공,
 정상 503, 예상 밖 응답의 합은 시도 수와 같아야 하며 누락은 없어야 한다.
 
 ### 응답 시간과 probe
@@ -299,7 +299,7 @@ pending이 발생해도 2초 전에 해소되고 단계 종료 후 0으로 복�
 OpenAI 답안 평가 limiter가 제공하는 Micrometer 지표의 이름과 의미는
 [답안 평가 동시성 제한 지표](../../docs/answer-assessment-metrics.md)를 참고한다.
 
-`active`가 32 이하라는 사실만으로 테스트가 성공한 것은 아니다. Hikari와
+`active`가 48 이하라는 사실만으로 테스트가 성공한 것은 아니다. Hikari와
 Tomcat이 먼저 포화되면 요청이 limiter에 도달하지 못해 active가 낮게 보일 수
 있다. 따라서 limiter, DB, Tomcat과 probe를 함께 해석해야 한다.
 
@@ -307,16 +307,16 @@ Tomcat이 먼저 포화되면 요청이 limiter에 도달하지 못해 active가
 
 | 관측 조합                                                     | 해석                                       |
 | --------------------------------------------------------- | ---------------------------------------- |
-| active가 32에 도달하고 permit을 얻지 못한 요청이 빠른 정상 503이며 probe가 안정적 | OpenAI limiter와 서버 자원 격리가 의도대로 동작        |
-| active가 32보다 낮은데 Hikari pending이 지속되고 Tomcat·probe가 악화    | limiter 앞의 DB 준비 또는 JPA 자원 수명이 우선 병목     |
+| active가 48에 도달하고 permit을 얻지 못한 요청이 빠른 정상 503이며 probe가 안정적 | OpenAI limiter와 서버 자원 격리가 의도대로 동작        |
+| active가 48보다 낮은데 Hikari pending이 지속되고 Tomcat·probe가 악화    | limiter 앞의 DB 준비 또는 JPA 자원 수명이 우선 병목     |
 | Hikari는 안정적이지만 Tomcat busy가 OpenAI 대기 중 내려가지 않음           | 비동기 dispatch 또는 요청 스레드 반환 경로 점검 필요       |
-| active가 32이고 서버 자원은 안정적이지만 성공 응답만 느림                      | 실제 provider 지연 또는 답안 평가 timeout 정책 점검 필요 |
+| active가 48이고 서버 자원은 안정적이지만 성공 응답만 느림                      | 실제 provider 지연 또는 답안 평가 timeout 정책 점검 필요 |
 | 단계 종료 후 active나 pending이 0으로 돌아오지 않음                      | permit 또는 DB connection 누수 가능성           |
 
 자동 판정 기준은 다음과 같다.
 
 * 예상하지 못한 상태, 응답 누락, 응답 혼합은 0건이다.
-* OpenAI active는 항상 32 이하이고 32건 초과 단계에서 정상 과부하 503이
+* OpenAI active는 항상 48 이하이고 48건 초과 단계에서 정상 과부하 503이
   관찰된다.
 
 * 성공 응답은 30초 이내이고 정상 과부하 503 p95는 5초 이내다.
@@ -330,8 +330,8 @@ Tomcat이 먼저 포화되면 요청이 limiter에 도달하지 못해 active가
 | 판정 기준                                | 성격               | 근거와 의미                                                                                              |
 | ------------------------------------ | ---------------- | --------------------------------------------------------------------------------------------------- |
 | 예상 밖 상태·누락·응답 혼합 0건                  | 동작 계약            | 하나라도 발생하면 HTTP 계약 또는 사용자 격리가 깨진 것이므로 허용하지 않는다.                                                      |
-| OpenAI active 32 이하                  | 설정 불변식           | `max-concurrent-requests=32`를 limiter가 항상 지켜야 한다.                                                   |
-| 32건 초과 단계에서 정상 503 관찰                | 동작 계약            | 동시 한도를 넘었을 때 요청이 무제한 대기하거나 provider까지 전달되지 않고 명시적으로 거절되는지 증명한다.                                     |
+| OpenAI active 48 이하                  | 설정 불변식           | `max-concurrent-requests=48`을 limiter가 항상 지켜야 한다.                                                   |
+| 48건 초과 단계에서 정상 503 관찰                | 동작 계약            | 동시 한도를 넘었을 때 요청이 무제한 대기하거나 provider까지 전달되지 않고 명시적으로 거절되는지 증명한다.                                     |
 | 성공 응답 최대 30초                         | hard deadline    | 서버 비동기 요청 timeout 30초에서 도출한다. 성공한 모든 요청에 적용하므로 p95가 아니라 최대값을 사용한다.                                  |
 | 과부하 503 p95 5초                       | 초기 운영 목표         | permit 초과 요청의 fail-fast 여부를 판단하는 여유 있는 기준이다. 코드 설정에서 도출된 값은 아니며 AWS 측정 후 조정할 수 있다.                  |
 | probe 성공률 100%                       | 통제된 부하 테스트 합격 기준 | 점검 시간의 격리된 테스트에서는 답안 제출 때문에 관계없는 API가 한 건이라도 실패하는 것을 허용하지 않는다. 일반 운영 전체의 가용성 SLO를 100%로 선언한 것은 아니다. |
@@ -382,6 +382,10 @@ macOS에서 Gradle Wrapper 실행 권한이 없다면 프로젝트 루트에서 
 아래 명령은 프로젝트 루트의 서로 다른 PowerShell 7 (`pwsh`)에서 실행한다.
 PowerShell과 k6, Python은 로컬 Windows 또는 macOS에 설치하며 EC2에는 설치하지
 않는다. DB 파일 이름은 실행마다 새 값으로 바꿔 이전 결과와 격리한다.
+
+기본 평가 동시 제한은 48이다. 다른 제한을 계측할 때는 백엔드의
+`ANSWER_ASSESSMENT_MAX_CONCURRENT_REQUESTS`와 `run-stages.ps1`,
+`build-report.ps1`의 `-AssessmentLimit`에 같은 값을 지정한다.
 
 ```powershell
 $pythonCommand = if (Get-Command python3 -ErrorAction SilentlyContinue) {

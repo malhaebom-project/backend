@@ -5,7 +5,7 @@
 - Git commit:
 - fixture run-id:
 - OpenAI 대상: fake / live
-- `ANSWER_ASSESSMENT_MAX_CONCURRENT_REQUESTS`: 32
+- `ANSWER_ASSESSMENT_MAX_CONCURRENT_REQUESTS`: 48
 
 | 동시 제출 | 200 성공 | 예상 503 | 기타 오류 | 성공 p95 | 503 p95 | probe p95 | OpenAI 최대 active | Tomcat 최대 busy | Hikari 최대 pending |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -18,8 +18,8 @@
 
 - 10/100/200/300 네 단계 결과와 누락 응답 0건:
 - 예상하지 못한 상태·응답 혼합 0건:
-- 각 단계 성공 응답 및 32건 초과 단계의 예상 503 관찰:
-- OpenAI active 32 이하:
+- 각 단계 성공 응답 및 48건 초과 단계의 예상 503 관찰:
+- OpenAI active 48 이하:
 - probe 성공률 100%, p95 기준 이내:
 - provider 대기 중 Tomcat busy가 max의 25% 미만:
 - Hikari pending이 2초 이상 지속되지 않음:

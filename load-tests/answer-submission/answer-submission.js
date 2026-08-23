@@ -5,6 +5,7 @@ import { Counter, Rate, Trend } from 'k6/metrics';
 
 const manifestPath = __ENV.MANIFEST;
 const concurrency = Number(__ENV.CONCURRENCY || '10');
+const assessmentLimit = Number(__ENV.ASSESSMENT_LIMIT || '48');
 const baseUrl = (__ENV.BASE_URL || 'http://127.0.0.1:8080').replace(/\/$/, '');
 const probeRate = Number(__ENV.PROBE_RATE || '20');
 const summaryPath = __ENV.SUMMARY_PATH || 'load-tests/results/summary.json';
@@ -46,7 +47,7 @@ const thresholds = {
   probe_success: ['rate==1'],
 };
 
-if (concurrency > 32) {
+if (concurrency > assessmentLimit) {
   thresholds.answer_success = ['count>0'];
   thresholds.answer_expected_overload = ['count>0'];
   thresholds.answer_overload_duration = ['p(95)<=5000'];

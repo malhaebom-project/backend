@@ -5,6 +5,8 @@ param(
     [string]$Manifest,
     [string]$ResultRoot = "load-tests/results",
     [int[]]$Stages = @(10, 100, 200, 300),
+    [ValidateRange(1, 10000)]
+    [int]$AssessmentLimit = 48,
     [int]$ProbeP95FloorMillis = 1000,
     [int]$RecoveryTimeoutSeconds = 300,
     [string]$DockerContainer = "",
@@ -98,6 +100,7 @@ foreach ($stage in $Stages) {
             "-e", "BASE_URL=$BaseUrl",
             "-e", ("MANIFEST=" + $manifestPath.Replace('\', '/')),
             "-e", "CONCURRENCY=$stage",
+            "-e", "ASSESSMENT_LIMIT=$AssessmentLimit",
             "-e", ("SUMMARY_PATH=" + $summaryPath.Replace('\', '/')),
             "--out", ("json=" + $rawPath),
             $k6Script
