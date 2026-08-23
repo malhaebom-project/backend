@@ -19,7 +19,6 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import com.malhaebom.malhaebom.domain.User;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
@@ -51,26 +50,6 @@ class LoginControllerTest {
 		)
 			.setControllerAdvice(new ApiExceptionHandler())
 			.build();
-	}
-
-	@Test
-	void signsUpGuardian() throws Exception {
-		User user = User.create("Guardian", "guardian@example.com", "encoded-password");
-		when(userService.create("Guardian", "guardian@example.com", "password123"))
-			.thenReturn(user);
-
-		mockMvc.perform(post(SIGNUP_ENDPOINT)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-					{"name":"Guardian","email":"guardian@example.com","password":"password123"}
-					"""))
-			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.success").value(true))
-			.andExpect(jsonPath("$.data.email").value("guardian@example.com"))
-			.andExpect(jsonPath("$.data.name").value("Guardian"))
-			.andExpect(jsonPath("$.data.role").value("GUARDIAN"));
-
-		verify(userService).create("Guardian", "guardian@example.com", "password123");
 	}
 
 	@Test

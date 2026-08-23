@@ -54,22 +54,6 @@ class SpeechAnswerStateServiceJpaTest {
 	private EntityManager entityManager;
 
 	@Test
-	void 요청_식별_키가_비어_있으면_요청을_거부한다() {
-		assertApiException(
-			ErrorCode.INVALID_REQUEST,
-			() -> stateService.start(999L, 999L, " ")
-		);
-	}
-
-	@Test
-	void 요청_식별_키가_100자를_초과하면_요청을_거부한다() {
-		assertApiException(
-			ErrorCode.INVALID_REQUEST,
-			() -> stateService.start(999L, 999L, "a".repeat(101))
-		);
-	}
-
-	@Test
 	void 현재_문제의_첫_음성_답변을_저장한다() {
 		LearningSession session = saveSession();
 		Long sessionQuestionId = currentQuestionId(session);

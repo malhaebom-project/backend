@@ -1,8 +1,10 @@
 package com.malhaebom.malhaebom.integration.learning;
 
 import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +18,8 @@ import com.malhaebom.malhaebom.domain.child.ChildProfile;
 import com.malhaebom.malhaebom.domain.child.repository.ChildProfileRepository;
 import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
+import com.malhaebom.malhaebom.domain.learning.LearningTopic;
+import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
@@ -57,6 +61,57 @@ class LearningSessionServiceJpaTest {
 		);
 		userId = user.getId();
 		childId = profile.getId();
+	}
+
+	@Test
+	void 요청한_조건의_활성_문제로_학습_세션을_저장한다() {
+		Question selected = question(
+			"selected",
+			Difficulty.EASY,
+			QuestionType.PICTURE_DESCRIPTION
+		);
+		Question inactive = question(
+			"inactive",
+			Difficulty.EASY,
+			QuestionType.PICTURE_DESCRIPTION
+		);
+		inactive.deactivate();
+		Question otherDifficulty = question(
+			"other difficulty",
+			Difficulty.NORMAL,
+			QuestionType.PICTURE_DESCRIPTION
+		);
+		Question otherType = question(
+			"other type",
+			Difficulty.EASY,
+			QuestionType.SHORT_ANSWER
+		);
+		questionRepository.saveAllAndFlush(List.of(
+			selected,
+			inactive,
+			otherDifficulty,
+			otherType
+		));
+
+		LearningSession created = learningSessionService.create(
+			userId,
+			childId,
+			LearningTopic.ANIMAL.getTopicId(),
+			Difficulty.EASY,
+			List.of(QuestionType.PICTURE_DESCRIPTION),
+			1
+		);
+		learningSessionRepository.flush();
+
+		LearningSession saved = learningSessionRepository
+			.findWithQuestionsById(created.getId())
+			.orElseThrow();
+		assertThat(saved.getChildId()).isEqualTo(childId);
+		assertThat(saved.getTopic()).isEqualTo(LearningTopic.ANIMAL);
+		assertThat(saved.getDifficulty()).isEqualTo(Difficulty.EASY);
+		assertThat(saved.getQuestionCount()).isEqualTo(1);
+		assertThat(saved.getCurrentQuestion().getQuestion().getId())
+			.isEqualTo(selected.getId());
 	}
 
 	@Test
@@ -115,6 +170,25 @@ class LearningSessionServiceJpaTest {
 		assertApiException(
 			ErrorCode.INVALID_REQUEST,
 			() -> learningSessionService.complete(session.getId())
+		);
+	}
+
+	private Question question(
+		String questionText,
+		Difficulty difficulty,
+		QuestionType type
+	) {
+		return Question.create(
+			LearningTopic.ANIMAL,
+			difficulty,
+			type,
+			questionText,
+			"질문",
+			null,
+			"answer",
+			Set.of("accepted answer"),
+			null,
+			null
 		);
 	}
 }

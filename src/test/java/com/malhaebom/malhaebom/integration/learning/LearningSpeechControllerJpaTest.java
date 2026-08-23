@@ -411,11 +411,21 @@ class LearningSpeechControllerJpaTest {
 	}
 
 	@Test
-	void Idempotency_Key_누락을_INVALID_REQUEST로_거부한다()
+	void Idempotency_Key가_누락되거나_비어_있으면_INVALID_REQUEST로_거부한다()
 		throws Exception {
 		mockMvc.perform(
 			multipart(ENDPOINT, session.getId(), sessionQuestionId)
 				.file(audio(new byte[] {1}, "audio/webm;codecs=opus"))
+		)
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"))
+			.andExpect(jsonPath("$.message").value(
+				"중복 요청 방지를 위한 요청 식별 키가 필요합니다."
+			));
+		mockMvc.perform(
+			multipart(ENDPOINT, session.getId(), sessionQuestionId)
+				.file(audio(new byte[] {1}, "audio/webm;codecs=opus"))
+				.header("Idempotency-Key", " ")
 		)
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"))

@@ -17,7 +17,7 @@ import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 class MalhaebomApplicationTests {
 
 	@Test
-	void contextLoads() {
+	void 테스트_설정으로_전체_애플리케이션_컨텍스트가_기동된다() {
 	}
 
 	@TestConfiguration(proxyBeanMethods = false)

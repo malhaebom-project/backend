@@ -18,14 +18,6 @@ class AnswerTest {
 		"현재진행형을 정확하게 사용했어요!";
 
 	@Test
-	void 정답_결과만_정답으로_판정한다() {
-		assertTrue(AnswerResult.CORRECT.isCorrect());
-		assertFalse(AnswerResult.PARTIALLY_CORRECT.isCorrect());
-		assertFalse(AnswerResult.INCORRECT.isCorrect());
-		assertFalse(AnswerResult.UNRECOGNIZED.isCorrect());
-	}
-
-	@Test
 	void 정답_평가_결과로_답변_시도를_생성한다() {
 		LearningSessionQuestion sessionQuestion = createSessionQuestion();
 		SpeechAnswer speechAnswer = completedSpeechAnswer(

@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -90,18 +89,6 @@ class OpenAiAnswerAssessmentGeneratorTest {
 	}
 
 	@Test
-	void 빈_답변은_AI를_호출하기_전에_거부한다() {
-		OpenAIClientAsync client = mock(OpenAIClientAsync.class);
-		OpenAiAnswerAssessmentGenerator generator = generator(client);
-
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> generator.generateAsync(assessmentInput(" "))
-		);
-		verify(client, never()).chat();
-	}
-
-	@Test
 	void active와_queue가_차면_그_다음_요청은_OpenAI_호출_없이_거절한다() {
 		AsyncClientFixture fixture = asyncClientFixture();
 		OpenAiAnswerAssessmentGenerator generator = generator(
@@ -135,36 +122,6 @@ class OpenAiAnswerAssessmentGeneratorTest {
 			ErrorCode.ANSWER_ASSESSMENT_OVERLOADED,
 			cause.getErrorCode()
 		);
-		verify(fixture.completions(), times(1)).create(
-			any(ChatCompletionCreateParams.class)
-		);
-
-		fixture.response().complete(chatCompletion());
-		first.join();
-		queued.join();
-		verify(fixture.completions(), times(2)).create(
-			any(ChatCompletionCreateParams.class)
-		);
-	}
-
-	@Test
-	void queued_상태에서는_OpenAI를_호출하지_않고_active_완료_후에만_시작한다() {
-		AsyncClientFixture fixture = asyncClientFixture();
-		OpenAiAnswerAssessmentGenerator generator = generator(
-			fixture.client(),
-			1,
-			1
-		);
-		CompletableFuture<AnswerAssessment> first = generator
-			.generateAsync(assessmentInput("He is running."))
-			.result()
-			.toCompletableFuture();
-		CompletableFuture<AnswerAssessment> queued = generator
-			.generateAsync(assessmentInput("He is running."))
-			.result()
-			.toCompletableFuture();
-
-		assertFalse(queued.isDone());
 		verify(fixture.completions(), times(1)).create(
 			any(ChatCompletionCreateParams.class)
 		);

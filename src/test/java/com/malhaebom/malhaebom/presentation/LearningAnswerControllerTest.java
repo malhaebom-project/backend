@@ -66,6 +66,22 @@ class LearningAnswerControllerTest {
 	}
 
 	@Test
+	void 음성_답변_ID가_없으면_400으로_거부한다() throws Exception {
+		mockMvc.perform(post(
+				ENDPOINT,
+				SESSION_ID,
+				SESSION_QUESTION_ID
+			)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{"speechAnswerId":null}
+					"""))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.success").value(false))
+			.andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));
+	}
+
+	@Test
 	void 답변_제출은_Servlet_비동기로_처리하고_완료_후_응답한다()
 		throws Exception {
 		CompletableFuture<AnswerSubmissionResult> submission =
