@@ -654,6 +654,11 @@ Hikari connection 획득 지연과 timeout을 함께 확인할 수 있다. OpenA
 횟수는 SDK 재시도를 포함하므로 assessment accepted보다 많다면 외부 호출이
 증폭된 것이다. `Answer submission idempotency outcomes` 패널은 동일 요청이 실제
 재처리됐는지, 완료 결과를 재사용했는지 결과별 초당 발생량으로 보여준다.
+`OpenAI token usage per second`는 prompt·completion·total과 그 부분집합인
+cached·reasoning 토큰을 구분한다. `OpenAI failures by reason`은 rate limit,
+timeout, 인증·권한, 4xx·5xx, I/O, 취소, refusal, 빈 응답, 잘못된 구조화 응답을
+구분한다. queue full과 queue timeout은 provider 호출 전 실패이므로 이 패널에는
+포함되지 않는다. 지표 정의와 해석은 `docs/answer-assessment-metrics.md`를 참고한다.
 
 `SPRING_PROFILES_ACTIVE=prod`와 운영 datasource 설정으로 fixture를 만든 뒤 같은
 manifest를 k6에 전달한다. fixture 생성·정리는 반드시 동일한 DB를 사용해야 한다.

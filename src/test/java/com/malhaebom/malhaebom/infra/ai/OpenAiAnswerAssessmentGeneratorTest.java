@@ -12,6 +12,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
@@ -20,13 +21,17 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 import com.openai.client.OpenAIClientAsync;
+import com.openai.core.http.Headers;
+import com.openai.errors.OpenAIIoException;
+import com.openai.errors.RateLimitException;
 import com.openai.models.chat.completions.ChatCompletion;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.openai.models.chat.completions.ChatCompletionMessage;
+import com.openai.models.completions.CompletionUsage;
 import com.openai.services.async.ChatServiceAsync;
 import com.openai.services.async.chat.ChatCompletionServiceAsync;
-import org.junit.jupiter.api.Test;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import com.malhaebom.malhaebom.domain.learning.AnswerResult;
@@ -37,6 +42,7 @@ import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerAssessmentMetricsRecorder;
+import com.malhaebom.malhaebom.infra.observability.MicrometerOpenAiAnswerAssessmentMetricsRecorder;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
@@ -73,6 +79,29 @@ class OpenAiAnswerAssessmentGeneratorTest {
 			"채점 참고 상황:\n소년이 공원에서 달리고 있다."
 		));
 		assertTrue(params.toString().contains("학습자 답변: He is running."));
+	}
+
+	@Test
+	void OpenAI_응답의_청구_토큰을_종류별로_한_번_기록한다() {
+		AsyncClientFixture fixture = asyncClientFixture();
+		SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+		OpenAiAnswerAssessmentGenerator generator = generator(
+			fixture.client(),
+			meterRegistry
+		);
+
+		CompletableFuture<AnswerAssessment> assessmentFuture = generator
+			.generateAsync(assessmentInput("He is running."))
+			.result()
+			.toCompletableFuture();
+		fixture.response().complete(chatCompletion(completionUsage()));
+		assessmentFuture.join();
+
+		assertTokenCount(meterRegistry, "prompt", 120);
+		assertTokenCount(meterRegistry, "completion", 30);
+		assertTokenCount(meterRegistry, "total", 150);
+		assertTokenCount(meterRegistry, "cached", 40);
+		assertTokenCount(meterRegistry, "reasoning", 12);
 	}
 
 	@Test
@@ -119,8 +148,15 @@ class OpenAiAnswerAssessmentGeneratorTest {
 	@Test
 	void 비동기_HTTP_실패는_예외_완료로_전달한다() {
 		AsyncClientFixture fixture = asyncClientFixture();
-		OpenAiAnswerAssessmentGenerator generator = generator(fixture.client());
-		RuntimeException failure = new IllegalStateException("OpenAI timeout");
+		SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+		OpenAiAnswerAssessmentGenerator generator = generator(
+			fixture.client(),
+			meterRegistry
+		);
+		RuntimeException failure = new OpenAIIoException(
+			"OpenAI timeout",
+			new SocketTimeoutException("read timed out")
+		);
 
 		CompletableFuture<AnswerAssessment> assessmentFuture = generator
 			.generateAsync(assessmentInput("He is running."))
@@ -133,6 +169,95 @@ class OpenAiAnswerAssessmentGeneratorTest {
 			assessmentFuture::join
 		);
 		assertSame(failure, exception.getCause());
+		assertEquals(
+			1.0,
+			meterRegistry.get(
+				"malhaebom.openai.answer.assessment.failures"
+			).tag("reason", "timeout").counter().count()
+		);
+	}
+
+	@Test
+	void OpenAI가_응답을_거부하면_토큰과_거부_원인을_함께_기록한다() {
+		AsyncClientFixture fixture = asyncClientFixture();
+		SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+		OpenAiAnswerAssessmentGenerator generator = generator(
+			fixture.client(),
+			meterRegistry
+		);
+		ChatCompletion completion = chatCompletion(completionUsage());
+		when(completion.choices().getFirst().message().refusal())
+			.thenReturn(Optional.of("safety refusal"));
+
+		CompletableFuture<AnswerAssessment> assessmentFuture = generator
+			.generateAsync(assessmentInput("He is running."))
+			.result()
+			.toCompletableFuture();
+		fixture.response().complete(completion);
+
+		assertThrows(CompletionException.class, assessmentFuture::join);
+		assertTokenCount(meterRegistry, "total", 150);
+		assertEquals(
+			1.0,
+			meterRegistry.get(
+				"malhaebom.openai.answer.assessment.failures"
+			).tag("reason", "refusal").counter().count()
+		);
+	}
+
+	@Test
+	void OpenAI_429_실패는_rate_limit으로_분류한다() {
+		AsyncClientFixture fixture = asyncClientFixture();
+		SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+		OpenAiAnswerAssessmentGenerator generator = generator(
+			fixture.client(),
+			meterRegistry
+		);
+		RateLimitException failure = RateLimitException.builder()
+			.headers(Headers.builder().build())
+			.build();
+
+		CompletableFuture<AnswerAssessment> assessmentFuture = generator
+			.generateAsync(assessmentInput("He is running."))
+			.result()
+			.toCompletableFuture();
+		fixture.response().completeExceptionally(failure);
+
+		assertThrows(CompletionException.class, assessmentFuture::join);
+		assertEquals(
+			1.0,
+			meterRegistry.get(
+				"malhaebom.openai.answer.assessment.failures"
+			).tag("reason", "rate_limit").counter().count()
+		);
+	}
+
+	@Test
+	void 구조화_응답_파싱_실패도_토큰과_invalid_response를_한_번_기록한다() {
+		AsyncClientFixture fixture = asyncClientFixture();
+		SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+		OpenAiAnswerAssessmentGenerator generator = generator(
+			fixture.client(),
+			meterRegistry
+		);
+		ChatCompletion completion = chatCompletion(completionUsage());
+		when(completion.choices().getFirst().message().content())
+			.thenReturn(Optional.of("not-json"));
+
+		CompletableFuture<AnswerAssessment> assessmentFuture = generator
+			.generateAsync(assessmentInput("He is running."))
+			.result()
+			.toCompletableFuture();
+		fixture.response().complete(completion);
+
+		assertThrows(CompletionException.class, assessmentFuture::join);
+		assertTokenCount(meterRegistry, "total", 150);
+		assertEquals(
+			1.0,
+			meterRegistry.get(
+				"malhaebom.openai.answer.assessment.failures"
+			).tag("reason", "invalid_response").counter().count()
+		);
 	}
 
 	@Test
@@ -252,6 +377,13 @@ class OpenAiAnswerAssessmentGeneratorTest {
 
 	private OpenAiAnswerAssessmentGenerator generator(
 		OpenAIClientAsync client,
+		SimpleMeterRegistry meterRegistry
+	) {
+		return generator(client, 32, 0, meterRegistry);
+	}
+
+	private OpenAiAnswerAssessmentGenerator generator(
+		OpenAIClientAsync client,
 		int maxConcurrentRequests
 	) {
 		return generator(client, maxConcurrentRequests, 0);
@@ -261,6 +393,20 @@ class OpenAiAnswerAssessmentGeneratorTest {
 		OpenAIClientAsync client,
 		int maxConcurrentRequests,
 		int queueCapacity
+	) {
+		return generator(
+			client,
+			maxConcurrentRequests,
+			queueCapacity,
+			new SimpleMeterRegistry()
+		);
+	}
+
+	private OpenAiAnswerAssessmentGenerator generator(
+		OpenAIClientAsync client,
+		int maxConcurrentRequests,
+		int queueCapacity,
+		SimpleMeterRegistry meterRegistry
 	) {
 		return new OpenAiAnswerAssessmentGenerator(
 			client,
@@ -274,16 +420,23 @@ class OpenAiAnswerAssessmentGeneratorTest {
 						: Duration.ofSeconds(10)
 				),
 				new MicrometerAnswerAssessmentMetricsRecorder(
-					new SimpleMeterRegistry()
+					meterRegistry
 				),
 				(task, delay) -> () -> {
 				},
 				System::nanoTime
+			),
+			new MicrometerOpenAiAnswerAssessmentMetricsRecorder(
+				meterRegistry
 			)
 		);
 	}
 
 	private ChatCompletion chatCompletion() {
+		return chatCompletion(null);
+	}
+
+	private ChatCompletion chatCompletion(CompletionUsage usage) {
 		ChatCompletion completion = mock(ChatCompletion.class);
 		ChatCompletion.Choice choice = mock(ChatCompletion.Choice.class);
 		ChatCompletionMessage message = mock(ChatCompletionMessage.class);
@@ -299,7 +452,39 @@ class OpenAiAnswerAssessmentGeneratorTest {
 			  "feedbackText": "현재진행형을 자연스럽게 잘 사용했어요!"
 			}
 			"""));
+		when(completion.usage()).thenReturn(Optional.ofNullable(usage));
 		return completion;
+	}
+
+	private CompletionUsage completionUsage() {
+		return CompletionUsage.builder()
+			.promptTokens(120)
+			.completionTokens(30)
+			.totalTokens(150)
+			.promptTokensDetails(
+				CompletionUsage.PromptTokensDetails.builder()
+					.cachedTokens(40)
+					.build()
+			)
+			.completionTokensDetails(
+				CompletionUsage.CompletionTokensDetails.builder()
+					.reasoningTokens(12)
+					.build()
+			)
+			.build();
+	}
+
+	private void assertTokenCount(
+		SimpleMeterRegistry meterRegistry,
+		String type,
+		double expected
+	) {
+		assertEquals(
+			expected,
+			meterRegistry.get(
+				"malhaebom.openai.answer.assessment.tokens"
+			).tag("type", type).counter().count()
+		);
 	}
 
 	private ChatCompletionCreateParams capturedParams(

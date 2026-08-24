@@ -7,6 +7,10 @@ active와 queue를 합친 즉시 수용 가능량은 96건이다. 대기는 requ
 limiter는 동시성 상태와 전이만 관리하고, Micrometer meter 등록과 기록은
 `MicrometerAnswerAssessmentMetricsRecorder`가 담당한다.
 
+실제 provider 요청이 시작된 뒤의 사용량과 실패 원인은 별도
+`OpenAiAnswerAssessmentMetricsRecorder`가 기록한다. 따라서 queue full·queue
+timeout처럼 OpenAI 호출 전에 종료된 작업은 OpenAI 실패에 포함되지 않는다.
+
 | 지표 | 종류 | 의미 |
 | --- | --- | --- |
 | `malhaebom.answer.assessment.active` | Gauge | 현재 permit을 점유하고 평가 중인 작업 수 |
@@ -24,6 +28,21 @@ limiter는 동시성 상태와 전이만 관리하고, Micrometer meter 등록�
 | `malhaebom.answer.assessment.queue.cancelled` | Counter | 대기 중 원래 제출 deadline 또는 호출자 취소로 제거된 누적 수 |
 | `malhaebom.answer.assessment.queue.wait` | Timer | 대기 종료까지 걸린 시간. `result=promoted`, `timeout`, `cancelled`, `shutdown` 태그로 원인을 구분 |
 
+## OpenAI 사용량·실패 원인
+
+| 지표 | 종류 | 태그 | 의미 |
+| --- | --- | --- | --- |
+| `malhaebom.openai.answer.assessment.tokens` | Counter | `type=prompt`, `completion`, `total`, `cached`, `reasoning` | OpenAI 응답 usage에 포함된 누적 토큰 수 |
+| `malhaebom.openai.answer.assessment.failures` | Counter | `reason=rate_limit`, `timeout`, `authentication`, `permission`, `bad_request`, `server_error`, `io_error`, `cancelled`, `refusal`, `empty_response`, `invalid_response`, `unknown` | 실제 OpenAI 요청 또는 응답 처리 실패의 누적 수 |
+
+토큰은 provider 응답을 받은 즉시 기록한다. 따라서 구조화 응답 파싱 실패나
+refusal로 최종 채점이 실패해도 이미 소비된 토큰은 빠지지 않는다. `cached`는
+prompt 토큰의 부분집합이고 `reasoning`은 completion 토큰의 부분집합이므로 다섯
+시계열을 서로 합산해 총비용으로 해석하면 안 된다. 전체 사용량은 `type=total`,
+입출력 비용 분석은 `prompt`와 `completion`, 캐시·추론 비중 분석은 `cached`와
+`reasoning`을 각각 확인한다. usage 필드 정의는
+[OpenAI Chat Completions API reference](https://developers.openai.com/api/reference/cli/resources/chat/subresources/completions)를 따른다.
+
 `rejected`에는 `queue.full`과 `queue.timeout`이 포함되지만 대기 중 취소는 포함되지
 않는다. 이 세 경우 모두 provider 호출 전에 끝난다. HTTP 503만으로는 queue full과
 queue timeout을 구분할 수 없으므로 서버 카운터를 함께 확인해야 한다.
@@ -36,6 +55,8 @@ queue timeout을 구분할 수 없으므로 서버 카운터를 함께 확인해
 - `accepted`는 실제 평가 시작 수이므로 direct admission과 승격을 모두 포함한다.
 - 단계 종료 후 `active=0`, `queue.size=0`, Hikari pending=0으로 회복한다.
 - `queue.full`, `queue.timeout`, `queue.cancelled`는 외부 provider 호출 수가 아니다.
+- OpenAI failure reason 하나는 실패한 실제 provider 요청당 정확히 한 번 증가한다.
+- provider 응답을 받은 작업은 후속 파싱 결과와 관계없이 usage를 한 번 기록한다.
 
 Counter는 애플리케이션 프로세스가 시작된 뒤의 누적값이고 재시작 시 초기화된다.
 부하 리포트는 각 단계의 첫 snapshot과 마지막 snapshot 차이로 queue 종료 원인 수를
