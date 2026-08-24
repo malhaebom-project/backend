@@ -407,11 +407,13 @@ bounded queue는 짧은 burst의 사용자 체감 성공률을 높일 뿐 provid
 * Java 21과 Gradle Wrapper
 * k6
 * Python 3
-* AWS 실행 시 Docker Compose, OpenSSH와 EC2 접속 키
+* AWS 실행 시 EC2의 Docker Compose, 로컬 OpenSSH와 EC2 접속 키
 
 결과와 fixture manifest는 `load-tests/results/`에 생성되며 Git에서 제외된다.
-macOS에서 Gradle Wrapper 실행 권한이 없다면 프로젝트 루트에서 한 번
-`chmod +x gradlew`를 실행한다.
+자동화 스크립트는 macOS에서 Gradle Wrapper를 `bash gradlew`로 실행하므로 실행
+권한 비트에 의존하지 않는다. 수동으로 `./gradlew`를 실행하려면 프로젝트 루트에서
+한 번 `chmod +x gradlew`를 실행한다. EC2 private key는 OpenSSH가 거부하지 않도록
+`chmod 600 <키 경로>`로 제한한다.
 
 ## 로컬 실행
 
@@ -539,16 +541,61 @@ OSIV 비활성화로 lazy loading에 의존하던 조회 API가 영향을 받지
 
 ## AWS 실행
 
+### 한 명령 자동 실행
+
+`invoke-aws-load-test.ps1`은 원격 loadtest Compose 기동, SSH tunnel, readiness
+확인, fixture seed, 네 단계 k6, fixture cleanup과 운영 Compose 복구를 순서대로
+실행한다. k6 또는 threshold가 실패해도 `finally`에서 fixture와 원격 Compose 복구를
+시도한다. 설정 파일의 limiter 32/64/10 값은 원격 Compose와 k6 양쪽에 동일하게
+전달되고 OpenAI SDK 자동 재시도는 원격 WAS에서 0회로 고정된다.
+
+Compose 전환은 EC2에서 각각 `start-loadtest-compose.sh`와
+`restore-prod-compose.sh`를 실행한다. 자동 실행에서는 설정 파일의 `Stages` 배열에
+나열한 부하 시나리오를 모두 실행한 뒤 `finally`에서 운영 Compose로 복구한다.
+
+최초 한 번 추적되지 않는 `.private` 설정 파일을 만든다.
+
+```powershell
+New-Item -ItemType Directory -Force .private/load-tests | Out-Null
+Copy-Item `
+  load-tests/answer-submission/aws-load-test.example.psd1 `
+  .private/load-tests/aws-load-test.psd1
+```
+
+복사한 파일에서 다음 네 값을 실제 환경에 맞게 지정한다.
+
+* `BaseUrl`: 공개 백엔드 URL
+* `SshHost`: `user@host` 형식의 EC2 SSH 대상
+* `SshIdentityFile`: 로컬 EC2 private key 절대 경로
+* `RemoteProjectDirectory`: EC2에서 Compose 파일이 있는 backend checkout 절대 경로
+
+`JAVA_HOME`이 JDK 21이 아니면 같은 설정 파일의 `JavaHome`도 지정한다. API key는
+이 파일에 넣지 않으며 기존 `config/application.yaml` 설정을 재사용한다.
+
+이후 전체 AWS 테스트는 다음 한 명령으로 실행한다.
+
+```powershell
+./load-tests/answer-submission/invoke-aws-load-test.ps1 `
+  -ConfirmLiveOpenAiCost
+```
+
+비용 확인 스위치가 없으면 실제 OpenAI 부하 테스트를 시작하지 않는다. 스크립트는
+실행별 UTC run-id와 결과 폴더를 자동 생성하고 테스트 중 Grafana 주소를 출력한다.
+정상 종료 시 SSH tunnel을 닫고 운영 Compose만 남긴다.
+
+PowerShell 프로세스 강제 종료나 로컬 전원 종료처럼 `finally`가 실행되지 않은
+경우에는 아래 수동 절차의 fixture cleanup과 운영 Compose 복구 명령을 실행한다.
+
+### 수동 실행 및 복구
+
 아래 PowerShell 스크립트와 k6는 로컬 Windows 또는 macOS에서 실행한다. EC2는
 Linux여도 되며 PowerShell이 필요하지 않다. 평상시 운영 Compose는 Actuator 관리
-포트를 host에 공개하지 않는다. 부하 테스트를 시작하기 전에 EC2에서 loadtest
-override를 붙여 WAS를 재생성한다.
+포트를 host에 공개하지 않는다. 부하 테스트를 시작하기 전에 EC2의 backend checkout
+루트에서 loadtest 시작 스크립트를 실행한다. 실행 권한 비트에 의존하지 않도록
+`bash`로 호출한다.
 
 ```bash
-docker compose \
-  -f docker-compose.prod.yml \
-  -f docker-compose.loadtest.yml \
-  up -d --force-recreate
+bash load-tests/answer-submission/start-loadtest-compose.sh
 ```
 
 loadtest override는 Prometheus와 Grafana를 함께 시작한다. 백엔드 관리 포트 9090,
@@ -565,7 +612,7 @@ Windows에서는 `TcpTestSucceeded`가 `False`인지 확인한다.
 
 macOS에서는 다음 명령의 연결이 실패해야 한다.
 
-```powershell
+```bash
 for port in 9090 9091 3000; do nc -vz 3.35.11.125 "$port"; done
 ```
 
@@ -592,13 +639,29 @@ manifest를 k6에 전달한다. fixture 생성·정리는 반드시 동일한 DB
 응답 분류가 자동 재시도의 영향을 받지 않게 한다.
 
 ```powershell
+$gradleWrapper = if ($IsWindows) { './gradlew.bat' } else { './gradlew' }
+$env:SPRING_PROFILES_ACTIVE = 'prod'
+$env:SPRING_AI_OPENAI_MAX_RETRIES = '0'
+$runId = 'aws-' + [DateTimeOffset]::UtcNow.ToString('yyyyMMddTHHmmssZ')
+$resultRoot = "load-tests/results/aws/$runId"
+$manifest = "$resultRoot/fixture-manifest.json"
+
+& $gradleWrapper loadTestFixtures --no-daemon `
+  "-PloadTestAction=seed" `
+  "-PloadTestRunId=$runId" `
+  "-PloadTestManifest=$manifest"
+```
+
+같은 PowerShell에서 생성된 manifest와 결과 경로를 사용해 k6를 실행한다.
+
+```powershell
 $sshKey = '<로컬 EC2 접속 키 경로>'
 ./load-tests/answer-submission/run-stages.ps1 `
   -BaseUrl http://3.35.11.125 `
   -ManagementUrl http://127.0.0.1:19090 `
   -PrometheusRemoteWriteUrl http://127.0.0.1:19091/api/v1/write `
-  -Manifest load-tests/results/aws/fixture-manifest.json `
-  -ResultRoot load-tests/results/aws `
+  -Manifest $manifest `
+  -ResultRoot $resultRoot `
   -DockerContainer backend-was-1 `
   -SshHost ubuntu@3.35.11.125 `
   -SshIdentityFile $sshKey `
@@ -608,9 +671,19 @@ $sshKey = '<로컬 EC2 접속 키 경로>'
   -ClientMaxRetries 0
 ```
 
+k6 성공·실패와 관계없이 같은 datasource 환경과 manifest로 fixture를 정리한다.
+
+```powershell
+& $gradleWrapper loadTestFixtures --no-daemon `
+  "-PloadTestAction=cleanup" `
+  "-PloadTestManifest=$manifest"
+```
+
 queue 자체의 동작을 먼저 보기 위해 재시도 0회를 기준 실행으로 삼고, 최대 2회
-재시도는 새 fixture와 결과 경로에서 보조 비교로 실행한다. 실행 중 일반 사용자
-요청을 피하고, 종료 후에는 fixture cleanup과
+재시도는 새 fixture와 결과 경로에서 보조 비교로 실행한다. loadtest Compose를 유지한
+상태에서 서로 다른 `Stages`, limiter, 재시도 설정으로 `run-stages.ps1`을 여러 번
+호출할 수 있다. 각 실행은 새 fixture와 결과 경로를 사용한다. 실행 중 일반 사용자
+요청을 피하고, 모든 시나리오 종료 후에는 fixture cleanup과
 `malhaebom.answer.assessment.active=0`,
 `malhaebom.answer.assessment.queue.size=0`,
 `hikaricp.connections.pending=0`을 확인한다. 실제 OpenAI는 완료된 permit을 뒤
@@ -633,9 +706,7 @@ Actuator snapshot은 그대로 생성된다. k6 지표에는 `testid=<manifest r
 컨테이너를 제거한다.
 
 ```bash
-docker compose \
-  -f docker-compose.prod.yml \
-  up -d --force-recreate --remove-orphans
+bash load-tests/answer-submission/restore-prod-compose.sh
 ```
 
 ## 결과 보고서 생성

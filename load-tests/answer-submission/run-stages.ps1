@@ -66,6 +66,24 @@ function Actuator-GaugeValue([string]$endpoint, [bool]$optional = $false) {
     }
 }
 
+function Start-ArgumentListProcess(
+    [string]$executable,
+    [string[]]$arguments
+) {
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $executable
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    foreach ($argument in $arguments) {
+        [void]$startInfo.ArgumentList.Add([string]$argument)
+    }
+    $process = [System.Diagnostics.Process]::Start($startInfo)
+    if ($null -eq $process) {
+        throw "Failed to start metrics collector process."
+    }
+    return $process
+}
+
 foreach ($stage in $Stages) {
     $stageDirectory = Join-Path $resultRootPath ("stage-" + $stage)
     New-Item -ItemType Directory -Path $stageDirectory -Force | Out-Null
@@ -107,15 +125,8 @@ foreach ($stage in $Stages) {
     if ($SshIdentityFile) {
         $collectorArguments += @("-SshIdentityFile", $SshIdentityFile)
     }
-    $collectorProcessParameters = @{
-        FilePath = $powerShellExecutable
-        ArgumentList = $collectorArguments
-        PassThru = $true
-    }
-    if ($IsWindows) {
-        $collectorProcessParameters.WindowStyle = "Hidden"
-    }
-    $collector = Start-Process @collectorProcessParameters
+    $collector = Start-ArgumentListProcess $powerShellExecutable `
+        $collectorArguments
 
     $stageExitCode = 0
     $probeP95 = $null
