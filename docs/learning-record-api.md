@@ -76,8 +76,8 @@ startDate 00:00 KST <= completedAt < endDate 다음 날 00:00 KST
 | `studySeconds` | `completedAt - startedAt`의 초 단위 값 |
 | `completedAt` | UTC 오프셋 `Z`가 포함된 세션 완료 시각 |
 
-`startedAt` 또는 `completedAt`이 없거나 계산 결과가 음수이면 `studySeconds`는
-`0`으로 처리한다.
+완료 세션은 `startedAt`과 `completedAt`이 모두 존재하며, `completedAt`은
+`startedAt`보다 빠르지 않다는 세션 상태 불변식을 따른다.
 
 ## 학습 통계 조회
 

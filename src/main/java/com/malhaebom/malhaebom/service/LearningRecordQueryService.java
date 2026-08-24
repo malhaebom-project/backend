@@ -260,10 +260,7 @@ public class LearningRecordQueryService {
 		LocalDateTime startedAt,
 		LocalDateTime completedAt
 	) {
-		if (startedAt == null || completedAt == null) {
-			return 0L;
-		}
-		return Math.max(0L, Duration.between(startedAt, completedAt).getSeconds());
+		return Duration.between(startedAt, completedAt).getSeconds();
 	}
 
 }
