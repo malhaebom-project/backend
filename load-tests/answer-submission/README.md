@@ -320,6 +320,7 @@ deadline을 연장하지 않는다.
 | 컨테이너 CPU·메모리                              | EC2 컨테이너 한도 또는 호스트 자원 부족 여부를 확인하는 보조 지표                                       |
 | OpenAI active / queue size                     | 실제 provider 평가 수와 FIFO 대기 수. 각각 설정값 32와 64 이하여야 함                                  |
 | queue full / timeout / cancelled               | provider 호출 전 종료 원인을 구분하는 서버 누적 카운터. 단계별 첫·마지막 snapshot 차이로 집계함                  |
+| submission prepare result                      | 신규 처리, 완료 결과 재사용, 처리 중 중복 요청, 실패 재시도, 만료 lease 회수를 구분하는 멱등 처리 카운터              |
 
 Hikari `최대 pending`은 특정 1초 표본에서 기다린 스레드 수이고,
 `pending 지속 시간`은 pending이 0보다 큰 상태가 연속된 시간이다. 순간적인
@@ -328,6 +329,17 @@ pending이 발생해도 2초 전에 해소되고 단계 종료 후 0으로 복�
 
 OpenAI 답안 평가 limiter가 제공하는 Micrometer 지표의 이름과 의미는
 [답안 평가 동시성 제한 지표](../../docs/answer-assessment-metrics.md)를 참고한다.
+
+멱등 처리 결과는
+`malhaebom_answer_submission_prepare_total{result="..."}`로 노출된다.
+
+| `result`     | 의미                                      |
+| ------------ | ----------------------------------------- |
+| `new`        | 새 제출 예약을 만들고 평가 처리를 시작함                |
+| `cached`     | 완료된 동일 제출의 기존 결과를 반환함                   |
+| `processing` | 동일 제출이 처리 중이어서 중복 평가를 시작하지 않음            |
+| `retry`      | 실패 상태의 기존 예약으로 평가를 다시 시작함                |
+| `reclaimed`  | 만료된 처리 lease 등 기존 미완료 예약을 다시 선점함           |
 
 `active`가 32 이하라는 사실만으로 테스트가 성공한 것은 아니다. Hikari와
 Tomcat이 먼저 포화되면 요청이 limiter에 도달하지 못해 active가 낮게 보일 수
@@ -407,11 +419,13 @@ bounded queue는 짧은 burst의 사용자 체감 성공률을 높일 뿐 provid
 * Java 21과 Gradle Wrapper
 * k6
 * Python 3
-* AWS 실행 시 OpenSSH와 EC2 접속 키
+* AWS 실행 시 EC2의 Docker Compose, 로컬 OpenSSH와 EC2 접속 키
 
 결과와 fixture manifest는 `load-tests/results/`에 생성되며 Git에서 제외된다.
-macOS에서 Gradle Wrapper 실행 권한이 없다면 프로젝트 루트에서 한 번
-`chmod +x gradlew`를 실행한다.
+자동화 스크립트는 macOS에서 Gradle Wrapper를 `bash gradlew`로 실행하므로 실행
+권한 비트에 의존하지 않는다. 수동으로 `./gradlew`를 실행하려면 프로젝트 루트에서
+한 번 `chmod +x gradlew`를 실행한다. EC2 private key는 OpenSSH가 거부하지 않도록
+`chmod 600 <키 경로>`로 제한한다.
 
 ## 로컬 실행
 
@@ -539,31 +553,83 @@ OSIV 비활성화로 lazy loading에 의존하던 조회 API가 영향을 받지
 
 ## AWS 실행
 
-아래 PowerShell 스크립트와 k6는 로컬 Windows 또는 macOS에서 실행한다. EC2는
-Linux여도 되며 PowerShell이 필요하지 않다. 평상시 운영 Compose는 Actuator 관리
-포트를 host에 공개하지 않는다. 부하 테스트를 시작하기 전에 EC2에서 loadtest
-override를 붙여 WAS를 재생성한다.
+### 권장 흐름: Compose 수동 전환과 시나리오 자동 실행
 
-```bash
-docker compose \
-  -f docker-compose.prod.yml \
-  -f docker-compose.loadtest.yml \
-  up -d --force-recreate was
+운영 환경 전환을 명시적으로 확인할 수 있도록 기본 절차는 loadtest Compose 시작,
+시나리오 자동 실행, 운영 Compose 복구를 나누어 수행한다.
+
+최초 한 번 추적되지 않는 `.private` 설정 파일을 만들고 `BaseUrl`, `SshHost`,
+`SshIdentityFile`을 실제 환경에 맞게 확인·지정한다.
+
+```powershell
+New-Item -ItemType Directory -Force .private/load-tests | Out-Null
+Copy-Item `
+  load-tests/answer-submission/aws-load-test.example.psd1 `
+  .private/load-tests/aws-load-test.psd1
 ```
 
-이때 관리 포트는 EC2 loopback에만 공개된다. 외부에서는 여전히 닫혀 있어야 하므로
-먼저 9090 포트에 직접 연결할 수 없는지 확인한다.
+`Scenarios`에는 자동으로 순차 실행할 동시성 단계와 클라이언트 재시도 횟수를
+정의한다. `RemoteProjectDirectory`에는 현재 self-hosted runner checkout 경로가 이미
+반영되어 있다. API key는 설정 파일에 넣지 않고 기존 `config/application.yaml`을
+재사용한다.
+
+먼저 EC2 backend checkout에서 loadtest Compose를 시작한다.
+
+```bash
+bash load-tests/answer-submission/start-loadtest-compose.sh
+```
+
+그다음 로컬 PowerShell 7에서 시나리오 자동화만 실행한다.
+
+```powershell
+./load-tests/answer-submission/invoke-aws-load-test-scenarios.ps1 `
+  -ConfirmLiveOpenAiCost
+```
+
+이 명령은 기존 loadtest Compose의 readiness 확인, SSH tunnel, 시나리오별 fixture
+seed·k6·cleanup만 처리한다. 성공하거나 실패해도 EC2 Compose 환경은 변경하거나
+복구하지 않는다. 결과를 확인하고 모든 fixture가 정리된 뒤 EC2에서 직접 복구한다.
+
+```bash
+bash load-tests/answer-submission/restore-prod-compose.sh
+```
+
+요약하면 권장 실행 경계는 다음과 같다.
+
+```text
+loadtest 환경 전환(수동)
+→ 여러 시나리오 실행·fixture cleanup(자동)
+→ 운영 환경 복구(수동)
+```
+
+#### 세부 수동 실행 및 비상 복구
+
+아래 PowerShell 스크립트와 k6는 로컬 Windows 또는 macOS에서 실행한다. EC2는
+Linux여도 되며 PowerShell이 필요하지 않다. 평상시 운영 Compose는 Actuator 관리
+포트를 host에 공개하지 않는다. 부하 테스트를 시작하기 전에 EC2의 backend checkout
+루트에서 loadtest 시작 스크립트를 실행한다. 실행 권한 비트에 의존하지 않도록
+`bash`로 호출한다.
+
+```bash
+bash load-tests/answer-submission/start-loadtest-compose.sh
+```
+
+loadtest override는 Prometheus와 Grafana를 함께 시작한다. 백엔드 관리 포트 9090,
+Prometheus 9091, Grafana 3000은 모두 EC2 loopback에만 공개된다. 외부에서는
+여전히 닫혀 있어야 하므로 먼저 세 포트에 직접 연결할 수 없는지 확인한다.
 
 Windows에서는 `TcpTestSucceeded`가 `False`인지 확인한다.
 
 ```powershell
-Test-NetConnection 3.35.11.125 -Port 9090
+9090, 9091, 3000 | ForEach-Object {
+  Test-NetConnection 3.35.11.125 -Port $_
+}
 ```
 
 macOS에서는 다음 명령의 연결이 실패해야 한다.
 
-```powershell
-nc -vz 3.35.11.125 9090
+```bash
+for port in 9090 9091 3000; do nc -vz 3.35.11.125 "$port"; done
 ```
 
 확인 후 로컬의 별도 terminal에서 SSH tunnel을 연다. 접속 키 경로는 로컬 OS에
@@ -571,8 +637,28 @@ nc -vz 3.35.11.125 9090
 
 ```powershell
 $sshKey = '<로컬 EC2 접속 키 경로>'
-ssh -N -L 19090:127.0.0.1:9090 -i $sshKey ubuntu@3.35.11.125
+ssh -N `
+  -L 19090:127.0.0.1:9090 `
+  -L 19091:127.0.0.1:9091 `
+  -L 13000:127.0.0.1:3000 `
+  -i $sshKey ubuntu@3.35.11.125
 ```
+
+Prometheus는 Compose network에서 `was:9090/actuator/prometheus`를 1초마다
+수집한다. 로컬 k6는 19091 터널을 통해 결과를 Remote Write하고, Grafana는
+<http://127.0.0.1:13000>에서 로그인 없이 읽기 전용으로 확인한다. 대시보드의
+`Test run`, `Scenario`, `Stage` 변수로 전체 실행, 시나리오와 동시성 단계를 선택한다.
+`Backend resources` 행에서는 Actuator scrape 요청을 제외한 HTTP 상태별 RPS와
+경로별 p95·p99, 실제 OpenAI HTTP 시도 횟수와 p95·p99, JVM heap·CPU·GC pause,
+Hikari connection 획득 지연과 timeout을 함께 확인할 수 있다. OpenAI HTTP 시도
+횟수는 SDK 재시도를 포함하므로 assessment accepted보다 많다면 외부 호출이
+증폭된 것이다. `Answer submission idempotency outcomes` 패널은 동일 요청이 실제
+재처리됐는지, 완료 결과를 재사용했는지 결과별 초당 발생량으로 보여준다.
+`OpenAI token usage per second`는 prompt·completion·total과 그 부분집합인
+cached·reasoning 토큰을 구분한다. `OpenAI failures by reason`은 rate limit,
+timeout, 인증·권한, 4xx·5xx, I/O, 취소, refusal, 빈 응답, 잘못된 구조화 응답을
+구분한다. queue full과 queue timeout은 provider 호출 전 실패이므로 이 패널에는
+포함되지 않는다. 지표 정의와 해석은 `docs/answer-assessment-metrics.md`를 참고한다.
 
 `SPRING_PROFILES_ACTIVE=prod`와 운영 datasource 설정으로 fixture를 만든 뒤 같은
 manifest를 k6에 전달한다. fixture 생성·정리는 반드시 동일한 DB를 사용해야 한다.
@@ -580,12 +666,32 @@ manifest를 k6에 전달한다. fixture 생성·정리는 반드시 동일한 DB
 응답 분류가 자동 재시도의 영향을 받지 않게 한다.
 
 ```powershell
+$gradleWrapper = if ($IsWindows) { './gradlew.bat' } else { './gradlew' }
+$env:SPRING_PROFILES_ACTIVE = 'prod'
+$env:SPRING_AI_OPENAI_MAX_RETRIES = '0'
+$runId = 'aws-' + [DateTimeOffset]::UtcNow.ToString('yyyyMMddTHHmmssZ')
+$resultRoot = "load-tests/results/aws/$runId"
+$manifest = "$resultRoot/fixture-manifest.json"
+$stages = @(10, 100, 200, 300)
+
+& $gradleWrapper loadTestFixtures --no-daemon `
+  "-PloadTestAction=seed" `
+  "-PloadTestRunId=$runId" `
+  "-PloadTestStages=$($stages -join ',')" `
+  "-PloadTestManifest=$manifest"
+```
+
+같은 PowerShell에서 생성된 manifest와 결과 경로를 사용해 k6를 실행한다.
+
+```powershell
 $sshKey = '<로컬 EC2 접속 키 경로>'
 ./load-tests/answer-submission/run-stages.ps1 `
   -BaseUrl http://3.35.11.125 `
   -ManagementUrl http://127.0.0.1:19090 `
-  -Manifest load-tests/results/aws/fixture-manifest.json `
-  -ResultRoot load-tests/results/aws `
+  -PrometheusRemoteWriteUrl http://127.0.0.1:19091/api/v1/write `
+  -Manifest $manifest `
+  -ResultRoot $resultRoot `
+  -Stages $stages `
   -DockerContainer backend-was-1 `
   -SshHost ubuntu@3.35.11.125 `
   -SshIdentityFile $sshKey `
@@ -595,9 +701,19 @@ $sshKey = '<로컬 EC2 접속 키 경로>'
   -ClientMaxRetries 0
 ```
 
+k6 성공·실패와 관계없이 같은 datasource 환경과 manifest로 fixture를 정리한다.
+
+```powershell
+& $gradleWrapper loadTestFixtures --no-daemon `
+  "-PloadTestAction=cleanup" `
+  "-PloadTestManifest=$manifest"
+```
+
 queue 자체의 동작을 먼저 보기 위해 재시도 0회를 기준 실행으로 삼고, 최대 2회
-재시도는 새 fixture와 결과 경로에서 보조 비교로 실행한다. 실행 중 일반 사용자
-요청을 피하고, 종료 후에는 fixture cleanup과
+재시도는 새 fixture와 결과 경로에서 보조 비교로 실행한다. loadtest Compose를 유지한
+상태에서 서로 다른 `Stages`, limiter, 재시도 설정으로 `run-stages.ps1`을 여러 번
+호출할 수 있다. 각 실행은 새 fixture와 결과 경로를 사용한다. 실행 중 일반 사용자
+요청을 피하고, 모든 시나리오 종료 후에는 fixture cleanup과
 `malhaebom.answer.assessment.active=0`,
 `malhaebom.answer.assessment.queue.size=0`,
 `hikaricp.connections.pending=0`을 확인한다. 실제 OpenAI는 완료된 permit을 뒤
@@ -608,11 +724,64 @@ raw 정상 503은 OpenAI 호출 전에 거절되므로 그 자체는 provider �
 `DockerContainer`를 지정하면 단계별 Docker CPU·메모리와 해당 단계의 컨테이너
 로그도 함께 보관된다.
 
-부하 테스트와 fixture cleanup을 마치면 EC2에서 운영 Compose만 사용해 WAS를 다시
-재생성한다. 이 작업은 host의 9090 포트 매핑을 제거한다.
+`PrometheusRemoteWriteUrl`을 지정해도 기존 `summary.json`, `k6-raw.json`과
+Actuator snapshot은 그대로 생성된다. 자동 실행의 k6 지표에는 전체 실행을 나타내는
+`testid`, 설정 항목 이름인 `scenario`, 동시성인 `stage` 태그가 추가된다. Grafana의
+`Test run`, `Scenario`, `Stage` 변수로 세 축을 각각 선택할 수 있다.
+
+부하 테스트와 fixture cleanup을 마치면 EC2에서 운영 Compose만 사용해 서비스를
+재생성한다. `--remove-orphans`가 Prometheus와 Grafana 컨테이너를 제거하고 host의
+9090, 9091, 3000 포트 매핑을 모두 제거한다. Prometheus named volume은 남으므로
+다음 loadtest 실행에서도 최대 14일의 이전 시계열을 조회할 수 있다.
+수동 정리를 빼먹더라도 다음 CI/CD 운영 배포의 `--remove-orphans`가 loadtest 전용
+컨테이너를 제거한다.
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --force-recreate was
+bash load-tests/answer-submission/restore-prod-compose.sh
+```
+
+### 선택 사항: 전체 흐름 자동 실행
+
+수동 절차를 반복해야 할 때 사용할 수 있도록 `invoke-aws-load-test.ps1`도 제공한다.
+이 도구는 loadtest Compose 시작부터 SSH tunnel, readiness 확인, 시나리오별 fixture
+seed·k6·cleanup, 운영 Compose 복구까지 모두 수행한다. 운영 Compose 전환과 복구까지
+자동으로 실행한다는 점을 확인한 경우에만 사용한다.
+
+한 시나리오의 k6 threshold가 실패해도 나머지 시나리오를 계속 실행하고 마지막에
+실패 목록을 반환한다. fixture cleanup이나 기반 환경이 실패하면 추가 실행을 중단하고
+`finally`에서 남은 fixture와 운영 Compose 복구를 시도한다. PowerShell 프로세스 강제
+종료나 로컬 전원 종료처럼 `finally`가 실행되지 않으면 위 수동 cleanup과 복구 절차를
+직접 실행해야 한다.
+
+전체 자동화도 위 공통 `.private` 설정과 `Scenarios`를 사용한다. 각 시나리오는 고유한
+이름과 동시성 단계, 클라이언트 재시도 횟수를 가진다.
+
+```powershell
+Scenarios = @(
+  @{ Name = "baseline-retry0"; Stages = @(10, 100, 200, 300); ClientMaxRetries = 0 }
+  @{ Name = "retry1"; Stages = @(10, 100, 200, 300); ClientMaxRetries = 1 }
+  @{ Name = "retry2"; Stages = @(10, 100, 200, 300); ClientMaxRetries = 2 }
+)
+```
+
+다음 명령은 실제 OpenAI 비용과 운영 환경 전환을 명시적으로 확인하는 스위치가
+없으면 실행되지 않는다.
+
+```powershell
+./load-tests/answer-submission/invoke-aws-load-test.ps1 `
+  -ConfirmLiveOpenAiCost
+```
+
+시작 전에 모든 시나리오와 합산 최대 HTTP 시도 횟수를 출력한다. 예제 구성은 논리
+제출 1,830건, 최대 HTTP 시도 3,660회다. 결과는 시나리오별 폴더에 저장되고 최상위
+`run-plan.json`에는 전체 test-id와 실행 계획이 기록된다.
+
+```text
+load-tests/results/aws/<test-id>/
+├─ run-plan.json
+├─ baseline-retry0/
+├─ retry1/
+└─ retry2/
 ```
 
 ## 결과 보고서 생성

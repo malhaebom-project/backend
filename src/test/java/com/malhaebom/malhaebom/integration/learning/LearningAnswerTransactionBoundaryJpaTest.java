@@ -31,6 +31,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmission;
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionStatus;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
@@ -42,6 +44,7 @@ import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionReposit
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerSubmissionMetricsRecorder;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.AnswerAssessmentService;
 import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
@@ -61,6 +64,7 @@ import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 @Import({
 	JpaAuditingConfiguration.class,
 	LearningAnswerService.class,
+	MicrometerAnswerSubmissionMetricsRecorder.class,
 	AnswerSubmissionTransactionService.class,
 	AnswerAssessmentService.class,
 	LearningAnswerTransactionBoundaryJpaTest.AssessmentTestConfiguration.class
@@ -435,6 +439,11 @@ class LearningAnswerTransactionBoundaryJpaTest {
 
 	@TestConfiguration(proxyBeanMethods = false)
 	static class AssessmentTestConfiguration {
+
+		@Bean
+		SimpleMeterRegistry meterRegistry() {
+			return new SimpleMeterRegistry();
+		}
 
 		@Bean
 		TestAnswerAssessmentGenerator answerAssessmentGenerator() {

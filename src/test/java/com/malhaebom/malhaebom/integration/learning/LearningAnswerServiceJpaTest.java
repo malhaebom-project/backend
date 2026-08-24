@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.persistence.EntityManager;
 
 import com.malhaebom.malhaebom.domain.learning.Answer;
@@ -41,6 +42,7 @@ import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerSubmissionMetricsRecorder;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.AnswerAssessmentService;
 import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
@@ -57,6 +59,8 @@ import com.malhaebom.malhaebom.service.policy.AnswerSubmissionPolicyProperties;
 class LearningAnswerServiceJpaTest {
 
 	private static final String ANSWER_TEXT = "He is running.";
+	private static final String PREPARE_METRIC =
+		"malhaebom.answer.submission.prepare";
 
 	@Autowired
 	private LearningSessionRepository learningSessionRepository;
@@ -72,12 +76,14 @@ class LearningAnswerServiceJpaTest {
 	private EntityManager entityManager;
 
 	private TestAnswerAssessmentGenerator assessmentGenerator;
+	private SimpleMeterRegistry meterRegistry;
 	private AnswerSubmissionTransactionService submissionTransactionService;
 	private LearningAnswerService learningAnswerService;
 
 	@BeforeEach
 	void setUp() {
 		assessmentGenerator = new TestAnswerAssessmentGenerator();
+		meterRegistry = new SimpleMeterRegistry();
 		AnswerAssessmentService assessmentService =
 			new AnswerAssessmentService(assessmentGenerator);
 		Clock clock = Clock.systemUTC();
@@ -90,7 +96,8 @@ class LearningAnswerServiceJpaTest {
 				Duration.ofSeconds(25),
 				Duration.ofSeconds(60)
 			),
-			clock
+			clock,
+			new MicrometerAnswerSubmissionMetricsRecorder(meterRegistry)
 		);
 		learningAnswerService = new LearningAnswerService(
 			learningSessionRepository,
@@ -263,6 +270,8 @@ class LearningAnswerServiceJpaTest {
 		assertEquals(1, assessmentGenerator.callCount);
 		assertEquals(1, answerRepository.count());
 		assertEquals(1, answerSubmissionRepository.count());
+		assertEquals(1.0, prepareCount("new"));
+		assertEquals(1.0, prepareCount("cached"));
 		assertEquals(
 			AnswerSubmissionStatus.COMPLETED,
 			answerSubmissionRepository.findBySpeechAnswer_Id(
@@ -326,6 +335,8 @@ class LearningAnswerServiceJpaTest {
 		assertEquals(2, assessmentGenerator.callCount);
 		assertEquals(1, answerRepository.count());
 		assertEquals(1, answerSubmissionRepository.count());
+		assertEquals(1.0, prepareCount("new"));
+		assertEquals(1.0, prepareCount("retry"));
 	}
 
 	@Test
@@ -379,6 +390,8 @@ class LearningAnswerServiceJpaTest {
 		);
 		assertEquals(0, assessmentGenerator.callCount);
 		assertEquals(0, answerRepository.count());
+		assertEquals(1.0, prepareCount("new"));
+		assertEquals(1.0, prepareCount("processing"));
 	}
 
 	@Test
@@ -414,6 +427,7 @@ class LearningAnswerServiceJpaTest {
 				.orElseThrow()
 				.getStatus()
 		);
+		assertEquals(1.0, prepareCount("reclaimed"));
 	}
 
 	@Test
@@ -623,6 +637,13 @@ class LearningAnswerServiceJpaTest {
 			}
 			throw exception;
 		}
+	}
+
+	private double prepareCount(String result) {
+		return meterRegistry.get(PREPARE_METRIC)
+			.tag("result", result)
+			.counter()
+			.count();
 	}
 
 	private SpeechAnswer saveCompletedSpeechAnswer(LearningSession session) {

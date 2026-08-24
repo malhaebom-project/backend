@@ -15,6 +15,9 @@ param(
     [int]$ClientMaxRetries = 0,
     [int]$ProbeP95FloorMillis = 1000,
     [int]$RecoveryTimeoutSeconds = 300,
+    [string]$PrometheusRemoteWriteUrl = "",
+    [string]$TestId = "",
+    [string]$Scenario = "default",
     [string]$DockerContainer = "",
     [string]$SshHost = "",
     [string]$SshIdentityFile = ""
@@ -31,6 +34,34 @@ $powerShellExecutable = (Get-Process -Id $PID).Path
 $manifestPath = [System.IO.Path]::GetFullPath($Manifest)
 $resultRootPath = [System.IO.Path]::GetFullPath($ResultRoot)
 $failedStages = @()
+if ($Stages.Count -eq 0 `
+    -or @($Stages | Where-Object { $_ -lt 1 -or $_ -gt 10000 }).Count -gt 0) {
+    throw "Stages must contain values between 1 and 10000."
+}
+if (@($Stages | Select-Object -Unique).Count -ne $Stages.Count) {
+    throw "Stages must not contain duplicates."
+}
+$manifestDocument = Get-Content -LiteralPath $manifestPath -Raw `
+    | ConvertFrom-Json
+$manifestRunId = [string]$manifestDocument.runId
+if ([string]::IsNullOrWhiteSpace($manifestRunId)) {
+    throw "Manifest runId is required for k6 metric correlation."
+}
+$metricTestId = if ([string]::IsNullOrWhiteSpace($TestId)) {
+    $manifestRunId
+} else {
+    $TestId
+}
+if ($Scenario -notmatch '^[a-z0-9][a-z0-9-]{0,28}$') {
+    throw "Scenario must use 1-29 lowercase letters, numbers, or hyphens."
+}
+if ($PrometheusRemoteWriteUrl) {
+    $remoteWriteUri = [uri]$PrometheusRemoteWriteUrl
+    if (-not $remoteWriteUri.IsAbsoluteUri `
+        -or $remoteWriteUri.Scheme -notin @("http", "https")) {
+        throw "PrometheusRemoteWriteUrl must be an absolute HTTP(S) URL."
+    }
+}
 
 function K6-MetricValue($summary, [string]$name, [string]$field) {
     $metric = $summary.metrics.$name
@@ -50,6 +81,24 @@ function Actuator-GaugeValue([string]$endpoint, [bool]$optional = $false) {
         }
         throw
     }
+}
+
+function Start-ArgumentListProcess(
+    [string]$executable,
+    [string[]]$arguments
+) {
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $executable
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    foreach ($argument in $arguments) {
+        [void]$startInfo.ArgumentList.Add([string]$argument)
+    }
+    $process = [System.Diagnostics.Process]::Start($startInfo)
+    if ($null -eq $process) {
+        throw "Failed to start metrics collector process."
+    }
+    return $process
 }
 
 foreach ($stage in $Stages) {
@@ -93,15 +142,8 @@ foreach ($stage in $Stages) {
     if ($SshIdentityFile) {
         $collectorArguments += @("-SshIdentityFile", $SshIdentityFile)
     }
-    $collectorProcessParameters = @{
-        FilePath = $powerShellExecutable
-        ArgumentList = $collectorArguments
-        PassThru = $true
-    }
-    if ($IsWindows) {
-        $collectorProcessParameters.WindowStyle = "Hidden"
-    }
-    $collector = Start-Process @collectorProcessParameters
+    $collector = Start-ArgumentListProcess $powerShellExecutable `
+        $collectorArguments
 
     $stageExitCode = 0
     $probeP95 = $null
@@ -126,12 +168,36 @@ foreach ($stage in $Stages) {
             "-e", ("ASSESSMENT_MAX_QUEUE_WAIT_SECONDS=" `
                 + $AssessmentMaxQueueWaitSeconds),
             "-e", "CLIENT_MAX_RETRIES=$ClientMaxRetries",
+            "-e", "SCENARIO_NAME=$Scenario",
             "-e", ("SUMMARY_PATH=" + $summaryPath.Replace('\', '/')),
-            "--out", ("json=" + $rawPath),
-            $k6Script
+            "--tag", "testid=$metricTestId",
+            "--tag", "scenario=$Scenario",
+            "--tag", "stage=$stage",
+            "--out", ("json=" + $rawPath)
         )
-        & k6 @k6Arguments
-        $stageExitCode = $LASTEXITCODE
+        if ($PrometheusRemoteWriteUrl) {
+            $k6Arguments += @("--out", "experimental-prometheus-rw")
+        }
+        $k6Arguments += $k6Script
+
+        $previousRemoteWriteUrl = $env:K6_PROMETHEUS_RW_SERVER_URL
+        $previousTrendStats = $env:K6_PROMETHEUS_RW_TREND_STATS
+        $previousStaleMarkers = $env:K6_PROMETHEUS_RW_STALE_MARKERS
+        try {
+            if ($PrometheusRemoteWriteUrl) {
+                $env:K6_PROMETHEUS_RW_SERVER_URL =
+                    $PrometheusRemoteWriteUrl
+                $env:K6_PROMETHEUS_RW_TREND_STATS =
+                    "p(95),p(99),avg,max"
+                $env:K6_PROMETHEUS_RW_STALE_MARKERS = "true"
+            }
+            & k6 @k6Arguments
+            $stageExitCode = $LASTEXITCODE
+        } finally {
+            $env:K6_PROMETHEUS_RW_SERVER_URL = $previousRemoteWriteUrl
+            $env:K6_PROMETHEUS_RW_TREND_STATS = $previousTrendStats
+            $env:K6_PROMETHEUS_RW_STALE_MARKERS = $previousStaleMarkers
+        }
 
         if (Test-Path -LiteralPath $summaryPath) {
             $summary = Get-Content -LiteralPath $summaryPath -Raw `
@@ -199,7 +265,11 @@ foreach ($stage in $Stages) {
     Set-Content -LiteralPath (Join-Path $stageDirectory "k6-exit-code.txt") `
         -Value $stageExitCode -Encoding ascii
     [pscustomobject]@{
+        testId = $metricTestId
+        fixtureRunId = $manifestRunId
+        scenario = $Scenario
         stage = $stage
+        prometheusRemoteWriteEnabled = [bool]$PrometheusRemoteWriteUrl
         assessmentLimit = $AssessmentLimit
         assessmentQueueCapacity = $AssessmentQueueCapacity
         assessmentMaxQueueWaitSeconds = $AssessmentMaxQueueWaitSeconds

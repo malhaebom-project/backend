@@ -7,16 +7,20 @@ import java.util.concurrent.CompletionStage;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openai.client.OpenAIClientAsync;
+import com.openai.errors.OpenAIInvalidDataException;
 import com.openai.models.ReasoningEffort;
 import com.openai.models.ResponseFormatJsonSchema;
 import com.openai.models.chat.completions.ChatCompletion;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
+import com.openai.models.completions.CompletionUsage;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.stereotype.Component;
 
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
+import com.malhaebom.malhaebom.infra.observability.OpenAiAnswerAssessmentMetricsRecorder;
+import com.malhaebom.malhaebom.infra.observability.OpenAiAnswerAssessmentMetricsRecorder.FailureReason;
 import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 
 @Component
@@ -293,17 +297,20 @@ public class OpenAiAnswerAssessmentGenerator
 	private final OpenAIClientAsync openAiClient;
 	private final OpenAiAnswerAssessmentProperties properties;
 	private final AnswerAssessmentConcurrencyLimiter concurrencyLimiter;
+	private final OpenAiAnswerAssessmentMetricsRecorder metricsRecorder;
 	private final BeanOutputConverter<AnswerAssessment> outputConverter;
 	private final ResponseFormatJsonSchema responseFormat;
 
 	public OpenAiAnswerAssessmentGenerator(
 		OpenAIClientAsync openAiClient,
 		OpenAiAnswerAssessmentProperties properties,
-		AnswerAssessmentConcurrencyLimiter concurrencyLimiter
+		AnswerAssessmentConcurrencyLimiter concurrencyLimiter,
+		OpenAiAnswerAssessmentMetricsRecorder metricsRecorder
 	) {
 		this.openAiClient = openAiClient;
 		this.properties = properties;
 		this.concurrencyLimiter = concurrencyLimiter;
+		this.metricsRecorder = metricsRecorder;
 		this.outputConverter = new BeanOutputConverter<>(AnswerAssessment.class);
 		this.responseFormat = createResponseFormat(
 			outputConverter.getJsonSchema()
@@ -324,9 +331,13 @@ public class OpenAiAnswerAssessmentGenerator
 		CompletableFuture<ChatCompletion> request = openAiClient.chat()
 			.completions()
 			.create(createParams(input));
-		CompletionStage<AnswerAssessment> result = request.thenApply(
-			this::extractAssessment
-		);
+		CompletionStage<AnswerAssessment> result = request
+			.whenComplete((completion, exception) -> {
+				if (exception != null) {
+					metricsRecorder.recordFailure(exception);
+				}
+			})
+			.thenApply(this::extractAssessment);
 		return new AnswerAssessmentTask(
 			result,
 			() -> request.cancel(true)
@@ -410,17 +421,56 @@ public class OpenAiAnswerAssessmentGenerator
 	private AnswerAssessment extractAssessment(
 		ChatCompletion completion
 	) {
+		try {
+			return extractValidAssessment(completion);
+		} catch (OpenAIInvalidDataException exception) {
+			metricsRecorder.recordFailure(FailureReason.INVALID_RESPONSE);
+			throw exception;
+		}
+	}
+
+	private AnswerAssessment extractValidAssessment(
+		ChatCompletion completion
+	) {
+		completion.usage().ifPresent(this::recordTokenUsage);
 		if (completion.choices().isEmpty()) {
+			metricsRecorder.recordFailure(FailureReason.EMPTY_RESPONSE);
 			throw new IllegalStateException("OpenAI 채점 응답이 비어 있습니다.");
 		}
 
 		var message = completion.choices().getFirst().message();
 		if (message.refusal().isPresent()) {
+			metricsRecorder.recordFailure(FailureReason.REFUSAL);
 			throw new IllegalStateException("OpenAI가 답변 채점을 거부했습니다.");
 		}
-		String content = message.content().orElseThrow(
-			() -> new IllegalStateException("OpenAI 채점 결과가 비어 있습니다.")
-		);
-		return outputConverter.convert(content);
+		if (message.content().isEmpty()) {
+			metricsRecorder.recordFailure(FailureReason.EMPTY_RESPONSE);
+			throw new IllegalStateException("OpenAI 채점 결과가 비어 있습니다.");
+		}
+		try {
+			return outputConverter.convert(message.content().orElseThrow());
+		} catch (OpenAIInvalidDataException exception) {
+			throw exception;
+		} catch (RuntimeException exception) {
+			metricsRecorder.recordFailure(FailureReason.INVALID_RESPONSE);
+			throw exception;
+		}
 	}
+
+	private void recordTokenUsage(CompletionUsage usage) {
+		long cachedTokens = usage.promptTokensDetails()
+			.flatMap(CompletionUsage.PromptTokensDetails::cachedTokens)
+			.orElse(0L);
+		long reasoningTokens = usage.completionTokensDetails()
+			.flatMap(CompletionUsage.CompletionTokensDetails::reasoningTokens)
+			.orElse(0L);
+		metricsRecorder.recordTokenUsage(
+			usage.promptTokens(),
+			usage.completionTokens(),
+			usage.totalTokens(),
+			cachedTokens,
+			reasoningTokens
+		);
+	}
+
 }
