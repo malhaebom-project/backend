@@ -24,6 +24,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.malhaebom.malhaebom.domain.learning.AnswerResult;
+import com.malhaebom.malhaebom.domain.learning.Difficulty;
+import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.infra.ai.OpenAiAnswerAssessmentGenerator;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
@@ -207,6 +209,8 @@ class OpenAiAnswerAssessmentGeneratorLiveTest {
 
 	private record LiveCase(
 		String name,
+		Difficulty difficulty,
+		QuestionType questionType,
 		String questionText,
 		String questionTextKo,
 		String modelAnswer,
@@ -225,6 +229,10 @@ class OpenAiAnswerAssessmentGeneratorLiveTest {
 	) {
 
 		public LiveCase {
+			difficulty = difficulty == null ? Difficulty.EASY : difficulty;
+			questionType = questionType == null
+				? QuestionType.SHORT_ANSWER
+				: questionType;
 			acceptedAnswers = acceptedAnswers == null
 				? List.of()
 				: List.copyOf(acceptedAnswers);
@@ -232,6 +240,8 @@ class OpenAiAnswerAssessmentGeneratorLiveTest {
 
 		AnswerAssessmentInput toInput() {
 			return new AnswerAssessmentInput(
+				difficulty,
+				questionType,
 				questionText,
 				questionTextKo,
 				"",

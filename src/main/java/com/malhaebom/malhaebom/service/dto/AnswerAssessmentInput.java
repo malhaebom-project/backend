@@ -5,10 +5,14 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmission;
+import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.Question;
+import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 
 public record AnswerAssessmentInput(
+	Difficulty difficulty,
+	QuestionType questionType,
 	String questionText,
 	String questionTextKo,
 	String gradingContext,
@@ -18,6 +22,12 @@ public record AnswerAssessmentInput(
 ) {
 
 	public AnswerAssessmentInput {
+		if (difficulty == null) {
+			throw new IllegalArgumentException("난이도는 null일 수 없습니다.");
+		}
+		if (questionType == null) {
+			throw new IllegalArgumentException("문제 유형은 null일 수 없습니다.");
+		}
 		validateText(questionText, "영문 문제");
 		validateText(questionTextKo, "한글 문제");
 		if (gradingContext == null) {
@@ -45,6 +55,8 @@ public record AnswerAssessmentInput(
 		Question question = submission.getSessionQuestion().getQuestion();
 		SpeechAnswer speechAnswer = submission.getSpeechAnswer();
 		return new AnswerAssessmentInput(
+			question.getDifficulty(),
+			question.getType(),
 			question.getQuestionText(),
 			question.getQuestionTextKo(),
 			question.getGradingContext(),

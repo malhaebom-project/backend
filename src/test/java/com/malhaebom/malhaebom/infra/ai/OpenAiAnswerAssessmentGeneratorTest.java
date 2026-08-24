@@ -66,10 +66,53 @@ class OpenAiAnswerAssessmentGeneratorTest {
 			params.maxCompletionTokens().orElseThrow()
 		);
 		assertTrue(params.responseFormat().isPresent());
+		assertTrue(params.toString().contains("난이도: EASY"));
+		assertTrue(params.toString().contains("문제 유형: PICTURE_DESCRIPTION"));
 		assertTrue(params.toString().contains(
-			"채점 참고 사항: 소년이 공원에서 달리고 있다."
+			"채점 참고 상황:\n소년이 공원에서 달리고 있다."
 		));
 		assertTrue(params.toString().contains("학습자 답변: He is running."));
+	}
+
+	@Test
+	void 난이도에_맞는_채점_기준만_system_message에_포함한다() {
+		AsyncClientFixture easyFixture = asyncClientFixture();
+		generator(easyFixture.client()).generateAsync(
+			assessmentInput(Difficulty.EASY, "Tiger")
+		);
+		String easyParams = capturedParams(easyFixture.completions()).toString();
+
+		AsyncClientFixture normalFixture = asyncClientFixture();
+		generator(normalFixture.client()).generateAsync(
+			assessmentInput(Difficulty.NORMAL, "Tiger")
+		);
+		String normalParams = capturedParams(
+			normalFixture.completions()
+		).toString();
+
+		AsyncClientFixture hardFixture = asyncClientFixture();
+		generator(hardFixture.client()).generateAsync(
+			assessmentInput(Difficulty.HARD, "Tiger")
+		);
+		String hardParams = capturedParams(hardFixture.completions()).toString();
+
+		assertTrue(easyParams.contains("[현재 난이도: EASY]"));
+		assertTrue(easyParams.contains("한 단어, 짧은 구, Yes/No도"));
+		assertTrue(easyParams.contains(
+			"가장 낮은 상한을 적용"
+		));
+		assertTrue(easyParams.contains(
+			"CORRECT: meaningScore가 40점 이상이고 총점이 80점 이상"
+		));
+		assertFalse(easyParams.contains("[현재 난이도: HARD]"));
+		assertTrue(normalParams.contains("[현재 난이도: NORMAL]"));
+		assertTrue(normalParams.contains("expressionScore 상한: 12점"));
+		assertTrue(normalParams.contains("grammarScore 상한: 8점"));
+		assertTrue(normalParams.contains("34점입니다"));
+		assertTrue(hardParams.contains("[현재 난이도: HARD]"));
+		assertTrue(hardParams.contains("expressionScore 상한: 8점"));
+		assertTrue(hardParams.contains("grammarScore 상한: 5점"));
+		assertFalse(hardParams.contains("[현재 난이도: EASY]"));
 	}
 
 	@Test
@@ -276,8 +319,17 @@ class OpenAiAnswerAssessmentGeneratorTest {
 	}
 
 	private AnswerAssessmentInput assessmentInput(String answerText) {
-		Question question = createQuestion();
+		return assessmentInput(Difficulty.EASY, answerText);
+	}
+
+	private AnswerAssessmentInput assessmentInput(
+		Difficulty difficulty,
+		String answerText
+	) {
+		Question question = createQuestion(difficulty);
 		return new AnswerAssessmentInput(
+			question.getDifficulty(),
+			question.getType(),
 			question.getQuestionText(),
 			question.getQuestionTextKo(),
 			question.getGradingContext(),
@@ -287,10 +339,10 @@ class OpenAiAnswerAssessmentGeneratorTest {
 		);
 	}
 
-	private Question createQuestion() {
+	private Question createQuestion(Difficulty difficulty) {
 		return Question.create(
 			LearningTopic.DAILY_LIFE,
-			Difficulty.EASY,
+			difficulty,
 			QuestionType.PICTURE_DESCRIPTION,
 			"What is the boy doing?",
 			"소년은 무엇을 하고 있나요?",
