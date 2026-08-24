@@ -636,6 +636,11 @@ Prometheus는 Compose network에서 `was:9090/actuator/prometheus`를 1초마다
 수집한다. 로컬 k6는 19091 터널을 통해 결과를 Remote Write하고, Grafana는
 <http://127.0.0.1:13000>에서 로그인 없이 읽기 전용으로 확인한다. 대시보드의
 `Test run`, `Scenario`, `Stage` 변수로 전체 실행, 시나리오와 동시성 단계를 선택한다.
+`Backend resources` 행에서는 Actuator scrape 요청을 제외한 HTTP 상태별 RPS와
+경로별 p95·p99, 실제 OpenAI HTTP 시도 횟수와 p95·p99, JVM heap·CPU·GC pause,
+Hikari connection 획득 지연과 timeout을 함께 확인할 수 있다. OpenAI HTTP 시도
+횟수는 SDK 재시도를 포함하므로 assessment accepted보다 많다면 외부 호출이
+증폭된 것이다.
 
 `SPRING_PROFILES_ACTIVE=prod`와 운영 datasource 설정으로 fixture를 만든 뒤 같은
 manifest를 k6에 전달한다. fixture 생성·정리는 반드시 동일한 DB를 사용해야 한다.
