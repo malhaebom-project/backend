@@ -66,6 +66,9 @@ class OpenAiAnswerAssessmentGeneratorTest {
 			params.maxCompletionTokens().orElseThrow()
 		);
 		assertTrue(params.responseFormat().isPresent());
+		assertTrue(params.toString().contains(
+			"채점 참고 사항: 소년이 공원에서 달리고 있다."
+		));
 		assertTrue(params.toString().contains("학습자 답변: He is running."));
 	}
 
@@ -277,6 +280,7 @@ class OpenAiAnswerAssessmentGeneratorTest {
 		return new AnswerAssessmentInput(
 			question.getQuestionText(),
 			question.getQuestionTextKo(),
+			question.getGradingContext(),
 			question.getModelAnswer(),
 			question.getAcceptedAnswers(),
 			answerText
@@ -291,6 +295,7 @@ class OpenAiAnswerAssessmentGeneratorTest {
 			"What is the boy doing?",
 			"소년은 무엇을 하고 있나요?",
 			null,
+			"소년이 공원에서 달리고 있다.",
 			"The boy is running.",
 			Set.of("He is running."),
 			null,

@@ -185,6 +185,7 @@ class LearningSessionServiceJpaTest {
 			questionText,
 			"질문",
 			null,
+			"",
 			"answer",
 			Set.of("accepted answer"),
 			null,

@@ -44,6 +44,17 @@ public class OpenAiAnswerAssessmentGenerator
 		어순, 시제, 수 일치, 주어·동사 누락 등 발화 내용에서 확인 가능한
 		오류는 그대로 평가하세요.
 
+		"채점 참고 상황"은 문제에 사용된 그림이나 문제 상황에서 사실로
+		간주할 수 있는 정보를 설명합니다. 학습자의 답변이 모범 답안이나
+		허용 답안과 정확히 일치하지 않더라도 채점 참고 상황과 일치하고
+		질문에 적절하게 답했다면 올바른 의미로 인정하세요.
+		채점 참고 상황에 포함된 모든 정보를 학습자가 말해야 하는 것은
+		아닙니다. 반드시 질문에서 실제로 요구한 내용만 평가하세요.
+		채점 참고 상황에 여러 사물, 인물, 행동 또는 특징이 있더라도
+		질문과 관계없는 정보를 언급하지 않았다는 이유로 감점하지 마세요.
+		채점 참고 상황에 없는 사실을 임의로 추측하거나 만들어서
+		평가 기준으로 사용하지 마세요.
+
 		recognized는 답변이 비어 있거나, 이해할 수 없거나, 문제와 전혀
 		관련이 없을 때만 false입니다. false이면 모든 세부 점수는 0점으로
 		반환하세요.
@@ -65,6 +76,7 @@ public class OpenAiAnswerAssessmentGenerator
 		<learning_data>
 		영어 문제: %s
 		한국어 문제: %s
+		채점 참고 사항: %s
 		모범 답안: %s
 		허용 답안: %s
 		학습자 답변: %s
@@ -170,6 +182,7 @@ public class OpenAiAnswerAssessmentGenerator
 		return USER_PROMPT_TEMPLATE.formatted(
 			input.questionText(),
 			input.questionTextKo(),
+			input.gradingContext(),
 			input.modelAnswer(),
 			String.join(" | ", input.acceptedAnswers()),
 			input.answerText()

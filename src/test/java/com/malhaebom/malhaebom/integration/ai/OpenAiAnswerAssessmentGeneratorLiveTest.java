@@ -234,6 +234,7 @@ class OpenAiAnswerAssessmentGeneratorLiveTest {
 			return new AnswerAssessmentInput(
 				questionText,
 				questionTextKo,
+				"",
 				modelAnswer,
 				new LinkedHashSet<>(acceptedAnswers),
 				answerText

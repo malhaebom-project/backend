@@ -27,6 +27,9 @@ public record AdminQuestionRequest(
 	@Size(max = 2048)
 	String imageUrl,
 
+	@Size(max = 2000)
+	String gradingContext,
+
 	@NotBlank
 	@Size(max = 1000)
 	String modelAnswer,
@@ -50,6 +53,7 @@ public record AdminQuestionRequest(
 			questionText,
 			questionTextKo,
 			imageUrl,
+			gradingContext,
 			modelAnswer,
 			acceptedAnswers,
 			hintText

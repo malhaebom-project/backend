@@ -142,6 +142,7 @@ class LearningSessionTest {
 			questionText,
 			questionTextKo,
 			null,
+			"",
 			"answer",
 			Set.of("accepted answer"),
 			null,

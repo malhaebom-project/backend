@@ -97,6 +97,8 @@ class AdminQuestionControllerJpaTest {
 			))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.questionId").value(question.getId()))
+			.andExpect(jsonPath("$.data.gradingContext")
+				.value("소년이 달리고 있다."))
 			.andExpect(jsonPath("$.data.acceptedAnswers", containsInAnyOrder(
 				"He is running.",
 				"The boy is running."
@@ -136,6 +138,7 @@ class AdminQuestionControllerJpaTest {
 			questionText,
 			"한글 문제",
 			null,
+			"소년이 달리고 있다.",
 			acceptedAnswers.iterator().next(),
 			acceptedAnswers,
 			null,

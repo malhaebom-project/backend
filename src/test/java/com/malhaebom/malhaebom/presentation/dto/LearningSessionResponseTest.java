@@ -53,6 +53,7 @@ class LearningSessionResponseTest {
 			"What is this?",
 			"이것은 무엇인가요?",
 			null,
+			"",
 			"answer",
 			Set.of("answer"),
 			null,

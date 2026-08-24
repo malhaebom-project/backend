@@ -664,6 +664,7 @@ class LearningAnswerServiceJpaTest {
 			questionText,
 			"무엇을 하고 있나요?",
 			null,
+			"",
 			"The child is running.",
 			Set.of("The child is running."),
 			null,

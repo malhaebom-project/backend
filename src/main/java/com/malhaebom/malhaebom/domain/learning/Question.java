@@ -54,6 +54,9 @@ public class Question extends BaseEntity {
 
 	private String imageUrl;
 
+	@Column(length = 2000)
+	private String gradingContext;
+
 	@Column(nullable = false, length = 1000)
 	private String modelAnswer;
 
@@ -81,6 +84,7 @@ public class Question extends BaseEntity {
 		String questionText,
 		String questionTextKo,
 		String imageUrl,
+		String gradingContext,
 		String modelAnswer,
 		Set<String> acceptedAnswers,
 		String hintText,
@@ -102,6 +106,7 @@ public class Question extends BaseEntity {
 		question.questionText = questionText;
 		question.questionTextKo = questionTextKo;
 		question.imageUrl = imageUrl;
+		question.gradingContext = normalizeOptionalText(gradingContext);
 		question.modelAnswer = modelAnswer;
 		question.acceptedAnswers.addAll(acceptedAnswers);
 		question.hintText = hintText;
@@ -117,6 +122,7 @@ public class Question extends BaseEntity {
 		String questionText,
 		String questionTextKo,
 		String imageUrl,
+		String gradingContext,
 		String modelAnswer,
 		Set<String> acceptedAnswers,
 		String hintText
@@ -139,6 +145,7 @@ public class Question extends BaseEntity {
 		this.questionText = questionText;
 		this.questionTextKo = questionTextKo;
 		this.imageUrl = imageUrl;
+		this.gradingContext = normalizeOptionalText(gradingContext);
 		this.modelAnswer = modelAnswer;
 		this.acceptedAnswers.clear();
 		this.acceptedAnswers.addAll(acceptedAnswers);
@@ -161,6 +168,10 @@ public class Question extends BaseEntity {
 
 	public Set<String> getAcceptedAnswers() {
 		return Collections.unmodifiableSet(acceptedAnswers);
+	}
+
+	public String getGradingContext() {
+		return gradingContext == null ? "" : gradingContext;
 	}
 
 	public boolean matchesAnswer(String answerText) {
@@ -238,5 +249,9 @@ public class Question extends BaseEntity {
 			.toLowerCase(Locale.ENGLISH) // 소문자로 변환
 			.replaceAll("\\s+", " ") // 연속 공백 하나로 합치기
 			.replaceAll("[.!?]+$", ""); // 문장 끝의 ., ?, ! 제거
+	}
+
+	private static String normalizeOptionalText(String text) {
+		return text == null || text.isBlank() ? "" : text.strip();
 	}
 }
