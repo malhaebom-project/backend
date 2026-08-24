@@ -540,8 +540,19 @@ OSIV 비활성화로 lazy loading에 의존하던 조회 API가 영향을 받지
 ## AWS 실행
 
 아래 PowerShell 스크립트와 k6는 로컬 Windows 또는 macOS에서 실행한다. EC2는
-Linux여도 되며 PowerShell이 필요하지 않다. Actuator 관리 포트는 EC2
-loopback에만 공개된다. 먼저 외부에서 9090 포트가 닫혀 있는지 확인한다.
+Linux여도 되며 PowerShell이 필요하지 않다. 평상시 운영 Compose는 Actuator 관리
+포트를 host에 공개하지 않는다. 부하 테스트를 시작하기 전에 EC2에서 loadtest
+override를 붙여 WAS를 재생성한다.
+
+```bash
+docker compose \
+  -f docker-compose.prod.yml \
+  -f docker-compose.loadtest.yml \
+  up -d --force-recreate was
+```
+
+이때 관리 포트는 EC2 loopback에만 공개된다. 외부에서는 여전히 닫혀 있어야 하므로
+먼저 9090 포트에 직접 연결할 수 없는지 확인한다.
 
 Windows에서는 `TcpTestSucceeded`가 `False`인지 확인한다.
 
@@ -596,6 +607,13 @@ queue 자체의 동작을 먼저 보기 위해 재시도 0회를 기준 실행�
 raw 정상 503은 OpenAI 호출 전에 거절되므로 그 자체는 provider 과금 호출이 아니다.
 `DockerContainer`를 지정하면 단계별 Docker CPU·메모리와 해당 단계의 컨테이너
 로그도 함께 보관된다.
+
+부하 테스트와 fixture cleanup을 마치면 EC2에서 운영 Compose만 사용해 WAS를 다시
+재생성한다. 이 작업은 host의 9090 포트 매핑을 제거한다.
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --force-recreate was
+```
 
 ## 결과 보고서 생성
 
