@@ -1,4 +1,4 @@
-package com.malhaebom.malhaebom.service.dto;
+package com.malhaebom.malhaebom.domain.learning.repository.projection;
 
 import java.time.LocalDateTime;
 

@@ -10,7 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import com.malhaebom.malhaebom.domain.learning.Answer;
 import com.malhaebom.malhaebom.domain.learning.AnswerResult;
-import com.malhaebom.malhaebom.service.dto.WrongAnswerProjection;
+import com.malhaebom.malhaebom.domain.learning.repository.projection.WrongAnswerProjection;
 
 public interface AnswerRepository extends JpaRepository<Answer, Long> {
 

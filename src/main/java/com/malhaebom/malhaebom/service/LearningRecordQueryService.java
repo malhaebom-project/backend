@@ -4,8 +4,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -20,20 +18,19 @@ import com.malhaebom.malhaebom.domain.learning.LearningSessionStatus;
 import com.malhaebom.malhaebom.domain.learning.AnswerResult;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
-import com.malhaebom.malhaebom.global.exception.ApiException;
-import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.domain.learning.repository.projection.ChildStatisticsProjection;
+import com.malhaebom.malhaebom.domain.learning.repository.projection.LearningHistoryProjection;
+import com.malhaebom.malhaebom.domain.learning.repository.projection.LearningSessionPeriodProjection;
+import com.malhaebom.malhaebom.domain.learning.repository.projection.TopicStatisticsProjection;
+import com.malhaebom.malhaebom.domain.learning.repository.projection.WrongAnswerProjection;
+import com.malhaebom.malhaebom.global.time.LearningTime;
 import com.malhaebom.malhaebom.infra.storage.image.QuestionImageUrlResolver;
 import com.malhaebom.malhaebom.service.dto.ChildStatistics;
-import com.malhaebom.malhaebom.service.dto.ChildStatisticsProjection;
 import com.malhaebom.malhaebom.service.dto.LearningHistory;
 import com.malhaebom.malhaebom.service.dto.LearningHistoryItem;
-import com.malhaebom.malhaebom.service.dto.LearningHistoryProjection;
-import com.malhaebom.malhaebom.service.dto.LearningSessionPeriodProjection;
 import com.malhaebom.malhaebom.service.dto.LearningStatistics;
 import com.malhaebom.malhaebom.service.dto.TopicStatistics;
-import com.malhaebom.malhaebom.service.dto.TopicStatisticsProjection;
 import com.malhaebom.malhaebom.service.dto.WrongAnswer;
-import com.malhaebom.malhaebom.service.dto.WrongAnswerProjection;
 
 import lombok.RequiredArgsConstructor;
 
@@ -41,20 +38,12 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class LearningRecordQueryService {
 
-	private static final int MAX_PAGE_SIZE = 50;
 	private static final int RECENT_WRONG_ANSWER_LIMIT = 10;
 	private static final List<AnswerResult> WRONG_ANSWER_RESULTS = List.of(
 		AnswerResult.PARTIALLY_CORRECT,
 		AnswerResult.INCORRECT,
 		AnswerResult.UNRECOGNIZED
 	);
-	private static final ZoneId STUDY_ZONE = ZoneId.of("Asia/Seoul");
-	private static final ZoneId STORAGE_ZONE = ZoneOffset.UTC;
-	private static final LocalDateTime DEFAULT_START_AT =
-		toUtcStartOfDay(LocalDate.of(1970, 1, 1));
-	private static final LocalDateTime DEFAULT_END_AT =
-		toUtcStartOfDay(LocalDate.of(9999, 1, 1));
-
 	private final ChildProfileService childProfileService;
 	private final LearningSessionRepository learningSessionRepository;
 	private final AnswerRepository answerRepository;
@@ -67,18 +56,11 @@ public class LearningRecordQueryService {
 		Long childId,
 		int page,
 		int size,
-		LocalDate startDate,
-		LocalDate endDate
+		LocalDateTime startAt,
+		LocalDateTime endAt
 	) {
-		validateRequest(page, size, startDate, endDate);
 		childProfileService.getOwnedActive(userId, childId);
 
-		LocalDateTime startAt = startDate == null
-			? DEFAULT_START_AT
-			: toUtcStartOfDay(startDate);
-		LocalDateTime endAt = endDate == null
-			? DEFAULT_END_AT
-			: toUtcStartOfDay(endDate.plusDays(1));
 		Page<LearningHistoryProjection> history =
 			learningSessionRepository.findLearningHistory(
 				childId,
@@ -221,11 +203,11 @@ public class LearningRecordQueryService {
 		Set<LocalDate> studyDates = new HashSet<>();
 		for (LearningSessionPeriodProjection period : periods) {
 			if (period.getCompletedAt() != null) {
-				studyDates.add(toStudyDate(period.getCompletedAt()));
+				studyDates.add(LearningTime.toStudyDate(period.getCompletedAt()));
 			}
 		}
 
-		LocalDate today = LocalDate.now(clock.withZone(STUDY_ZONE));
+		LocalDate today = LearningTime.currentStudyDate(clock);
 		LocalDate cursor = studyDates.contains(today)
 			? today
 			: today.minusDays(1);
@@ -241,18 +223,6 @@ public class LearningRecordQueryService {
 		return consecutiveDays;
 	}
 
-	private static LocalDateTime toUtcStartOfDay(LocalDate date) {
-		return date.atStartOfDay(STUDY_ZONE)
-			.withZoneSameInstant(STORAGE_ZONE)
-			.toLocalDateTime();
-	}
-
-	private static LocalDate toStudyDate(LocalDateTime storedAt) {
-		return storedAt.atZone(STORAGE_ZONE)
-			.withZoneSameInstant(STUDY_ZONE)
-			.toLocalDate();
-	}
-
 	private double calculateCorrectRate(long correctCount, long questionCount) {
 		if (questionCount == 0) {
 			return 0.0;
@@ -264,35 +234,7 @@ public class LearningRecordQueryService {
 		LocalDateTime startedAt,
 		LocalDateTime completedAt
 	) {
-		if (startedAt == null || completedAt == null) {
-			return 0L;
-		}
-		return Math.max(0L, Duration.between(startedAt, completedAt).getSeconds());
+		return Duration.between(startedAt, completedAt).getSeconds();
 	}
 
-	private void validateRequest(
-		int page,
-		int size,
-		LocalDate startDate,
-		LocalDate endDate
-	) {
-		if (page < 0) {
-			throw new ApiException(
-				ErrorCode.INVALID_REQUEST,
-				"페이지 번호는 0 이상이어야 합니다."
-			);
-		}
-		if (size < 1 || size > MAX_PAGE_SIZE) {
-			throw new ApiException(
-				ErrorCode.INVALID_REQUEST,
-				"페이지 크기는 1 이상 50 이하여야 합니다."
-			);
-		}
-		if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-			throw new ApiException(
-				ErrorCode.INVALID_REQUEST,
-				"시작일은 종료일보다 늦을 수 없습니다."
-			);
-		}
-	}
 }

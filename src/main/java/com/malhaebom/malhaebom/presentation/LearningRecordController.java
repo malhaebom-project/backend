@@ -1,23 +1,23 @@
 package com.malhaebom.malhaebom.presentation;
 
-import java.time.LocalDate;
 import java.util.List;
 
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
+import com.malhaebom.malhaebom.presentation.dto.LearningHistoryRequest;
 import com.malhaebom.malhaebom.presentation.dto.LearningHistoryResponse;
 import com.malhaebom.malhaebom.presentation.dto.LearningStatisticsResponse;
 import com.malhaebom.malhaebom.presentation.dto.WrongAnswerResponse;
 import com.malhaebom.malhaebom.service.LearningRecordQueryService;
 import com.malhaebom.malhaebom.service.dto.LoginUser;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -31,22 +31,17 @@ public class LearningRecordController {
 	public ApiResponse<LearningHistoryResponse> getHistory(
 		@Auth LoginUser loginUser,
 		@PathVariable Long childId,
-		@RequestParam(defaultValue = "0") int page,
-		@RequestParam(defaultValue = "10") int size,
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+		@Valid @ModelAttribute LearningHistoryRequest request
 	) {
 		return ApiResponse.success(
 			LearningHistoryResponse.from(
 				learningRecordQueryService.getHistory(
 					loginUser.userId(),
 					childId,
-					page,
-					size,
-					startDate,
-					endDate
+					request.page(),
+					request.size(),
+					request.startAt(),
+					request.endAt()
 				)
 			)
 		);

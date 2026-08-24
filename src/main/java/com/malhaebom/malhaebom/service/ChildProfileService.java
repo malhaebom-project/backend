@@ -12,12 +12,12 @@ import com.malhaebom.malhaebom.domain.child.ChildLevel;
 import com.malhaebom.malhaebom.domain.child.ChildProfile;
 import com.malhaebom.malhaebom.domain.child.repository.ChildProfileRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
+import com.malhaebom.malhaebom.domain.learning.repository.projection.ChildStatisticsProjection;
 import com.malhaebom.malhaebom.domain.repository.UserRepository;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.service.dto.ChildProfileResult;
 import com.malhaebom.malhaebom.service.dto.ChildStatistics;
-import com.malhaebom.malhaebom.service.dto.ChildStatisticsProjection;
 
 import lombok.RequiredArgsConstructor;
 
