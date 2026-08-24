@@ -16,6 +16,8 @@ param(
     [int]$ProbeP95FloorMillis = 1000,
     [int]$RecoveryTimeoutSeconds = 300,
     [string]$PrometheusRemoteWriteUrl = "",
+    [string]$TestId = "",
+    [string]$Scenario = "default",
     [string]$DockerContainer = "",
     [string]$SshHost = "",
     [string]$SshIdentityFile = ""
@@ -32,11 +34,26 @@ $powerShellExecutable = (Get-Process -Id $PID).Path
 $manifestPath = [System.IO.Path]::GetFullPath($Manifest)
 $resultRootPath = [System.IO.Path]::GetFullPath($ResultRoot)
 $failedStages = @()
+if ($Stages.Count -eq 0 `
+    -or @($Stages | Where-Object { $_ -lt 1 -or $_ -gt 10000 }).Count -gt 0) {
+    throw "Stages must contain values between 1 and 10000."
+}
+if (@($Stages | Select-Object -Unique).Count -ne $Stages.Count) {
+    throw "Stages must not contain duplicates."
+}
 $manifestDocument = Get-Content -LiteralPath $manifestPath -Raw `
     | ConvertFrom-Json
-$testId = [string]$manifestDocument.runId
-if ([string]::IsNullOrWhiteSpace($testId)) {
+$manifestRunId = [string]$manifestDocument.runId
+if ([string]::IsNullOrWhiteSpace($manifestRunId)) {
     throw "Manifest runId is required for k6 metric correlation."
+}
+$metricTestId = if ([string]::IsNullOrWhiteSpace($TestId)) {
+    $manifestRunId
+} else {
+    $TestId
+}
+if ($Scenario -notmatch '^[a-z0-9][a-z0-9-]{0,28}$') {
+    throw "Scenario must use 1-29 lowercase letters, numbers, or hyphens."
 }
 if ($PrometheusRemoteWriteUrl) {
     $remoteWriteUri = [uri]$PrometheusRemoteWriteUrl
@@ -151,8 +168,10 @@ foreach ($stage in $Stages) {
             "-e", ("ASSESSMENT_MAX_QUEUE_WAIT_SECONDS=" `
                 + $AssessmentMaxQueueWaitSeconds),
             "-e", "CLIENT_MAX_RETRIES=$ClientMaxRetries",
+            "-e", "SCENARIO_NAME=$Scenario",
             "-e", ("SUMMARY_PATH=" + $summaryPath.Replace('\', '/')),
-            "--tag", "testid=$testId",
+            "--tag", "testid=$metricTestId",
+            "--tag", "scenario=$Scenario",
             "--tag", "stage=$stage",
             "--out", ("json=" + $rawPath)
         )
@@ -246,7 +265,9 @@ foreach ($stage in $Stages) {
     Set-Content -LiteralPath (Join-Path $stageDirectory "k6-exit-code.txt") `
         -Value $stageExitCode -Encoding ascii
     [pscustomobject]@{
-        testId = $testId
+        testId = $metricTestId
+        fixtureRunId = $manifestRunId
+        scenario = $Scenario
         stage = $stage
         prometheusRemoteWriteEnabled = [bool]$PrometheusRemoteWriteUrl
         assessmentLimit = $AssessmentLimit

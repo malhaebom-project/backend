@@ -544,14 +544,17 @@ OSIV 비활성화로 lazy loading에 의존하던 조회 API가 영향을 받지
 ### 한 명령 자동 실행
 
 `invoke-aws-load-test.ps1`은 원격 loadtest Compose 기동, SSH tunnel, readiness
-확인, fixture seed, 네 단계 k6, fixture cleanup과 운영 Compose 복구를 순서대로
-실행한다. k6 또는 threshold가 실패해도 `finally`에서 fixture와 원격 Compose 복구를
-시도한다. 설정 파일의 limiter 32/64/10 값은 원격 Compose와 k6 양쪽에 동일하게
-전달되고 OpenAI SDK 자동 재시도는 원격 WAS에서 0회로 고정된다.
+확인, 시나리오별 fixture seed·k6·cleanup과 운영 Compose 복구를 순서대로 실행한다.
+한 시나리오의 k6 threshold가 실패해도 나머지 시나리오를 계속 실행하고, 마지막에
+실패 목록을 반환한다. fixture cleanup이나 기반 환경이 실패하면 추가 실행을 중단하고
+`finally`에서 남은 fixture와 원격 Compose 복구를 시도한다. 설정 파일의 limiter
+32/64/10 값은 원격 Compose와 모든 k6 시나리오에 동일하게 전달되고 OpenAI SDK 자동
+재시도는 원격 WAS에서 0회로 고정된다.
 
 Compose 전환은 EC2에서 각각 `start-loadtest-compose.sh`와
-`restore-prod-compose.sh`를 실행한다. 자동 실행에서는 설정 파일의 `Stages` 배열에
-나열한 부하 시나리오를 모두 실행한 뒤 `finally`에서 운영 Compose로 복구한다.
+`restore-prod-compose.sh`를 실행한다. 자동 실행에서는 loadtest Compose를 한 번만
+시작하고 설정 파일의 `Scenarios`를 모두 실행한 뒤 `finally`에서 운영 Compose로
+복구한다.
 
 최초 한 번 추적되지 않는 `.private` 설정 파일을 만든다.
 
@@ -562,15 +565,40 @@ Copy-Item `
   .private/load-tests/aws-load-test.psd1
 ```
 
-복사한 파일에서 다음 네 값을 실제 환경에 맞게 지정한다.
+복사한 파일에서 다음 세 값을 실제 환경에 맞게 확인·지정한다.
 
 * `BaseUrl`: 공개 백엔드 URL
 * `SshHost`: `user@host` 형식의 EC2 SSH 대상
 * `SshIdentityFile`: 로컬 EC2 private key 절대 경로
-* `RemoteProjectDirectory`: EC2에서 Compose 파일이 있는 backend checkout 절대 경로
+
+`RemoteProjectDirectory`는 현재 self-hosted runner checkout 경로인
+`/home/ubuntu/actions-runner/_work/backend/backend`가 예제에 반영되어 있다. runner
+구성이 바뀐 경우에만 새 EC2 절대 경로로 수정한다.
 
 `JAVA_HOME`이 JDK 21이 아니면 같은 설정 파일의 `JavaHome`도 지정한다. API key는
 이 파일에 넣지 않으며 기존 `config/application.yaml` 설정을 재사용한다.
+
+`Scenarios`의 각 항목은 고유한 소문자·숫자·하이픈 이름과 동시성 단계, 클라이언트
+재시도 횟수를 가진다. 다음 예시는 같은 서버 limiter에서 재시도 0·1·2회를 비교한다.
+
+```powershell
+Scenarios = @(
+  @{ Name = "baseline-retry0"; Stages = @(10, 100, 200, 300); ClientMaxRetries = 0 }
+  @{ Name = "retry1"; Stages = @(10, 100, 200, 300); ClientMaxRetries = 1 }
+  @{ Name = "retry2"; Stages = @(10, 100, 200, 300); ClientMaxRetries = 2 }
+)
+```
+
+각 시나리오는 별도 fixture run-id와 결과 폴더를 사용한다. 최상위 `run-plan.json`에는
+전체 test-id, 설정, 시나리오별 단계와 최대 HTTP 시도 횟수가 저장된다.
+
+```text
+load-tests/results/aws/<test-id>/
+├─ run-plan.json
+├─ baseline-retry0/
+├─ retry1/
+└─ retry2/
+```
 
 이후 전체 AWS 테스트는 다음 한 명령으로 실행한다.
 
@@ -579,9 +607,11 @@ Copy-Item `
   -ConfirmLiveOpenAiCost
 ```
 
-비용 확인 스위치가 없으면 실제 OpenAI 부하 테스트를 시작하지 않는다. 스크립트는
-실행별 UTC run-id와 결과 폴더를 자동 생성하고 테스트 중 Grafana 주소를 출력한다.
-정상 종료 시 SSH tunnel을 닫고 운영 Compose만 남긴다.
+비용 확인 스위치가 없으면 실제 OpenAI 부하 테스트를 시작하지 않는다. 시작 전에
+모든 시나리오와 합산 최대 HTTP 시도 횟수를 출력한다. 예제의 세 시나리오는 논리
+제출 1,830건, 최대 HTTP 시도 3,660회다. 스크립트는 실행별 UTC test-id와 결과 폴더를
+자동 생성하고 테스트 중 Grafana 주소를 출력한다. 정상 종료 시 SSH tunnel을 닫고
+운영 Compose만 남긴다.
 
 PowerShell 프로세스 강제 종료나 로컬 전원 종료처럼 `finally`가 실행되지 않은
 경우에는 아래 수동 절차의 fixture cleanup과 운영 Compose 복구 명령을 실행한다.
@@ -695,8 +725,9 @@ raw 정상 503은 OpenAI 호출 전에 거절되므로 그 자체는 provider �
 로그도 함께 보관된다.
 
 `PrometheusRemoteWriteUrl`을 지정해도 기존 `summary.json`, `k6-raw.json`과
-Actuator snapshot은 그대로 생성된다. k6 지표에는 `testid=<manifest runId>`와
-`stage=<동시성>` 태그가 추가되므로 실행과 단계를 Grafana에서 분리할 수 있다.
+Actuator snapshot은 그대로 생성된다. 자동 실행의 k6 지표에는 전체 실행을 나타내는
+`testid`, 설정 항목 이름인 `scenario`, 동시성인 `stage` 태그가 추가된다. Grafana의
+`Test run`, `Scenario`, `Stage` 변수로 세 축을 각각 선택할 수 있다.
 
 부하 테스트와 fixture cleanup을 마치면 EC2에서 운영 Compose만 사용해 서비스를
 재생성한다. `--remove-orphans`가 Prometheus와 Grafana 컨테이너를 제거하고 host의

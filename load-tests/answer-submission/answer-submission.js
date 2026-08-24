@@ -13,6 +13,7 @@ const assessmentMaxQueueWaitSeconds = Number(
   __ENV.ASSESSMENT_MAX_QUEUE_WAIT_SECONDS || '10'
 );
 const clientMaxRetries = Number(__ENV.CLIENT_MAX_RETRIES || '0');
+const scenarioName = __ENV.SCENARIO_NAME || 'default';
 const baseUrl = (__ENV.BASE_URL || 'http://127.0.0.1:8080').replace(/\/$/, '');
 const probeRate = Number(__ENV.PROBE_RATE || '20');
 const summaryPath = __ENV.SUMMARY_PATH || 'load-tests/results/summary.json';
@@ -287,6 +288,7 @@ function retryDelaySeconds(retryIndex) {
 export function handleSummary(data) {
   const summary = {
     runId: manifest.runId,
+    scenario: scenarioName,
     concurrency,
     assessmentLimit,
     assessmentQueueCapacity,
@@ -310,7 +312,7 @@ function summaryLine(data) {
       ? data.metrics[name].values[field] || 0
       : 0;
   return [
-    `answer load stage=${concurrency}`,
+    `answer load scenario=${scenarioName} stage=${concurrency}`,
     `admission_capacity=${immediateAdmissionCapacity}`,
     `attempts=${value('answer_attempts')}`,
     `retries=${value('answer_retry_attempts')}`,

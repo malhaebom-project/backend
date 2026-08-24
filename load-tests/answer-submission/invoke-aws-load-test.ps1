@@ -51,6 +51,68 @@ function Config-OrDefault([string]$name, $defaultValue) {
     return $defaultValue
 }
 
+function Resolve-Scenarios {
+    $rawScenarios = if ($config.ContainsKey("Scenarios")) {
+        @($config["Scenarios"])
+    } else {
+        @(@{
+            Name = "default"
+            Stages = Config-OrDefault "Stages" @(10, 100, 200, 300)
+            ClientMaxRetries = Config-OrDefault "ClientMaxRetries" 0
+        })
+    }
+    if ($rawScenarios.Count -eq 0) {
+        throw "Scenarios must contain at least one scenario."
+    }
+
+    $names = [System.Collections.Generic.HashSet[string]]::new(
+        [System.StringComparer]::Ordinal
+    )
+    $resolved = foreach ($scenario in $rawScenarios) {
+        if ($scenario -isnot [System.Collections.IDictionary]) {
+            throw "Each Scenarios entry must be a hashtable."
+        }
+        foreach ($requiredName in @("Name", "Stages", "ClientMaxRetries")) {
+            if (-not $scenario.Contains($requiredName)) {
+                throw "Scenario is missing required value: $requiredName"
+            }
+        }
+        $name = [string]$scenario["Name"]
+        if ($name -notmatch '^[a-z0-9][a-z0-9-]{0,28}$') {
+            throw "Scenario Name must use 1-29 lowercase letters, numbers, " `
+                + "or hyphens: $name"
+        }
+        if (-not $names.Add($name)) {
+            throw "Scenario names must be unique: $name"
+        }
+        $scenarioStages = [int[]]$scenario["Stages"]
+        if ($scenarioStages.Count -eq 0 `
+            -or @($scenarioStages | Where-Object {
+                $_ -lt 1 -or $_ -gt 10000
+            }).Count -gt 0) {
+            throw "Scenario $name Stages must be between 1 and 10000."
+        }
+        if (@($scenarioStages | Select-Object -Unique).Count `
+            -ne $scenarioStages.Count) {
+            throw "Scenario $name Stages must not contain duplicates."
+        }
+        $scenarioRetries = [int]$scenario["ClientMaxRetries"]
+        if ($scenarioRetries -lt 0 -or $scenarioRetries -gt 2) {
+            throw "Scenario $name ClientMaxRetries must be between 0 and 2."
+        }
+        [pscustomobject]@{
+            Name = $name
+            Stages = $scenarioStages
+            ClientMaxRetries = $scenarioRetries
+            LogicalSubmissions = ($scenarioStages | Measure-Object -Sum).Sum
+            MaximumHttpAttempts =
+                ($scenarioStages | Measure-Object -Sum).Sum `
+                * ($scenarioRetries + 1)
+        }
+    }
+    return @($resolved)
+}
+
 function Assert-Command([string]$name) {
     $command = Get-Command $name -ErrorAction SilentlyContinue
     if ($null -eq $command) {
@@ -161,7 +223,8 @@ function Invoke-FixtureTask(
     [string]$gradleWrapper,
     [string]$action,
     [string]$manifestPath,
-    [string]$runId = ""
+    [string]$runId = "",
+    [int[]]$stages = @()
 ) {
     $arguments = @(
         "loadTestFixtures"
@@ -171,6 +234,12 @@ function Invoke-FixtureTask(
     )
     if ($runId) {
         $arguments += "-PloadTestRunId=$runId"
+    }
+    if ($action -eq "seed") {
+        if ($stages.Count -eq 0) {
+            throw "Fixture seed requires at least one stage."
+        }
+        $arguments += "-PloadTestStages=$($stages -join ',')"
     }
     Push-Location $repositoryRoot
     try {
@@ -232,13 +301,12 @@ $resultRootBase = if ([System.IO.Path]::IsPathRooted($resultRootSetting)) {
 }
 $dockerContainer = [string](Config-OrDefault `
     "DockerContainer" "backend-was-1")
-$stages = [int[]](Config-OrDefault "Stages" @(10, 100, 200, 300))
+$scenarios = Resolve-Scenarios
 $assessmentLimit = [int](Config-OrDefault "AssessmentLimit" 32)
 $assessmentQueueCapacity = [int](Config-OrDefault `
     "AssessmentQueueCapacity" 64)
 $assessmentMaxQueueWaitSeconds = [int](Config-OrDefault `
     "AssessmentMaxQueueWaitSeconds" 10)
-$clientMaxRetries = [int](Config-OrDefault "ClientMaxRetries" 0)
 $recoveryTimeoutSeconds = [int](Config-OrDefault `
     "RecoveryTimeoutSeconds" 300)
 $localManagementPort = [int](Config-OrDefault "LocalManagementPort" 19090)
@@ -247,12 +315,6 @@ $localGrafanaPort = [int](Config-OrDefault "LocalGrafanaPort" 13000)
 $readinessTimeoutSeconds = [int](Config-OrDefault `
     "ReadinessTimeoutSeconds" 120)
 
-if ($stages.Count -eq 0 -or @($stages | Where-Object { $_ -lt 1 }).Count -gt 0) {
-    throw "Stages must contain positive concurrency values."
-}
-if ($clientMaxRetries -lt 0 -or $clientMaxRetries -gt 2) {
-    throw "ClientMaxRetries must be between 0 and 2."
-}
 if ($assessmentLimit -lt 1) {
     throw "AssessmentLimit must be greater than 0."
 }
@@ -322,28 +384,49 @@ $remoteRestoreCommand = (
     "cd $remoteProjectDirectory && " +
     "bash $remoteRestoreScript"
 )
-$runId = "aws-" + [DateTimeOffset]::UtcNow.ToString("yyyyMMddTHHmmssZ")
-$resultRoot = Join-Path $resultRootBase $runId
-$manifestPath = Join-Path $resultRoot "fixture-manifest.json"
+$batchRunId = "aws-" + [DateTimeOffset]::UtcNow.ToString("yyyyMMddTHHmmssZ")
+$resultRoot = Join-Path $resultRootBase $batchRunId
 $runStagesScript = Join-Path $PSScriptRoot "run-stages.ps1"
-$maximumHttpAttempts = (
-    ($stages | Measure-Object -Sum).Sum * ($clientMaxRetries + 1)
-)
+$logicalSubmissions = ($scenarios | Measure-Object `
+    -Property LogicalSubmissions -Sum).Sum
+$maximumHttpAttempts = ($scenarios | Measure-Object `
+    -Property MaximumHttpAttempts -Sum).Sum
 
 New-Item -ItemType Directory -Path $resultRoot -Force | Out-Null
+$runPlanPath = Join-Path $resultRoot "run-plan.json"
+[pscustomobject]@{
+    testId = $batchRunId
+    generatedAt = [DateTimeOffset]::UtcNow.ToString("O")
+    assessmentLimit = $assessmentLimit
+    assessmentQueueCapacity = $assessmentQueueCapacity
+    assessmentMaxQueueWaitSeconds = $assessmentMaxQueueWaitSeconds
+    logicalSubmissions = $logicalSubmissions
+    maximumHttpAttempts = $maximumHttpAttempts
+    scenarios = $scenarios
+} | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $runPlanPath `
+    -Encoding utf8
 Write-Warning (
     "Starting a live OpenAI load test with up to " +
     "$maximumHttpAttempts answer HTTP attempts."
 )
-Write-Host "Run ID: $runId"
+Write-Host "Test ID: $batchRunId"
 Write-Host "Results: $resultRoot"
+Write-Host "Scenarios:"
+foreach ($scenario in $scenarios) {
+    Write-Host (
+        "  - $($scenario.Name): stages=$($scenario.Stages -join ',') " +
+        "retries=$($scenario.ClientMaxRetries) " +
+        "max-http-attempts=$($scenario.MaximumHttpAttempts)"
+    )
+}
 
 $previousProfile = $env:SPRING_PROFILES_ACTIVE
 $previousOpenAiRetries = $env:SPRING_AI_OPENAI_MAX_RETRIES
 $tunnelProcess = $null
-$fixtureSeedAttempted = $false
 $primaryError = $null
 $cleanupErrors = [System.Collections.Generic.List[string]]::new()
+$pendingManifests = [System.Collections.Generic.List[string]]::new()
+$scenarioFailures = [System.Collections.Generic.List[string]]::new()
 
 try {
     $env:SPRING_PROFILES_ACTIVE = "prod"
@@ -370,39 +453,76 @@ try {
         $readinessTimeoutSeconds
 
     Write-Host "Grafana: http://127.0.0.1:$localGrafanaPort"
-    Write-Host "Seeding load-test fixtures..."
-    $fixtureSeedAttempted = $true
-    Invoke-FixtureTask $gradleWrapper "seed" $manifestPath $runId
+    foreach ($scenario in $scenarios) {
+        $scenarioName = $scenario.Name
+        $scenarioRunId = "$batchRunId-$scenarioName"
+        $scenarioRoot = Join-Path $resultRoot $scenarioName
+        $manifestPath = Join-Path $scenarioRoot "fixture-manifest.json"
+        New-Item -ItemType Directory -Path $scenarioRoot -Force | Out-Null
 
-    Write-Host "Running staged k6 load test..."
-    $runStageParameters = @{
-        BaseUrl = $baseUrl
-        ManagementUrl = "http://127.0.0.1:$localManagementPort"
-        PrometheusRemoteWriteUrl =
-            "http://127.0.0.1:$localPrometheusPort/api/v1/write"
-        Manifest = $manifestPath
-        ResultRoot = $resultRoot
-        Stages = $stages
-        AssessmentLimit = $assessmentLimit
-        AssessmentQueueCapacity = $assessmentQueueCapacity
-        AssessmentMaxQueueWaitSeconds = $assessmentMaxQueueWaitSeconds
-        ClientMaxRetries = $clientMaxRetries
-        RecoveryTimeoutSeconds = $recoveryTimeoutSeconds
-        DockerContainer = $dockerContainer
-        SshHost = $sshHost
-        SshIdentityFile = $sshIdentityFile
+        Write-Host "[$scenarioName] Seeding load-test fixtures..."
+        try {
+            Invoke-FixtureTask $gradleWrapper "seed" $manifestPath `
+                $scenarioRunId $scenario.Stages
+            if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+                throw "Scenario $scenarioName did not create a manifest."
+            }
+            $pendingManifests.Add($manifestPath)
+
+            Write-Host "[$scenarioName] Running staged k6 load test..."
+            $runStageParameters = @{
+                BaseUrl = $baseUrl
+                ManagementUrl = "http://127.0.0.1:$localManagementPort"
+                PrometheusRemoteWriteUrl =
+                    "http://127.0.0.1:$localPrometheusPort/api/v1/write"
+                Manifest = $manifestPath
+                ResultRoot = $scenarioRoot
+                Stages = $scenario.Stages
+                AssessmentLimit = $assessmentLimit
+                AssessmentQueueCapacity = $assessmentQueueCapacity
+                AssessmentMaxQueueWaitSeconds =
+                    $assessmentMaxQueueWaitSeconds
+                ClientMaxRetries = $scenario.ClientMaxRetries
+                RecoveryTimeoutSeconds = $recoveryTimeoutSeconds
+                TestId = $batchRunId
+                Scenario = $scenarioName
+                DockerContainer = $dockerContainer
+                SshHost = $sshHost
+                SshIdentityFile = $sshIdentityFile
+            }
+            try {
+                & $runStagesScript @runStageParameters
+            } catch {
+                $scenarioFailures.Add(
+                    "$scenarioName`: $($_.Exception.Message)"
+                )
+                Write-Warning "Scenario $scenarioName failed; continuing."
+            }
+        } finally {
+            if (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
+                Write-Host "[$scenarioName] Cleaning up fixtures..."
+                Invoke-FixtureTask $gradleWrapper "cleanup" $manifestPath
+                [void]$pendingManifests.Remove($manifestPath)
+            }
+        }
     }
-    & $runStagesScript @runStageParameters
+    if ($scenarioFailures.Count -gt 0) {
+        throw "Load-test scenario failures: " +
+            ($scenarioFailures -join "; ")
+    }
 } catch {
     $primaryError = $_
 } finally {
-    if ($fixtureSeedAttempted `
-        -and (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+    foreach ($pendingManifest in @($pendingManifests)) {
         try {
-            Write-Host "Cleaning up load-test fixtures..."
-            Invoke-FixtureTask $gradleWrapper "cleanup" $manifestPath
+            Write-Host "Cleaning up pending fixtures: $pendingManifest"
+            Invoke-FixtureTask $gradleWrapper "cleanup" $pendingManifest
+            [void]$pendingManifests.Remove($pendingManifest)
         } catch {
-            $cleanupErrors.Add("Fixture cleanup failed: $($_.Exception.Message)")
+            $cleanupErrors.Add(
+                "Fixture cleanup failed for $pendingManifest`: " +
+                $_.Exception.Message
+            )
         }
     }
     if ($null -ne $tunnelProcess -and -not $tunnelProcess.HasExited) {

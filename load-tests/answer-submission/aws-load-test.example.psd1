@@ -9,11 +9,26 @@
 
     ResultRoot = "load-tests/results/aws"
     DockerContainer = "backend-was-1"
-    Stages = @(10, 100, 200, 300)
+    Scenarios = @(
+        @{
+            Name = "baseline-retry0"
+            Stages = @(10, 100, 200, 300)
+            ClientMaxRetries = 0
+        }
+        @{
+            Name = "retry1"
+            Stages = @(10, 100, 200, 300)
+            ClientMaxRetries = 1
+        }
+        @{
+            Name = "retry2"
+            Stages = @(10, 100, 200, 300)
+            ClientMaxRetries = 2
+        }
+    )
     AssessmentLimit = 32
     AssessmentQueueCapacity = 64
     AssessmentMaxQueueWaitSeconds = 10
-    ClientMaxRetries = 0
     RecoveryTimeoutSeconds = 300
 
     LocalManagementPort = 19090
