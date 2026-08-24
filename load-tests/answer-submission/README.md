@@ -407,7 +407,7 @@ bounded queue는 짧은 burst의 사용자 체감 성공률을 높일 뿐 provid
 * Java 21과 Gradle Wrapper
 * k6
 * Python 3
-* AWS 실행 시 OpenSSH와 EC2 접속 키
+* AWS 실행 시 Docker Compose, OpenSSH와 EC2 접속 키
 
 결과와 fixture manifest는 `load-tests/results/`에 생성되며 Git에서 제외된다.
 macOS에서 Gradle Wrapper 실행 권한이 없다면 프로젝트 루트에서 한 번
@@ -548,22 +548,25 @@ override를 붙여 WAS를 재생성한다.
 docker compose \
   -f docker-compose.prod.yml \
   -f docker-compose.loadtest.yml \
-  up -d --force-recreate was
+  up -d --force-recreate
 ```
 
-이때 관리 포트는 EC2 loopback에만 공개된다. 외부에서는 여전히 닫혀 있어야 하므로
-먼저 9090 포트에 직접 연결할 수 없는지 확인한다.
+loadtest override는 Prometheus와 Grafana를 함께 시작한다. 백엔드 관리 포트 9090,
+Prometheus 9091, Grafana 3000은 모두 EC2 loopback에만 공개된다. 외부에서는
+여전히 닫혀 있어야 하므로 먼저 세 포트에 직접 연결할 수 없는지 확인한다.
 
 Windows에서는 `TcpTestSucceeded`가 `False`인지 확인한다.
 
 ```powershell
-Test-NetConnection 3.35.11.125 -Port 9090
+9090, 9091, 3000 | ForEach-Object {
+  Test-NetConnection 3.35.11.125 -Port $_
+}
 ```
 
 macOS에서는 다음 명령의 연결이 실패해야 한다.
 
 ```powershell
-nc -vz 3.35.11.125 9090
+for port in 9090 9091 3000; do nc -vz 3.35.11.125 "$port"; done
 ```
 
 확인 후 로컬의 별도 terminal에서 SSH tunnel을 연다. 접속 키 경로는 로컬 OS에
@@ -571,8 +574,17 @@ nc -vz 3.35.11.125 9090
 
 ```powershell
 $sshKey = '<로컬 EC2 접속 키 경로>'
-ssh -N -L 19090:127.0.0.1:9090 -i $sshKey ubuntu@3.35.11.125
+ssh -N `
+  -L 19090:127.0.0.1:9090 `
+  -L 19091:127.0.0.1:9091 `
+  -L 13000:127.0.0.1:3000 `
+  -i $sshKey ubuntu@3.35.11.125
 ```
+
+Prometheus는 Compose network에서 `was:9090/actuator/prometheus`를 1초마다
+수집한다. 로컬 k6는 19091 터널을 통해 결과를 Remote Write하고, Grafana는
+<http://127.0.0.1:13000>에서 로그인 없이 읽기 전용으로 확인한다. 대시보드의
+`Test run`과 `Stage` 변수는 manifest의 run-id와 동시성 단계를 사용한다.
 
 `SPRING_PROFILES_ACTIVE=prod`와 운영 datasource 설정으로 fixture를 만든 뒤 같은
 manifest를 k6에 전달한다. fixture 생성·정리는 반드시 동일한 DB를 사용해야 한다.
@@ -584,6 +596,7 @@ $sshKey = '<로컬 EC2 접속 키 경로>'
 ./load-tests/answer-submission/run-stages.ps1 `
   -BaseUrl http://3.35.11.125 `
   -ManagementUrl http://127.0.0.1:19090 `
+  -PrometheusRemoteWriteUrl http://127.0.0.1:19091/api/v1/write `
   -Manifest load-tests/results/aws/fixture-manifest.json `
   -ResultRoot load-tests/results/aws `
   -DockerContainer backend-was-1 `
@@ -608,11 +621,21 @@ raw 정상 503은 OpenAI 호출 전에 거절되므로 그 자체는 provider �
 `DockerContainer`를 지정하면 단계별 Docker CPU·메모리와 해당 단계의 컨테이너
 로그도 함께 보관된다.
 
-부하 테스트와 fixture cleanup을 마치면 EC2에서 운영 Compose만 사용해 WAS를 다시
-재생성한다. 이 작업은 host의 9090 포트 매핑을 제거한다.
+`PrometheusRemoteWriteUrl`을 지정해도 기존 `summary.json`, `k6-raw.json`과
+Actuator snapshot은 그대로 생성된다. k6 지표에는 `testid=<manifest runId>`와
+`stage=<동시성>` 태그가 추가되므로 실행과 단계를 Grafana에서 분리할 수 있다.
+
+부하 테스트와 fixture cleanup을 마치면 EC2에서 운영 Compose만 사용해 서비스를
+재생성한다. `--remove-orphans`가 Prometheus와 Grafana 컨테이너를 제거하고 host의
+9090, 9091, 3000 포트 매핑을 모두 제거한다. Prometheus named volume은 남으므로
+다음 loadtest 실행에서도 최대 14일의 이전 시계열을 조회할 수 있다.
+수동 정리를 빼먹더라도 다음 CI/CD 운영 배포의 `--remove-orphans`가 loadtest 전용
+컨테이너를 제거한다.
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --force-recreate was
+docker compose \
+  -f docker-compose.prod.yml \
+  up -d --force-recreate --remove-orphans
 ```
 
 ## 결과 보고서 생성
