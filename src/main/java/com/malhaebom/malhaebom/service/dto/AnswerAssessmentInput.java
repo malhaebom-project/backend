@@ -20,7 +20,9 @@ public record AnswerAssessmentInput(
 	public AnswerAssessmentInput {
 		validateText(questionText, "영문 문제");
 		validateText(questionTextKo, "한글 문제");
-		validateText(gradingContext, "채점 참고 사항");
+		if (gradingContext == null) {
+			throw new IllegalArgumentException("제약 참고 사항은 null일 수 없습니다.");
+		}
 		validateText(modelAnswer, "모범 답안");
 		validateText(answerText, "학습자 답변");
 		if (acceptedAnswers == null) {
