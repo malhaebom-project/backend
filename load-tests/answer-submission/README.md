@@ -320,6 +320,7 @@ deadline을 연장하지 않는다.
 | 컨테이너 CPU·메모리                              | EC2 컨테이너 한도 또는 호스트 자원 부족 여부를 확인하는 보조 지표                                       |
 | OpenAI active / queue size                     | 실제 provider 평가 수와 FIFO 대기 수. 각각 설정값 32와 64 이하여야 함                                  |
 | queue full / timeout / cancelled               | provider 호출 전 종료 원인을 구분하는 서버 누적 카운터. 단계별 첫·마지막 snapshot 차이로 집계함                  |
+| submission prepare result                      | 신규 처리, 완료 결과 재사용, 처리 중 중복 요청, 실패 재시도, 만료 lease 회수를 구분하는 멱등 처리 카운터              |
 
 Hikari `최대 pending`은 특정 1초 표본에서 기다린 스레드 수이고,
 `pending 지속 시간`은 pending이 0보다 큰 상태가 연속된 시간이다. 순간적인
@@ -328,6 +329,17 @@ pending이 발생해도 2초 전에 해소되고 단계 종료 후 0으로 복�
 
 OpenAI 답안 평가 limiter가 제공하는 Micrometer 지표의 이름과 의미는
 [답안 평가 동시성 제한 지표](../../docs/answer-assessment-metrics.md)를 참고한다.
+
+멱등 처리 결과는
+`malhaebom_answer_submission_prepare_total{result="..."}`로 노출된다.
+
+| `result`     | 의미                                      |
+| ------------ | ----------------------------------------- |
+| `new`        | 새 제출 예약을 만들고 평가 처리를 시작함                |
+| `cached`     | 완료된 동일 제출의 기존 결과를 반환함                   |
+| `processing` | 동일 제출이 처리 중이어서 중복 평가를 시작하지 않음            |
+| `retry`      | 실패 상태의 기존 예약으로 평가를 다시 시작함                |
+| `reclaimed`  | 만료된 처리 lease 등 기존 미완료 예약을 다시 선점함           |
 
 `active`가 32 이하라는 사실만으로 테스트가 성공한 것은 아니다. Hikari와
 Tomcat이 먼저 포화되면 요청이 limiter에 도달하지 못해 active가 낮게 보일 수
@@ -640,7 +652,8 @@ Prometheus는 Compose network에서 `was:9090/actuator/prometheus`를 1초마다
 경로별 p95·p99, 실제 OpenAI HTTP 시도 횟수와 p95·p99, JVM heap·CPU·GC pause,
 Hikari connection 획득 지연과 timeout을 함께 확인할 수 있다. OpenAI HTTP 시도
 횟수는 SDK 재시도를 포함하므로 assessment accepted보다 많다면 외부 호출이
-증폭된 것이다.
+증폭된 것이다. `Answer submission idempotency outcomes` 패널은 동일 요청이 실제
+재처리됐는지, 완료 결과를 재사용했는지 결과별 초당 발생량으로 보여준다.
 
 `SPRING_PROFILES_ACTIVE=prod`와 운영 datasource 설정으로 fixture를 만든 뒤 같은
 manifest를 k6에 전달한다. fixture 생성·정리는 반드시 동일한 DB를 사용해야 한다.

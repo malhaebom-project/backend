@@ -58,6 +58,9 @@ import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.ai.AnswerAssessmentConcurrencyLimiter;
 import com.malhaebom.malhaebom.infra.ai.AnswerAssessmentConcurrencyProperties;
 import com.malhaebom.malhaebom.infra.ai.AnswerAssessmentQueueTimeoutScheduler;
+import com.malhaebom.malhaebom.infra.observability.AnswerAssessmentMetricsRecorder;
+import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerAssessmentMetricsRecorder;
+import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerSubmissionMetricsRecorder;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.AnswerAssessmentService;
 import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
@@ -78,6 +81,8 @@ import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 @Import({
 	JpaAuditingConfiguration.class,
 	LearningAnswerService.class,
+	MicrometerAnswerAssessmentMetricsRecorder.class,
+	MicrometerAnswerSubmissionMetricsRecorder.class,
 	AnswerSubmissionTransactionService.class,
 	AnswerAssessmentService.class,
 	LearningAnswerConcurrencyJpaTest.AssessmentTestConfiguration.class
@@ -616,7 +621,8 @@ class LearningAnswerConcurrencyJpaTest {
 
 		@Bean
 		AnswerAssessmentConcurrencyLimiter answerAssessmentConcurrencyLimiter(
-			ControllableQueueTimeoutScheduler timeoutScheduler
+			ControllableQueueTimeoutScheduler timeoutScheduler,
+			AnswerAssessmentMetricsRecorder metrics
 		) {
 			return new AnswerAssessmentConcurrencyLimiter(
 				new AnswerAssessmentConcurrencyProperties(
@@ -624,9 +630,14 @@ class LearningAnswerConcurrencyJpaTest {
 					1,
 					Duration.ofSeconds(10)
 				),
-				new SimpleMeterRegistry(),
+				metrics,
 				timeoutScheduler
 			);
+		}
+
+		@Bean
+		SimpleMeterRegistry meterRegistry() {
+			return new SimpleMeterRegistry();
 		}
 
 		@Bean

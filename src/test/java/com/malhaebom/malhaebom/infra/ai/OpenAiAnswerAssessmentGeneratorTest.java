@@ -36,6 +36,7 @@ import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerAssessmentMetricsRecorder;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
@@ -272,7 +273,9 @@ class OpenAiAnswerAssessmentGeneratorTest {
 						? Duration.ZERO
 						: Duration.ofSeconds(10)
 				),
-				new SimpleMeterRegistry(),
+				new MicrometerAnswerAssessmentMetricsRecorder(
+					new SimpleMeterRegistry()
+				),
 				(task, delay) -> () -> {
 				},
 				System::nanoTime

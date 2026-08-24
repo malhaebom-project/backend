@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerAssessmentMetricsRecorder;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 
@@ -508,7 +509,7 @@ class AnswerAssessmentConcurrencyLimiterTest {
 						? Duration.ZERO
 						: Duration.ofSeconds(10)
 				),
-				registry,
+				new MicrometerAnswerAssessmentMetricsRecorder(registry),
 				scheduler,
 				ticker::get
 			);

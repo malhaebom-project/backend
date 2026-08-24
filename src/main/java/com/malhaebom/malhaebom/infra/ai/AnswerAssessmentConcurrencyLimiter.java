@@ -12,10 +12,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PreDestroy;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,14 +19,13 @@ import org.springframework.stereotype.Component;
 
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.infra.observability.AnswerAssessmentMetricsRecorder;
+import com.malhaebom.malhaebom.infra.observability.AnswerAssessmentMetricsRecorder.QueueWaitResult;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 
 @Component
 public class AnswerAssessmentConcurrencyLimiter {
-
-	private static final String METRIC_PREFIX =
-		"malhaebom.answer.assessment.";
 
 	private final Object lock = new Object();
 	private final int maxConcurrentRequests;
@@ -39,34 +34,22 @@ public class AnswerAssessmentConcurrencyLimiter {
 	private final AnswerAssessmentQueueTimeoutScheduler timeoutScheduler;
 	private final boolean ownsTimeoutScheduler;
 	private final LongSupplier nanoTime;
+	private final AnswerAssessmentMetricsRecorder metrics;
 	private final Set<QueueEntry> queue = new LinkedHashSet<>();
 	private final AtomicInteger activeRequests = new AtomicInteger();
 	private final AtomicInteger queuedRequests = new AtomicInteger();
-	private final Counter acceptedRequests;
-	private final Counter rejectedRequests;
-	private final Counter completedRequests;
-	private final Counter failedRequests;
-	private final Counter queuedAdmissions;
-	private final Counter promotedRequests;
-	private final Counter queueFullRequests;
-	private final Counter queueTimeoutRequests;
-	private final Counter queueCancelledRequests;
-	private final Timer promotedWait;
-	private final Timer timeoutWait;
-	private final Timer cancelledWait;
-	private final Timer shutdownWait;
 
 	private boolean accepting = true;
 
 	@Autowired
 	public AnswerAssessmentConcurrencyLimiter(
 		AnswerAssessmentConcurrencyProperties properties,
-		MeterRegistry meterRegistry,
+		AnswerAssessmentMetricsRecorder metrics,
 		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler
 	) {
 		this(
 			properties,
-			meterRegistry,
+			metrics,
 			timeoutScheduler,
 			System::nanoTime,
 			false
@@ -75,11 +58,11 @@ public class AnswerAssessmentConcurrencyLimiter {
 
 	public AnswerAssessmentConcurrencyLimiter(
 		AnswerAssessmentConcurrencyProperties properties,
-		MeterRegistry meterRegistry
+		AnswerAssessmentMetricsRecorder metrics
 	) {
 		this(
 			properties,
-			meterRegistry,
+			metrics,
 			new ExecutorAnswerAssessmentQueueTimeoutScheduler(),
 			System::nanoTime,
 			true
@@ -88,22 +71,25 @@ public class AnswerAssessmentConcurrencyLimiter {
 
 	AnswerAssessmentConcurrencyLimiter(
 		AnswerAssessmentConcurrencyProperties properties,
-		MeterRegistry meterRegistry,
+		AnswerAssessmentMetricsRecorder metrics,
 		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler,
 		LongSupplier nanoTime
 	) {
-		this(properties, meterRegistry, timeoutScheduler, nanoTime, false);
+		this(properties, metrics, timeoutScheduler, nanoTime, false);
 	}
 
 	private AnswerAssessmentConcurrencyLimiter(
 		AnswerAssessmentConcurrencyProperties properties,
-		MeterRegistry meterRegistry,
+		AnswerAssessmentMetricsRecorder metrics,
 		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler,
 		LongSupplier nanoTime,
 		boolean ownsTimeoutScheduler
 	) {
 		Objects.requireNonNull(properties, "동시성 설정은 null일 수 없습니다.");
-		Objects.requireNonNull(meterRegistry, "MeterRegistry는 null일 수 없습니다.");
+		this.metrics = Objects.requireNonNull(
+			metrics,
+			"답안 평가 지표 기록기는 null일 수 없습니다."
+		);
 		this.timeoutScheduler = Objects.requireNonNull(
 			timeoutScheduler,
 			"대기열 timeout scheduler는 null일 수 없습니다."
@@ -116,47 +102,12 @@ public class AnswerAssessmentConcurrencyLimiter {
 		maxConcurrentRequests = properties.maxConcurrentRequests();
 		queueCapacity = properties.queueCapacity();
 		maxQueueWait = properties.maxQueueWait();
-
-		acceptedRequests = meterRegistry.counter(METRIC_PREFIX + "accepted");
-		rejectedRequests = meterRegistry.counter(METRIC_PREFIX + "rejected");
-		completedRequests = meterRegistry.counter(METRIC_PREFIX + "completed");
-		failedRequests = meterRegistry.counter(METRIC_PREFIX + "failed");
-		queuedAdmissions = meterRegistry.counter(METRIC_PREFIX + "queued");
-		promotedRequests = meterRegistry.counter(
-			METRIC_PREFIX + "queue.promoted"
+		metrics.bind(
+			activeRequests::get,
+			maxConcurrentRequests,
+			queuedRequests::get,
+			queueCapacity
 		);
-		queueFullRequests = meterRegistry.counter(METRIC_PREFIX + "queue.full");
-		queueTimeoutRequests = meterRegistry.counter(
-			METRIC_PREFIX + "queue.timeout"
-		);
-		queueCancelledRequests = meterRegistry.counter(
-			METRIC_PREFIX + "queue.cancelled"
-		);
-		promotedWait = queueWaitTimer(meterRegistry, "promoted");
-		timeoutWait = queueWaitTimer(meterRegistry, "timeout");
-		cancelledWait = queueWaitTimer(meterRegistry, "cancelled");
-		shutdownWait = queueWaitTimer(meterRegistry, "shutdown");
-
-		Gauge.builder(
-			METRIC_PREFIX + "active",
-			activeRequests,
-			AtomicInteger::get
-		).register(meterRegistry);
-		Gauge.builder(
-			METRIC_PREFIX + "limit",
-			this,
-			limiter -> limiter.maxConcurrentRequests
-		).register(meterRegistry);
-		Gauge.builder(
-			METRIC_PREFIX + "queue.size",
-			queuedRequests,
-			AtomicInteger::get
-		).register(meterRegistry);
-		Gauge.builder(
-			METRIC_PREFIX + "queue.capacity",
-			this,
-			limiter -> limiter.queueCapacity
-		).register(meterRegistry);
 	}
 
 	public AnswerAssessmentTask execute(
@@ -188,7 +139,7 @@ public class AnswerAssessmentConcurrencyLimiter {
 					);
 					queue.add(entry);
 					queuedRequests.incrementAndGet();
-					queuedAdmissions.increment();
+					metrics.recordQueued();
 					admission = Admission.QUEUE;
 				} catch (RuntimeException exception) {
 					entry.state = State.TERMINAL;
@@ -231,7 +182,7 @@ public class AnswerAssessmentConcurrencyLimiter {
 		}
 
 		for (QueueEntry entry : shutdownEntries) {
-			recordWait(entry, shutdownWait);
+			recordWait(entry, QueueWaitResult.SHUTDOWN);
 			entry.result.completeExceptionally(shutdownException());
 		}
 		if (
@@ -250,7 +201,7 @@ public class AnswerAssessmentConcurrencyLimiter {
 	}
 
 	private void start(QueueEntry entry) {
-		acceptedRequests.increment();
+		metrics.recordAccepted();
 		AnswerAssessmentTask activeTask;
 		try {
 			activeTask = Objects.requireNonNull(
@@ -303,13 +254,13 @@ public class AnswerAssessmentConcurrencyLimiter {
 		}
 
 		if (exception == null) {
-			completedRequests.increment();
+			metrics.recordCompleted();
 		} else {
-			failedRequests.increment();
+			metrics.recordFailed();
 		}
 		if (promoted != null) {
-			promotedRequests.increment();
-			recordWait(promoted, promotedWait);
+			metrics.recordPromoted();
+			recordWait(promoted, QueueWaitResult.PROMOTED);
 			start(promoted);
 		}
 		for (QueueEntry expired : expiredEntries) {
@@ -370,8 +321,8 @@ public class AnswerAssessmentConcurrencyLimiter {
 		}
 
 		if (cancelledWhileQueued) {
-			queueCancelledRequests.increment();
-			recordWait(entry, cancelledWait);
+			metrics.recordQueueCancelled();
+			recordWait(entry, QueueWaitResult.CANCELLED);
 			return entry.result.cancel(false);
 		}
 		return activeTask != null && activeTask.cancel();
@@ -389,9 +340,9 @@ public class AnswerAssessmentConcurrencyLimiter {
 	}
 
 	private void completeTimeout(QueueEntry entry) {
-		queueTimeoutRequests.increment();
-		rejectedRequests.increment();
-		recordWait(entry, timeoutWait);
+		metrics.recordQueueTimeout();
+		metrics.recordRejected();
+		recordWait(entry, QueueWaitResult.TIMEOUT);
 		entry.result.completeExceptionally(overloadedException());
 	}
 
@@ -405,8 +356,8 @@ public class AnswerAssessmentConcurrencyLimiter {
 	}
 
 	private void rejectFull(QueueEntry entry) {
-		queueFullRequests.increment();
-		rejectedRequests.increment();
+		metrics.recordQueueFull();
+		metrics.recordRejected();
 		entry.state = State.TERMINAL;
 		entry.result.completeExceptionally(overloadedException());
 	}
@@ -424,15 +375,9 @@ public class AnswerAssessmentConcurrencyLimiter {
 		return elapsed >= maxQueueWait.toNanos();
 	}
 
-	private void recordWait(QueueEntry entry, Timer timer) {
+	private void recordWait(QueueEntry entry, QueueWaitResult result) {
 		long elapsed = Math.max(0, nanoTime.getAsLong() - entry.enqueuedAtNanos);
-		timer.record(Duration.ofNanos(elapsed));
-	}
-
-	private Timer queueWaitTimer(MeterRegistry meterRegistry, String result) {
-		return Timer.builder(METRIC_PREFIX + "queue.wait")
-			.tag("result", result)
-			.register(meterRegistry);
+		metrics.recordQueueWait(result, Duration.ofNanos(elapsed));
 	}
 
 	private ApiException overloadedException() {

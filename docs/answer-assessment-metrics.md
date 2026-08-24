@@ -4,6 +4,8 @@
 대기열을 함께 제한한다. 기본값은 active 32건, queue 64건, 최대 대기 10초이며
 active와 queue를 합친 즉시 수용 가능량은 96건이다. 대기는 request thread,
 평가 executor thread, DB connection을 점유하지 않는 `CompletableFuture` 기반이다.
+limiter는 동시성 상태와 전이만 관리하고, Micrometer meter 등록과 기록은
+`MicrometerAnswerAssessmentMetricsRecorder`가 담당한다.
 
 | 지표 | 종류 | 의미 |
 | --- | --- | --- |
