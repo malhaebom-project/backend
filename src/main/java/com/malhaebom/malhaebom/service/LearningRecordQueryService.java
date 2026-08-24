@@ -4,8 +4,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -20,6 +18,7 @@ import com.malhaebom.malhaebom.domain.learning.LearningSessionStatus;
 import com.malhaebom.malhaebom.domain.learning.AnswerResult;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
+import com.malhaebom.malhaebom.global.time.LearningTime;
 import com.malhaebom.malhaebom.infra.storage.image.QuestionImageUrlResolver;
 import com.malhaebom.malhaebom.service.dto.ChildStatistics;
 import com.malhaebom.malhaebom.service.dto.ChildStatisticsProjection;
@@ -45,8 +44,6 @@ public class LearningRecordQueryService {
 		AnswerResult.INCORRECT,
 		AnswerResult.UNRECOGNIZED
 	);
-	private static final ZoneId STUDY_ZONE = ZoneId.of("Asia/Seoul");
-	private static final ZoneId STORAGE_ZONE = ZoneOffset.UTC;
 	private final ChildProfileService childProfileService;
 	private final LearningSessionRepository learningSessionRepository;
 	private final AnswerRepository answerRepository;
@@ -206,11 +203,11 @@ public class LearningRecordQueryService {
 		Set<LocalDate> studyDates = new HashSet<>();
 		for (LearningSessionPeriodProjection period : periods) {
 			if (period.getCompletedAt() != null) {
-				studyDates.add(toStudyDate(period.getCompletedAt()));
+				studyDates.add(LearningTime.toStudyDate(period.getCompletedAt()));
 			}
 		}
 
-		LocalDate today = LocalDate.now(clock.withZone(STUDY_ZONE));
+		LocalDate today = LearningTime.currentStudyDate(clock);
 		LocalDate cursor = studyDates.contains(today)
 			? today
 			: today.minusDays(1);
@@ -224,12 +221,6 @@ public class LearningRecordQueryService {
 			cursor = cursor.minusDays(1);
 		}
 		return consecutiveDays;
-	}
-
-	private static LocalDate toStudyDate(LocalDateTime storedAt) {
-		return storedAt.atZone(STORAGE_ZONE)
-			.withZoneSameInstant(STUDY_ZONE)
-			.toLocalDate();
 	}
 
 	private double calculateCorrectRate(long correctCount, long questionCount) {

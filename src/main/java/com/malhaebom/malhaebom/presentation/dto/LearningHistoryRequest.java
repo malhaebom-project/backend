@@ -2,10 +2,10 @@ package com.malhaebom.malhaebom.presentation.dto;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 
 import org.springframework.format.annotation.DateTimeFormat;
+
+import com.malhaebom.malhaebom.global.time.LearningTime;
 
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Max;
@@ -26,12 +26,10 @@ public record LearningHistoryRequest(
 	@DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
 	LocalDate endDate
 ) {
-	private static final ZoneId STUDY_ZONE = ZoneId.of("Asia/Seoul");
-	private static final ZoneId STORAGE_ZONE = ZoneOffset.UTC;
 	private static final LocalDateTime DEFAULT_START_AT =
-		toUtcStartOfDay(LocalDate.of(1970, 1, 1));
+		LearningTime.toStorageStartOfDay(LocalDate.of(1970, 1, 1));
 	private static final LocalDateTime DEFAULT_END_AT =
-		toUtcStartOfDay(LocalDate.of(9999, 1, 1));
+		LearningTime.toStorageStartOfDay(LocalDate.of(9999, 1, 1));
 
 	public LearningHistoryRequest {
 		if (page == null) {
@@ -53,19 +51,13 @@ public record LearningHistoryRequest(
 		if (startDate == null) {
 			return DEFAULT_START_AT;
 		}
-		return toUtcStartOfDay(startDate);
+		return LearningTime.toStorageStartOfDay(startDate);
 	}
 
 	public LocalDateTime endAt() {
 		if (endDate == null) {
 			return DEFAULT_END_AT;
 		}
-		return toUtcStartOfDay(endDate.plusDays(1));
-	}
-
-	private static LocalDateTime toUtcStartOfDay(LocalDate date) {
-		return date.atStartOfDay(STUDY_ZONE)
-			.withZoneSameInstant(STORAGE_ZONE)
-			.toLocalDateTime();
+		return LearningTime.toStorageStartOfDay(endDate.plusDays(1));
 	}
 }
