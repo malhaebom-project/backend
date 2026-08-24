@@ -11,6 +11,7 @@ import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 public record AnswerAssessmentInput(
 	String questionText,
 	String questionTextKo,
+	String gradingContext,
 	String modelAnswer,
 	Set<String> acceptedAnswers,
 	String answerText
@@ -19,6 +20,7 @@ public record AnswerAssessmentInput(
 	public AnswerAssessmentInput {
 		validateText(questionText, "영문 문제");
 		validateText(questionTextKo, "한글 문제");
+		validateText(gradingContext, "채점 참고 사항");
 		validateText(modelAnswer, "모범 답안");
 		validateText(answerText, "학습자 답변");
 		if (acceptedAnswers == null) {
@@ -43,6 +45,7 @@ public record AnswerAssessmentInput(
 		return new AnswerAssessmentInput(
 			question.getQuestionText(),
 			question.getQuestionTextKo(),
+			question.getGradingContext(),
 			question.getModelAnswer(),
 			question.getAcceptedAnswers(),
 			speechAnswer.getTranscript()

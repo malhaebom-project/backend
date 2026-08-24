@@ -13,6 +13,7 @@ public record AdminQuestionCommand(
 	String questionText,
 	String questionTextKo,
 	String imageUrl,
+	String gradingContext,
 	String modelAnswer,
 	Set<String> acceptedAnswers,
 	String hintText

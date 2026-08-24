@@ -108,6 +108,7 @@ class ChildProfileServiceJpaTest {
 			"What is this?",
 			"이것은 무엇인가요?",
 			null,
+			"",
 			"It is a cat.",
 			Set.of("It is a cat."),
 			null,

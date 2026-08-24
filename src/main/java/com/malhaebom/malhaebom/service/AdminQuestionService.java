@@ -37,6 +37,7 @@ public class AdminQuestionService {
 				command.questionText(),
 				command.questionTextKo(),
 				command.imageUrl(),
+				command.gradingContext(),
 				command.modelAnswer(),
 				command.acceptedAnswers(),
 				command.hintText(),
@@ -79,6 +80,7 @@ public class AdminQuestionService {
 			command.questionText(),
 			command.questionTextKo(),
 			command.imageUrl(),
+			command.gradingContext(),
 			command.modelAnswer(),
 			command.acceptedAnswers(),
 			command.hintText()

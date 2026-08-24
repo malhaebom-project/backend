@@ -277,6 +277,7 @@ class AnswerTest {
 			"What is the boy doing?",
 			"남자아이는 무엇을 하고 있나요?",
 			null,
+			"",
 			"The boy is running.",
 			Set.of("He is running.", "He's running."),
 			"He is ____ing.",
