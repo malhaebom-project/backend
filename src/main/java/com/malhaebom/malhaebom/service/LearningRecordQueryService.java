@@ -20,8 +20,6 @@ import com.malhaebom.malhaebom.domain.learning.LearningSessionStatus;
 import com.malhaebom.malhaebom.domain.learning.AnswerResult;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
-import com.malhaebom.malhaebom.global.exception.ApiException;
-import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.storage.image.QuestionImageUrlResolver;
 import com.malhaebom.malhaebom.service.dto.ChildStatistics;
 import com.malhaebom.malhaebom.service.dto.ChildStatisticsProjection;
@@ -41,7 +39,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class LearningRecordQueryService {
 
-	private static final int MAX_PAGE_SIZE = 50;
 	private static final int RECENT_WRONG_ANSWER_LIMIT = 10;
 	private static final List<AnswerResult> WRONG_ANSWER_RESULTS = List.of(
 		AnswerResult.PARTIALLY_CORRECT,
@@ -70,7 +67,6 @@ public class LearningRecordQueryService {
 		LocalDate startDate,
 		LocalDate endDate
 	) {
-		validateRequest(page, size, startDate, endDate);
 		childProfileService.getOwnedActive(userId, childId);
 
 		LocalDateTime startAt = startDate == null
@@ -270,29 +266,4 @@ public class LearningRecordQueryService {
 		return Math.max(0L, Duration.between(startedAt, completedAt).getSeconds());
 	}
 
-	private void validateRequest(
-		int page,
-		int size,
-		LocalDate startDate,
-		LocalDate endDate
-	) {
-		if (page < 0) {
-			throw new ApiException(
-				ErrorCode.INVALID_REQUEST,
-				"페이지 번호는 0 이상이어야 합니다."
-			);
-		}
-		if (size < 1 || size > MAX_PAGE_SIZE) {
-			throw new ApiException(
-				ErrorCode.INVALID_REQUEST,
-				"페이지 크기는 1 이상 50 이하여야 합니다."
-			);
-		}
-		if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-			throw new ApiException(
-				ErrorCode.INVALID_REQUEST,
-				"시작일은 종료일보다 늦을 수 없습니다."
-			);
-		}
-	}
 }

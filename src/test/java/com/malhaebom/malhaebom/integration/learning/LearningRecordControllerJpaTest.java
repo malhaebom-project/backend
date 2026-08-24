@@ -14,6 +14,8 @@ import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -152,6 +154,41 @@ class LearningRecordControllerJpaTest {
 			.setCustomArgumentResolvers(loginUserResolver())
 			.setControllerAdvice(new ApiExceptionHandler())
 			.build();
+	}
+
+	@ParameterizedTest
+	@CsvSource({
+		"page, -1, 페이지 번호는 0 이상이어야 합니다.",
+		"size, 0, 페이지 크기는 1 이상이어야 합니다.",
+		"size, 51, 페이지 크기는 50 이하여야 합니다."
+	})
+	void 잘못된_페이징_조건은_HTTP_경계에서_거부한다(
+		String parameter,
+		String value,
+		String message
+	) throws Exception {
+		mockMvc.perform(get(
+				"/api/v1/children/{childId}/learning-history",
+				childId
+			)
+				.param(parameter, value))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"))
+			.andExpect(jsonPath("$.message").value(message));
+	}
+
+	@Test
+	void 시작일이_종료일보다_늦으면_HTTP_경계에서_거부한다() throws Exception {
+		mockMvc.perform(get(
+				"/api/v1/children/{childId}/learning-history",
+				childId
+			)
+				.param("startDate", "2026-08-19")
+				.param("endDate", "2026-08-18"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"))
+			.andExpect(jsonPath("$.message")
+				.value("시작일은 종료일보다 늦을 수 없습니다."));
 	}
 
 	@Test
