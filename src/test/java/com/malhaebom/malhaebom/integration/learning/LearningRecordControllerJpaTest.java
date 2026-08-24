@@ -192,6 +192,26 @@ class LearningRecordControllerJpaTest {
 	}
 
 	@Test
+	void 날짜_조건을_생략하면_전체_기간의_학습_기록을_조회한다() throws Exception {
+		LearningSession session = saveCompletedSession(
+			childId,
+			LearningTopic.ANIMAL,
+			List.of(true),
+			LocalDateTime.of(2026, 8, 18, 9, 55),
+			LocalDateTime.of(2026, 8, 18, 10, 0)
+		);
+
+		mockMvc.perform(get(
+				"/api/v1/children/{childId}/learning-history",
+				childId
+			))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.content.length()").value(1))
+			.andExpect(jsonPath("$.data.content[0].sessionId")
+				.value(session.getId()));
+	}
+
+	@Test
 	void 최근_오답_10건을_실제_저장_결과로_조회한다() throws Exception {
 		LocalDateTime baseTime = LocalDateTime.of(2026, 8, 18, 10, 0);
 		List<Answer> wrongAnswers = new ArrayList<>();

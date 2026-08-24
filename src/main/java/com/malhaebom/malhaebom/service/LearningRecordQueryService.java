@@ -47,11 +47,6 @@ public class LearningRecordQueryService {
 	);
 	private static final ZoneId STUDY_ZONE = ZoneId.of("Asia/Seoul");
 	private static final ZoneId STORAGE_ZONE = ZoneOffset.UTC;
-	private static final LocalDateTime DEFAULT_START_AT =
-		toUtcStartOfDay(LocalDate.of(1970, 1, 1));
-	private static final LocalDateTime DEFAULT_END_AT =
-		toUtcStartOfDay(LocalDate.of(9999, 1, 1));
-
 	private final ChildProfileService childProfileService;
 	private final LearningSessionRepository learningSessionRepository;
 	private final AnswerRepository answerRepository;
@@ -64,17 +59,11 @@ public class LearningRecordQueryService {
 		Long childId,
 		int page,
 		int size,
-		LocalDate startDate,
-		LocalDate endDate
+		LocalDateTime startAt,
+		LocalDateTime endAt
 	) {
 		childProfileService.getOwnedActive(userId, childId);
 
-		LocalDateTime startAt = startDate == null
-			? DEFAULT_START_AT
-			: toUtcStartOfDay(startDate);
-		LocalDateTime endAt = endDate == null
-			? DEFAULT_END_AT
-			: toUtcStartOfDay(endDate.plusDays(1));
 		Page<LearningHistoryProjection> history =
 			learningSessionRepository.findLearningHistory(
 				childId,
@@ -235,12 +224,6 @@ public class LearningRecordQueryService {
 			cursor = cursor.minusDays(1);
 		}
 		return consecutiveDays;
-	}
-
-	private static LocalDateTime toUtcStartOfDay(LocalDate date) {
-		return date.atStartOfDay(STUDY_ZONE)
-			.withZoneSameInstant(STORAGE_ZONE)
-			.toLocalDateTime();
 	}
 
 	private static LocalDate toStudyDate(LocalDateTime storedAt) {

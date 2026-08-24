@@ -40,8 +40,8 @@ public class LearningRecordController {
 					childId,
 					request.page(),
 					request.size(),
-					request.startDate(),
-					request.endDate()
+					request.startAt(),
+					request.endAt()
 				)
 			)
 		);
