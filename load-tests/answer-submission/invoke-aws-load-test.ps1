@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$ConfigPath = ".private/load-tests/aws-load-test.psd1",
-    [switch]$ConfirmLiveOpenAiCost
+    [switch]$ConfirmLiveOpenAiCost,
+    [switch]$SkipComposeLifecycle
 )
 
 $ErrorActionPreference = "Stop"
@@ -432,9 +433,13 @@ try {
     $env:SPRING_PROFILES_ACTIVE = "prod"
     $env:SPRING_AI_OPENAI_MAX_RETRIES = "0"
 
-    Write-Host "Starting the remote load-test observability stack..."
-    Invoke-RemoteCommand $sshExecutable $sshBaseArguments $sshHost `
-        $remoteLoadtestCommand
+    if ($SkipComposeLifecycle) {
+        Write-Host "Using the existing remote load-test Compose stack."
+    } else {
+        Write-Host "Starting the remote load-test observability stack..."
+        Invoke-RemoteCommand $sshExecutable $sshBaseArguments $sshHost `
+            $remoteLoadtestCommand
+    }
 
     Write-Host "Starting SSH tunnels..."
     $tunnelProcess = Start-SshTunnel $sshExecutable $sshBaseArguments `
@@ -533,12 +538,18 @@ try {
             $cleanupErrors.Add("SSH tunnel cleanup failed: $($_.Exception.Message)")
         }
     }
-    try {
-        Write-Host "Restoring the remote production Compose stack..."
-        Invoke-RemoteCommand $sshExecutable $sshBaseArguments $sshHost `
-            $remoteRestoreCommand
-    } catch {
-        $cleanupErrors.Add("Remote Compose restore failed: $($_.Exception.Message)")
+    if (-not $SkipComposeLifecycle) {
+        try {
+            Write-Host "Restoring the remote production Compose stack..."
+            Invoke-RemoteCommand $sshExecutable $sshBaseArguments $sshHost `
+                $remoteRestoreCommand
+        } catch {
+            $cleanupErrors.Add(
+                "Remote Compose restore failed: $($_.Exception.Message)"
+            )
+        }
+    } else {
+        Write-Host "Leaving the remote load-test Compose stack unchanged."
     }
     $env:SPRING_PROFILES_ACTIVE = $previousProfile
     $env:SPRING_AI_OPENAI_MAX_RETRIES = $previousOpenAiRetries

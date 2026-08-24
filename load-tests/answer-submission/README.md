@@ -541,22 +541,13 @@ OSIV 비활성화로 lazy loading에 의존하던 조회 API가 영향을 받지
 
 ## AWS 실행
 
-### 한 명령 자동 실행
+### 권장 흐름: Compose 수동 전환과 시나리오 자동 실행
 
-`invoke-aws-load-test.ps1`은 원격 loadtest Compose 기동, SSH tunnel, readiness
-확인, 시나리오별 fixture seed·k6·cleanup과 운영 Compose 복구를 순서대로 실행한다.
-한 시나리오의 k6 threshold가 실패해도 나머지 시나리오를 계속 실행하고, 마지막에
-실패 목록을 반환한다. fixture cleanup이나 기반 환경이 실패하면 추가 실행을 중단하고
-`finally`에서 남은 fixture와 원격 Compose 복구를 시도한다. 설정 파일의 limiter
-32/64/10 값은 원격 Compose와 모든 k6 시나리오에 동일하게 전달되고 OpenAI SDK 자동
-재시도는 원격 WAS에서 0회로 고정된다.
+운영 환경 전환을 명시적으로 확인할 수 있도록 기본 절차는 loadtest Compose 시작,
+시나리오 자동 실행, 운영 Compose 복구를 나누어 수행한다.
 
-Compose 전환은 EC2에서 각각 `start-loadtest-compose.sh`와
-`restore-prod-compose.sh`를 실행한다. 자동 실행에서는 loadtest Compose를 한 번만
-시작하고 설정 파일의 `Scenarios`를 모두 실행한 뒤 `finally`에서 운영 Compose로
-복구한다.
-
-최초 한 번 추적되지 않는 `.private` 설정 파일을 만든다.
+최초 한 번 추적되지 않는 `.private` 설정 파일을 만들고 `BaseUrl`, `SshHost`,
+`SshIdentityFile`을 실제 환경에 맞게 확인·지정한다.
 
 ```powershell
 New-Item -ItemType Directory -Force .private/load-tests | Out-Null
@@ -565,58 +556,41 @@ Copy-Item `
   .private/load-tests/aws-load-test.psd1
 ```
 
-복사한 파일에서 다음 세 값을 실제 환경에 맞게 확인·지정한다.
+`Scenarios`에는 자동으로 순차 실행할 동시성 단계와 클라이언트 재시도 횟수를
+정의한다. `RemoteProjectDirectory`에는 현재 self-hosted runner checkout 경로가 이미
+반영되어 있다. API key는 설정 파일에 넣지 않고 기존 `config/application.yaml`을
+재사용한다.
 
-* `BaseUrl`: 공개 백엔드 URL
-* `SshHost`: `user@host` 형식의 EC2 SSH 대상
-* `SshIdentityFile`: 로컬 EC2 private key 절대 경로
+먼저 EC2 backend checkout에서 loadtest Compose를 시작한다.
 
-`RemoteProjectDirectory`는 현재 self-hosted runner checkout 경로인
-`/home/ubuntu/actions-runner/_work/backend/backend`가 예제에 반영되어 있다. runner
-구성이 바뀐 경우에만 새 EC2 절대 경로로 수정한다.
-
-`JAVA_HOME`이 JDK 21이 아니면 같은 설정 파일의 `JavaHome`도 지정한다. API key는
-이 파일에 넣지 않으며 기존 `config/application.yaml` 설정을 재사용한다.
-
-`Scenarios`의 각 항목은 고유한 소문자·숫자·하이픈 이름과 동시성 단계, 클라이언트
-재시도 횟수를 가진다. 다음 예시는 같은 서버 limiter에서 재시도 0·1·2회를 비교한다.
-
-```powershell
-Scenarios = @(
-  @{ Name = "baseline-retry0"; Stages = @(10, 100, 200, 300); ClientMaxRetries = 0 }
-  @{ Name = "retry1"; Stages = @(10, 100, 200, 300); ClientMaxRetries = 1 }
-  @{ Name = "retry2"; Stages = @(10, 100, 200, 300); ClientMaxRetries = 2 }
-)
+```bash
+bash load-tests/answer-submission/start-loadtest-compose.sh
 ```
 
-각 시나리오는 별도 fixture run-id와 결과 폴더를 사용한다. 최상위 `run-plan.json`에는
-전체 test-id, 설정, 시나리오별 단계와 최대 HTTP 시도 횟수가 저장된다.
-
-```text
-load-tests/results/aws/<test-id>/
-├─ run-plan.json
-├─ baseline-retry0/
-├─ retry1/
-└─ retry2/
-```
-
-이후 전체 AWS 테스트는 다음 한 명령으로 실행한다.
+그다음 로컬 PowerShell 7에서 시나리오 자동화만 실행한다.
 
 ```powershell
-./load-tests/answer-submission/invoke-aws-load-test.ps1 `
+./load-tests/answer-submission/invoke-aws-load-test-scenarios.ps1 `
   -ConfirmLiveOpenAiCost
 ```
 
-비용 확인 스위치가 없으면 실제 OpenAI 부하 테스트를 시작하지 않는다. 시작 전에
-모든 시나리오와 합산 최대 HTTP 시도 횟수를 출력한다. 예제의 세 시나리오는 논리
-제출 1,830건, 최대 HTTP 시도 3,660회다. 스크립트는 실행별 UTC test-id와 결과 폴더를
-자동 생성하고 테스트 중 Grafana 주소를 출력한다. 정상 종료 시 SSH tunnel을 닫고
-운영 Compose만 남긴다.
+이 명령은 기존 loadtest Compose의 readiness 확인, SSH tunnel, 시나리오별 fixture
+seed·k6·cleanup만 처리한다. 성공하거나 실패해도 EC2 Compose 환경은 변경하거나
+복구하지 않는다. 결과를 확인하고 모든 fixture가 정리된 뒤 EC2에서 직접 복구한다.
 
-PowerShell 프로세스 강제 종료나 로컬 전원 종료처럼 `finally`가 실행되지 않은
-경우에는 아래 수동 절차의 fixture cleanup과 운영 Compose 복구 명령을 실행한다.
+```bash
+bash load-tests/answer-submission/restore-prod-compose.sh
+```
 
-### 수동 실행 및 복구
+요약하면 권장 실행 경계는 다음과 같다.
+
+```text
+loadtest 환경 전환(수동)
+→ 여러 시나리오 실행·fixture cleanup(자동)
+→ 운영 환경 복구(수동)
+```
+
+#### 세부 수동 실행 및 비상 복구
 
 아래 PowerShell 스크립트와 k6는 로컬 Windows 또는 macOS에서 실행한다. EC2는
 Linux여도 되며 PowerShell이 필요하지 않다. 평상시 운영 Compose는 Actuator 관리
@@ -661,7 +635,7 @@ ssh -N `
 Prometheus는 Compose network에서 `was:9090/actuator/prometheus`를 1초마다
 수집한다. 로컬 k6는 19091 터널을 통해 결과를 Remote Write하고, Grafana는
 <http://127.0.0.1:13000>에서 로그인 없이 읽기 전용으로 확인한다. 대시보드의
-`Test run`과 `Stage` 변수는 manifest의 run-id와 동시성 단계를 사용한다.
+`Test run`, `Scenario`, `Stage` 변수로 전체 실행, 시나리오와 동시성 단계를 선택한다.
 
 `SPRING_PROFILES_ACTIVE=prod`와 운영 datasource 설정으로 fixture를 만든 뒤 같은
 manifest를 k6에 전달한다. fixture 생성·정리는 반드시 동일한 DB를 사용해야 한다.
@@ -675,10 +649,12 @@ $env:SPRING_AI_OPENAI_MAX_RETRIES = '0'
 $runId = 'aws-' + [DateTimeOffset]::UtcNow.ToString('yyyyMMddTHHmmssZ')
 $resultRoot = "load-tests/results/aws/$runId"
 $manifest = "$resultRoot/fixture-manifest.json"
+$stages = @(10, 100, 200, 300)
 
 & $gradleWrapper loadTestFixtures --no-daemon `
   "-PloadTestAction=seed" `
   "-PloadTestRunId=$runId" `
+  "-PloadTestStages=$($stages -join ',')" `
   "-PloadTestManifest=$manifest"
 ```
 
@@ -692,6 +668,7 @@ $sshKey = '<로컬 EC2 접속 키 경로>'
   -PrometheusRemoteWriteUrl http://127.0.0.1:19091/api/v1/write `
   -Manifest $manifest `
   -ResultRoot $resultRoot `
+  -Stages $stages `
   -DockerContainer backend-was-1 `
   -SshHost ubuntu@3.35.11.125 `
   -SshIdentityFile $sshKey `
@@ -738,6 +715,50 @@ Actuator snapshot은 그대로 생성된다. 자동 실행의 k6 지표에는 �
 
 ```bash
 bash load-tests/answer-submission/restore-prod-compose.sh
+```
+
+### 선택 사항: 전체 흐름 자동 실행
+
+수동 절차를 반복해야 할 때 사용할 수 있도록 `invoke-aws-load-test.ps1`도 제공한다.
+이 도구는 loadtest Compose 시작부터 SSH tunnel, readiness 확인, 시나리오별 fixture
+seed·k6·cleanup, 운영 Compose 복구까지 모두 수행한다. 운영 Compose 전환과 복구까지
+자동으로 실행한다는 점을 확인한 경우에만 사용한다.
+
+한 시나리오의 k6 threshold가 실패해도 나머지 시나리오를 계속 실행하고 마지막에
+실패 목록을 반환한다. fixture cleanup이나 기반 환경이 실패하면 추가 실행을 중단하고
+`finally`에서 남은 fixture와 운영 Compose 복구를 시도한다. PowerShell 프로세스 강제
+종료나 로컬 전원 종료처럼 `finally`가 실행되지 않으면 위 수동 cleanup과 복구 절차를
+직접 실행해야 한다.
+
+전체 자동화도 위 공통 `.private` 설정과 `Scenarios`를 사용한다. 각 시나리오는 고유한
+이름과 동시성 단계, 클라이언트 재시도 횟수를 가진다.
+
+```powershell
+Scenarios = @(
+  @{ Name = "baseline-retry0"; Stages = @(10, 100, 200, 300); ClientMaxRetries = 0 }
+  @{ Name = "retry1"; Stages = @(10, 100, 200, 300); ClientMaxRetries = 1 }
+  @{ Name = "retry2"; Stages = @(10, 100, 200, 300); ClientMaxRetries = 2 }
+)
+```
+
+다음 명령은 실제 OpenAI 비용과 운영 환경 전환을 명시적으로 확인하는 스위치가
+없으면 실행되지 않는다.
+
+```powershell
+./load-tests/answer-submission/invoke-aws-load-test.ps1 `
+  -ConfirmLiveOpenAiCost
+```
+
+시작 전에 모든 시나리오와 합산 최대 HTTP 시도 횟수를 출력한다. 예제 구성은 논리
+제출 1,830건, 최대 HTTP 시도 3,660회다. 결과는 시나리오별 폴더에 저장되고 최상위
+`run-plan.json`에는 전체 test-id와 실행 계획이 기록된다.
+
+```text
+load-tests/results/aws/<test-id>/
+├─ run-plan.json
+├─ baseline-retry0/
+├─ retry1/
+└─ retry2/
 ```
 
 ## 결과 보고서 생성
