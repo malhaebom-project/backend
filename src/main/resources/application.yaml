@@ -53,6 +53,10 @@ malhaebom:
     max-concurrent-requests: ${ANSWER_ASSESSMENT_MAX_CONCURRENT_REQUESTS:32}
     queue-capacity: ${ANSWER_ASSESSMENT_QUEUE_CAPACITY:64}
     max-queue-wait: ${ANSWER_ASSESSMENT_MAX_QUEUE_WAIT:10s}
+    rate-limit:
+      requests-per-minute: ${ANSWER_ASSESSMENT_RATE_LIMIT_REQUESTS_PER_MINUTE:400}
+      tokens-per-minute: ${ANSWER_ASSESSMENT_RATE_LIMIT_TOKENS_PER_MINUTE:400000}
+      tokens-per-request: ${ANSWER_ASSESSMENT_RATE_LIMIT_TOKENS_PER_REQUEST:3000}
   answer-submission:
     processing-timeout: 25s
     processing-lease: 60s

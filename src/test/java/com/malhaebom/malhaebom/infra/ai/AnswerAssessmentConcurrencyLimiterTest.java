@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
+import io.github.bucket4j.TimeMeter;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerAssessmentMetricsRecorder;
+import com.malhaebom.malhaebom.infra.observability.MicrometerProviderRateLimitMetricsRecorder;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 
@@ -495,6 +497,58 @@ class AnswerAssessmentConcurrencyLimiterTest {
 		assertEquals(0.0, gauge(fixture, "active"));
 	}
 
+	@Test
+	void rate가_부족하면_FIFO_head만_대기하고_refill_시점에_한번_재실행한다() {
+		LimiterFixture fixture = rateLimitedFixture();
+		exhaustTokenBucket(fixture);
+		AtomicInteger firstCalls = new AtomicInteger();
+		AtomicInteger secondCalls = new AtomicInteger();
+		AnswerAssessmentTask first = fixture.limiter().execute(() -> {
+			firstCalls.incrementAndGet();
+			return completedTask();
+		});
+		AnswerAssessmentTask second = fixture.limiter().execute(() -> {
+			secondCalls.incrementAndGet();
+			return completedTask();
+		});
+
+		assertEquals(0, firstCalls.get());
+		assertEquals(0, secondCalls.get());
+		assertEquals(3, fixture.scheduler().scheduledCount());
+		assertEquals(1.0, rateCounter(fixture, "delayed"));
+
+		fixture.ticker().addAndGet(Duration.ofMillis(300).toNanos());
+		fixture.scheduler().runShortestDelay();
+
+		first.result().toCompletableFuture().join();
+		assertEquals(1, firstCalls.get());
+		assertEquals(0, secondCalls.get());
+		assertEquals(2.0, rateCounter(fixture, "delayed"));
+		assertEquals(134.0, rateCounter(fixture, "allowed"));
+		assertEquals(2, fixture.scheduler().scheduledCount());
+		assertFalse(second.result().toCompletableFuture().isDone());
+	}
+
+	@Test
+	void rate_대기_중_10초가_지나면_overload와_rate_rejected를_기록한다() {
+		LimiterFixture fixture = rateLimitedFixture();
+		exhaustTokenBucket(fixture);
+		AtomicInteger calls = new AtomicInteger();
+		AnswerAssessmentTask queued = fixture.limiter().execute(() -> {
+			calls.incrementAndGet();
+			return completedTask();
+		});
+
+		fixture.ticker().addAndGet(Duration.ofSeconds(10).toNanos());
+		fixture.scheduler().runNext();
+
+		assertOverloaded(queued);
+		assertEquals(0, calls.get());
+		assertEquals(1.0, rateCounter(fixture, "delayed"));
+		assertEquals(1.0, rateCounter(fixture, "rejected"));
+		assertEquals(0, fixture.scheduler().scheduledCount());
+	}
+
 	private LimiterFixture fixture(int activeLimit, int queueCapacity) {
 		SimpleMeterRegistry registry = new SimpleMeterRegistry();
 		ControllableTimeoutScheduler scheduler =
@@ -514,6 +568,46 @@ class AnswerAssessmentConcurrencyLimiterTest {
 				ticker::get
 			);
 		return new LimiterFixture(limiter, registry, scheduler, ticker);
+	}
+
+	private LimiterFixture rateLimitedFixture() {
+		SimpleMeterRegistry registry = new SimpleMeterRegistry();
+		ControllableTimeoutScheduler scheduler =
+			new ControllableTimeoutScheduler();
+		AtomicLong ticker = new AtomicLong();
+		TimeMeter timeMeter = new TimeMeter() {
+			@Override
+			public long currentTimeNanos() {
+				return ticker.get();
+			}
+
+			@Override
+			public boolean isWallClockBased() {
+				return false;
+			}
+		};
+		OpenAiAnswerAssessmentRateLimiter rateLimiter =
+			new OpenAiAnswerAssessmentRateLimiter(
+				new OpenAiAnswerAssessmentRateLimitProperties(
+					400, 400_000, 3_000),
+				new MicrometerProviderRateLimitMetricsRecorder(registry),
+				timeMeter);
+		AnswerAssessmentConcurrencyLimiter limiter =
+			new AnswerAssessmentConcurrencyLimiter(
+				new AnswerAssessmentConcurrencyProperties(
+					1, 2, Duration.ofSeconds(10)),
+				new MicrometerAnswerAssessmentMetricsRecorder(registry),
+				rateLimiter,
+				scheduler,
+				ticker::get);
+		return new LimiterFixture(limiter, registry, scheduler, ticker);
+	}
+
+	private void exhaustTokenBucket(LimiterFixture fixture) {
+		for (int index = 0; index < 133; index++) {
+			fixture.limiter().execute(this::completedTask)
+				.result().toCompletableFuture().join();
+		}
 	}
 
 	private Supplier<AnswerAssessmentTask> named(
@@ -641,6 +735,15 @@ class AnswerAssessmentConcurrencyLimiterTest {
 			.count();
 	}
 
+	private double rateCounter(LimiterFixture fixture, String result) {
+		return fixture.registry()
+			.get("malhaebom.ai.provider.rate.limit.requests")
+			.tag("provider", "openai")
+			.tag("result", result)
+			.counter()
+			.count();
+	}
+
 	private AnswerAssessment assessment() {
 		return new AnswerAssessment(
 			true,
@@ -677,7 +780,7 @@ class AnswerAssessmentConcurrencyLimiterTest {
 			Runnable task,
 			Duration delay
 		) {
-			ScheduledTask scheduled = new ScheduledTask(task);
+			ScheduledTask scheduled = new ScheduledTask(task, delay);
 			tasks.add(scheduled);
 			return () -> cancel(scheduled);
 		}
@@ -686,6 +789,21 @@ class AnswerAssessmentConcurrencyLimiterTest {
 			ScheduledTask scheduled;
 			synchronized (this) {
 				scheduled = tasks.poll();
+			}
+			if (scheduled != null && !scheduled.cancelled) {
+				scheduled.task.run();
+			}
+		}
+
+		void runShortestDelay() {
+			ScheduledTask scheduled;
+			synchronized (this) {
+				scheduled = tasks.stream()
+					.min((first, second) -> first.delay.compareTo(second.delay))
+					.orElse(null);
+				if (scheduled != null) {
+					tasks.remove(scheduled);
+				}
 			}
 			if (scheduled != null && !scheduled.cancelled) {
 				scheduled.task.run();
@@ -704,10 +822,12 @@ class AnswerAssessmentConcurrencyLimiterTest {
 		private static final class ScheduledTask {
 
 			private final Runnable task;
+			private final Duration delay;
 			private boolean cancelled;
 
-			private ScheduledTask(Runnable task) {
+			private ScheduledTask(Runnable task, Duration delay) {
 				this.task = task;
+				this.delay = delay;
 			}
 		}
 	}
