@@ -32,7 +32,7 @@ public class OpenAiAnswerAssessmentRateLimiter {
 		this(properties, metrics, TimeMeter.SYSTEM_NANOTIME);
 	}
 
-	OpenAiAnswerAssessmentRateLimiter(
+	public OpenAiAnswerAssessmentRateLimiter(
 		OpenAiAnswerAssessmentRateLimitProperties properties,
 		ProviderRateLimitMetricsRecorder metrics,
 		TimeMeter timeMeter

@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +45,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.github.bucket4j.TimeMeter;
 
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmission;
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionStatus;
@@ -56,12 +58,15 @@ import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionReposit
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.infra.ai.AnswerAssessmentConcurrencyLimiter;
-import com.malhaebom.malhaebom.infra.ai.AnswerAssessmentConcurrencyProperties;
+import com.malhaebom.malhaebom.infra.ai.AnswerAssessmentQueueProperties;
 import com.malhaebom.malhaebom.infra.ai.AnswerAssessmentQueueTimeoutScheduler;
+import com.malhaebom.malhaebom.infra.ai.AnswerAssessmentRateLimitQueue;
+import com.malhaebom.malhaebom.infra.ai.OpenAiAnswerAssessmentRateLimitProperties;
+import com.malhaebom.malhaebom.infra.ai.OpenAiAnswerAssessmentRateLimiter;
 import com.malhaebom.malhaebom.infra.observability.AnswerAssessmentMetricsRecorder;
 import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerAssessmentMetricsRecorder;
 import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerSubmissionMetricsRecorder;
+import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.AnswerAssessmentService;
 import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
@@ -307,7 +312,7 @@ class LearningAnswerConcurrencyJpaTest {
 		assertFalse(secondRequest.toCompletableFuture().isDone());
 		assertEquals(AnswerSubmissionStatus.PROCESSING, queued.getStatus());
 		assertEquals(1, assessmentGenerator.callCount());
-		assertEquals(1, queueTimeoutScheduler.scheduledCount());
+		assertEquals(2, queueTimeoutScheduler.scheduledCount());
 		assertEquals(answersBefore, answerRepository.count());
 
 		assessmentGenerator.releaseAssessment(0);
@@ -332,7 +337,7 @@ class LearningAnswerConcurrencyJpaTest {
 	}
 
 	@Test
-	void active와_queue가_차면_그_다음_제출을_실패시키고_같은_예약으로_재시도한다()
+	void rate_queue가_차면_그_다음_제출을_실패시키고_같은_예약으로_재시도한다()
 		throws Exception {
 		SubmissionFixture first = submissionFixture(1);
 		SubmissionFixture second = submissionFixture(1);
@@ -356,7 +361,7 @@ class LearningAnswerConcurrencyJpaTest {
 			failed.getFailureMessage()
 		);
 		assertEquals(1, assessmentGenerator.callCount());
-		assertEquals(1, queueTimeoutScheduler.scheduledCount());
+		assertEquals(2, queueTimeoutScheduler.scheduledCount());
 		assertEquals(answersBefore, answerRepository.count());
 
 		assessmentGenerator.releaseAssessment(0);
@@ -624,18 +629,35 @@ class LearningAnswerConcurrencyJpaTest {
 	static class AssessmentTestConfiguration {
 
 		@Bean
-		AnswerAssessmentConcurrencyLimiter answerAssessmentConcurrencyLimiter(
+		AnswerAssessmentRateLimitQueue answerAssessmentRateLimitQueue(
 			ControllableQueueTimeoutScheduler timeoutScheduler,
-			AnswerAssessmentMetricsRecorder metrics
+			AnswerAssessmentMetricsRecorder metrics,
+			OpenAiAnswerAssessmentRateLimiter rateLimiter
 		) {
-			return new AnswerAssessmentConcurrencyLimiter(
-				new AnswerAssessmentConcurrencyProperties(
-					1,
+			return new AnswerAssessmentRateLimitQueue(
+				new AnswerAssessmentQueueProperties(
 					1,
 					Duration.ofSeconds(10)
 				),
 				metrics,
+				rateLimiter,
 				timeoutScheduler
+			);
+		}
+
+		@Bean
+		ManualRateTimeMeter rateTimeMeter() {
+			return new ManualRateTimeMeter();
+		}
+
+		@Bean
+		OpenAiAnswerAssessmentRateLimiter rateLimiter(
+			ManualRateTimeMeter timeMeter
+		) {
+			return new OpenAiAnswerAssessmentRateLimiter(
+				new OpenAiAnswerAssessmentRateLimitProperties(1, 3_000, 3_000),
+				ProviderRateLimitMetricsRecorder.NOOP,
+				timeMeter
 			);
 		}
 
@@ -656,9 +678,15 @@ class LearningAnswerConcurrencyJpaTest {
 
 		@Bean
 		BlockingAnswerAssessmentGenerator answerAssessmentGenerator(
-			AnswerAssessmentConcurrencyLimiter concurrencyLimiter
+			AnswerAssessmentRateLimitQueue rateLimitQueue,
+			ControllableQueueTimeoutScheduler timeoutScheduler,
+			ManualRateTimeMeter timeMeter
 		) {
-			return new BlockingAnswerAssessmentGenerator(concurrencyLimiter);
+			return new BlockingAnswerAssessmentGenerator(
+				rateLimitQueue,
+				timeoutScheduler,
+				timeMeter
+			);
 		}
 	}
 
@@ -704,6 +732,20 @@ class LearningAnswerConcurrencyJpaTest {
 			}
 		}
 
+		void runRateRetry() {
+			ScheduledTimeout retry;
+			synchronized (this) {
+				retry = timeouts.stream().reduce((first, second) -> second)
+					.orElse(null);
+				if (retry != null) {
+					timeouts.remove(retry);
+				}
+			}
+			if (retry != null && !retry.cancelled) {
+				retry.task.run();
+			}
+		}
+
 		synchronized int scheduledCount() {
 			return timeouts.size();
 		}
@@ -731,6 +773,25 @@ class LearningAnswerConcurrencyJpaTest {
 			private ScheduledTimeout(Runnable task) {
 				this.task = task;
 			}
+		}
+	}
+
+	private static final class ManualRateTimeMeter implements TimeMeter {
+
+		private final AtomicLong nanos = new AtomicLong();
+
+		@Override
+		public long currentTimeNanos() {
+			return nanos.get();
+		}
+
+		@Override
+		public boolean isWallClockBased() {
+			return false;
+		}
+
+		void refill() {
+			nanos.addAndGet(Duration.ofMinutes(1).toNanos());
 		}
 	}
 
@@ -772,19 +833,26 @@ class LearningAnswerConcurrencyJpaTest {
 	private static final class BlockingAnswerAssessmentGenerator
 		implements AnswerAssessmentGenerator {
 
-		private final AnswerAssessmentConcurrencyLimiter concurrencyLimiter;
+		private final AnswerAssessmentRateLimitQueue rateLimitQueue;
+		private final ControllableQueueTimeoutScheduler timeoutScheduler;
+		private final ManualRateTimeMeter timeMeter;
 		private final List<CompletableFuture<AnswerAssessment>> assessments =
 			new CopyOnWriteArrayList<>();
 		private final AtomicInteger calls = new AtomicInteger();
 		private volatile CountDownLatch assessmentStarted;
 
 		private BlockingAnswerAssessmentGenerator(
-			AnswerAssessmentConcurrencyLimiter concurrencyLimiter
+			AnswerAssessmentRateLimitQueue rateLimitQueue,
+			ControllableQueueTimeoutScheduler timeoutScheduler,
+			ManualRateTimeMeter timeMeter
 		) {
-			this.concurrencyLimiter = concurrencyLimiter;
+			this.rateLimitQueue = rateLimitQueue;
+			this.timeoutScheduler = timeoutScheduler;
+			this.timeMeter = timeMeter;
 		}
 
 		void reset() {
+			timeMeter.refill();
 			calls.set(0);
 			assessmentStarted = new CountDownLatch(1);
 			assessments.clear();
@@ -800,11 +868,13 @@ class LearningAnswerConcurrencyJpaTest {
 
 		void releaseAssessment(int index) {
 			assessments.get(index).complete(CORRECT_ASSESSMENT);
+			timeMeter.refill();
+			timeoutScheduler.runRateRetry();
 		}
 
 		void releaseAllAssessments() {
 			for (int index = 0; index < assessments.size(); index++) {
-				assessments.get(index).complete(CORRECT_ASSESSMENT);
+				releaseAssessment(index);
 			}
 		}
 
@@ -816,7 +886,7 @@ class LearningAnswerConcurrencyJpaTest {
 		public AnswerAssessmentTask generateAsync(
 			AnswerAssessmentInput input
 		) {
-			return concurrencyLimiter.execute(() -> {
+			return rateLimitQueue.execute(() -> {
 				calls.incrementAndGet();
 				CompletableFuture<AnswerAssessment> assessment =
 					new CompletableFuture<>();

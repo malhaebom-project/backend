@@ -1,10 +1,9 @@
-# 답안 평가 동시성·대기열 지표
+# 답안 평가 rate limit·대기열 지표
 
-`AnswerAssessmentConcurrencyLimiter`는 OpenAI 답안 평가의 실제 실행 수와
-대기열을 함께 제한한다. 기본값은 active 32건, queue 64건, 최대 대기 10초이며
-active와 queue를 합친 즉시 수용 가능량은 96건이다. 대기는 request thread,
-평가 executor thread, DB connection을 점유하지 않는 `CompletableFuture` 기반이다.
-limiter는 동시성 상태와 전이만 관리하고, Micrometer meter 등록과 기록은
+`AnswerAssessmentRateLimitQueue`는 OpenAI rate token이 부족한 요청을 최대 64건,
+10초 동안 FIFO로 대기시킨다. 대기는 request thread, 평가 executor thread,
+DB connection을 점유하지 않는 `CompletableFuture` 기반이다. queue 상태와 전이는
+rate limit 획득 결과에 따라 관리되고, Micrometer meter 등록과 기록은
 `MicrometerAnswerAssessmentMetricsRecorder`가 담당한다.
 
 실제 provider 요청이 시작된 뒤의 사용량과 실패 원인은 별도
@@ -13,16 +12,14 @@ timeout처럼 OpenAI 호출 전에 종료된 작업은 OpenAI 실패에 포함�
 
 | 지표 | 종류 | 의미 |
 | --- | --- | --- |
-| `malhaebom.answer.assessment.active` | Gauge | 현재 permit을 점유하고 평가 중인 작업 수 |
-| `malhaebom.answer.assessment.limit` | Gauge | 허용된 최대 동시 평가 수. 기본값 32 |
 | `malhaebom.answer.assessment.queue.size` | Gauge | 현재 FIFO 대기열에 남아 있는 작업 수 |
 | `malhaebom.answer.assessment.queue.capacity` | Gauge | 대기열 최대 용량. 기본값 64 |
 | `malhaebom.answer.assessment.accepted` | Counter | direct admission 또는 queue 승격 후 실제 평가를 시작한 누적 수 |
 | `malhaebom.answer.assessment.rejected` | Counter | queue full 또는 queue timeout으로 provider 호출 전에 거절된 누적 수 |
-| `malhaebom.answer.assessment.completed` | Counter | permit을 점유한 비동기 작업이 정상 완료된 누적 수 |
-| `malhaebom.answer.assessment.failed` | Counter | permit 획득 후 작업 생성 또는 비동기 완료가 예외로 끝난 누적 수 |
+| `malhaebom.answer.assessment.completed` | Counter | 시작된 비동기 작업이 정상 완료된 누적 수 |
+| `malhaebom.answer.assessment.failed` | Counter | 작업 생성 또는 비동기 완료가 예외로 끝난 누적 수 |
 | `malhaebom.answer.assessment.queued` | Counter | FIFO 대기열에 들어간 누적 수 |
-| `malhaebom.answer.assessment.queue.promoted` | Counter | 대기열에서 permit으로 승격되어 평가를 시작한 누적 수 |
+| `malhaebom.answer.assessment.queue.promoted` | Counter | 대기열에서 rate token을 획득해 평가를 시작한 누적 수 |
 | `malhaebom.answer.assessment.queue.full` | Counter | 대기열이 가득 차 즉시 503으로 거절된 누적 수 |
 | `malhaebom.answer.assessment.queue.timeout` | Counter | 최대 대기 시간을 넘겨 503으로 종료된 누적 수 |
 | `malhaebom.answer.assessment.queue.cancelled` | Counter | 대기 중 원래 제출 deadline 또는 호출자 취소로 제거된 누적 수 |
@@ -49,11 +46,10 @@ queue timeout을 구분할 수 없으므로 서버 카운터를 함께 확인해
 
 운영 및 부하 테스트에서 다음 불변식을 확인한다.
 
-- `active <= limit`
 - `queue.size <= queue.capacity`
-- permit을 얻은 작업은 정확히 한 번 `completed` 또는 `failed`로 끝난다.
+- 시작된 작업은 정확히 한 번 `completed` 또는 `failed`로 끝난다.
 - `accepted`는 실제 평가 시작 수이므로 direct admission과 승격을 모두 포함한다.
-- 단계 종료 후 `active=0`, `queue.size=0`, Hikari pending=0으로 회복한다.
+- 단계 종료 후 `queue.size=0`, Hikari pending=0으로 회복한다.
 - `queue.full`, `queue.timeout`, `queue.cancelled`는 외부 provider 호출 수가 아니다.
 - OpenAI failure reason 하나는 실패한 실제 provider 요청당 정확히 한 번 증가한다.
 - provider 응답을 받은 작업은 후속 파싱 결과와 관계없이 usage를 한 번 기록한다.
