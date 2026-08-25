@@ -167,7 +167,7 @@ foreach ($stage in $Stages) {
             "-e", "SCENARIO_NAME=$Scenario",
             "-e", ("SUMMARY_PATH=" + $summaryPath.Replace('\', '/')),
             "--tag", "testid=$metricTestId",
-            "--tag", "scenario=$Scenario",
+            "--tag", "load_scenario=$Scenario",
             "--tag", "stage=$stage",
             "--out", ("json=" + $rawPath)
         )

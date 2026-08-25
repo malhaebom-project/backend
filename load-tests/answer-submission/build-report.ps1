@@ -61,6 +61,11 @@ function Read-PrometheusSnapshots([string]$path) {
                 QueueFull = 0.0
                 QueueTimeout = 0.0
                 QueueCancelled = 0.0
+                RateLimitAllowed = 0.0
+                RateLimitDelayed = 0.0
+                RateLimitRejected = 0.0
+                AvailableRequests = 0.0
+                AvailableTokens = 0.0
                 HikariPending = 0.0
                 TomcatBusy = 0.0
                 TomcatMax = 0.0
@@ -78,6 +83,16 @@ function Read-PrometheusSnapshots([string]$path) {
             $current.QueueTimeout = [double]$Matches[1]
         } elseif ($line -match '^malhaebom_answer_assessment_queue_cancelled_total(?:\{.*\})?\s+([-+0-9.eE]+)$') {
             $current.QueueCancelled = [double]$Matches[1]
+        } elseif ($line -match '^malhaebom_ai_provider_rate_limit_requests_total\{.*provider="openai".*result="allowed".*\}\s+([-+0-9.eE]+)$') {
+            $current.RateLimitAllowed = [double]$Matches[1]
+        } elseif ($line -match '^malhaebom_ai_provider_rate_limit_requests_total\{.*provider="openai".*result="delayed".*\}\s+([-+0-9.eE]+)$') {
+            $current.RateLimitDelayed = [double]$Matches[1]
+        } elseif ($line -match '^malhaebom_ai_provider_rate_limit_requests_total\{.*provider="openai".*result="rejected".*\}\s+([-+0-9.eE]+)$') {
+            $current.RateLimitRejected = [double]$Matches[1]
+        } elseif ($line -match '^malhaebom_ai_provider_rate_limit_available\{.*provider="openai".*quota="requests".*\}\s+([-+0-9.eE]+)$') {
+            $current.AvailableRequests = [double]$Matches[1]
+        } elseif ($line -match '^malhaebom_ai_provider_rate_limit_available\{.*provider="openai".*quota="tokens".*\}\s+([-+0-9.eE]+)$') {
+            $current.AvailableTokens = [double]$Matches[1]
         } elseif ($line -match '^hikaricp_connections_pending(?:\{.*\})?\s+([-+0-9.eE]+)$') {
             $current.HikariPending = [double]$Matches[1]
         } elseif ($line -match '^tomcat_threads_busy_threads\{.*name="http-nio-8080".*\}\s+([-+0-9.eE]+)$') {
@@ -100,6 +115,13 @@ function Counter-Delta($snapshots, [string]$property) {
         0,
         [double]$snapshots[-1].$property - [double]$snapshots[0].$property
     )
+}
+
+function Snapshot-Min($snapshots, [string]$property) {
+    if ($snapshots.Count -eq 0) {
+        return 0
+    }
+    return ($snapshots | Measure-Object -Property $property -Minimum).Minimum
 }
 
 function Max-SustainedSeconds($snapshots, [scriptblock]$predicate) {
@@ -203,6 +225,11 @@ foreach ($stage in $stages) {
         QueueFull = Counter-Delta $snapshots "QueueFull"
         QueueTimeout = Counter-Delta $snapshots "QueueTimeout"
         QueueCancelled = Counter-Delta $snapshots "QueueCancelled"
+        RateLimitAllowed = Counter-Delta $snapshots "RateLimitAllowed"
+        RateLimitDelayed = Counter-Delta $snapshots "RateLimitDelayed"
+        RateLimitRejected = Counter-Delta $snapshots "RateLimitRejected"
+        MinimumAvailableRequests = Snapshot-Min $snapshots "AvailableRequests"
+        MinimumAvailableTokens = Snapshot-Min $snapshots "AvailableTokens"
         TomcatBusy = Prometheus-Max $prometheusPath `
             "tomcat_threads_busy_threads"
         TomcatMax = Prometheus-Max $prometheusPath `
@@ -251,6 +278,18 @@ foreach ($row in $rows) {
         + "$($row.RetryAttempts) | $($row.RetryRecovered) | " `
         + "$($row.Success) | $($row.Overload) | $($row.RawOverload) | " `
         + "$($row.Unexpected) | $missing | $($row.Mismatch) |"
+}
+
+$lines += @(
+    "",
+    "| 동시 제출 | Bucket4j allowed | delayed | rejected | 최소 request 잔여량 | 최소 추정 token 잔여량 |",
+    "| ---: | ---: | ---: | ---: | ---: | ---: |"
+)
+foreach ($row in $rows) {
+    $lines += "| $($row.Stage) | $($row.RateLimitAllowed) | " `
+        + "$($row.RateLimitDelayed) | $($row.RateLimitRejected) | " `
+        + "$($row.MinimumAvailableRequests) | " `
+        + "$($row.MinimumAvailableTokens) |"
 }
 
 $lines += @(
@@ -304,6 +343,12 @@ $maxQueue = ($rows | Measure-Object -Property OpenAiQueueSize -Maximum).Maximum
 $queueFullTotal = ($rows | Measure-Object -Property QueueFull -Sum).Sum
 $queueTimeoutTotal = ($rows | Measure-Object -Property QueueTimeout -Sum).Sum
 $queueCancelledTotal = ($rows | Measure-Object -Property QueueCancelled -Sum).Sum
+$rateLimitAllowedTotal = ($rows | Measure-Object `
+    -Property RateLimitAllowed -Sum).Sum
+$rateLimitDelayedTotal = ($rows | Measure-Object `
+    -Property RateLimitDelayed -Sum).Sum
+$rateLimitRejectedTotal = ($rows | Measure-Object `
+    -Property RateLimitRejected -Sum).Sum
 $allStagesPresent = $rows.Count -eq $stages.Count
 $allStagesHaveSuccess = ($rows | Where-Object {
     $_.Success -le 0
@@ -386,6 +431,7 @@ $lines += @(
     "- 100단계는 과반 성공으로 queue 경계를 대부분 흡수: $queueBoundaryMostlyAbsorbed",
     "- queue size $AssessmentQueueCapacity 이하: $($maxQueue -le $AssessmentQueueCapacity) (최대 $maxQueue)",
     "- queue full / timeout / cancelled: $queueFullTotal / $queueTimeoutTotal / $queueCancelledTotal",
+    "- Bucket4j allowed / delayed / rejected: $rateLimitAllowedTotal / $rateLimitDelayedTotal / $rateLimitRejectedTotal",
     "- 200/300단계에서 raw 503 관찰: $overloadObserved",
     "- 성공 응답 30초 이내: $successDeadlinePassed",
     "- raw 503 p95 $overloadP95LimitMillis ms 이하(대기 $AssessmentMaxQueueWaitSeconds 초 + 응답 여유 2초): $overloadLatencyPassed",
@@ -403,7 +449,7 @@ $lines += @(
     "",
     "## 결론",
     "",
-    "- queue/active 설정 조정 필요 여부:",
+    "- Bucket4j rate limit/queue 설정 조정 필요 여부:",
     "- 병목과 후속 작업:"
 )
 

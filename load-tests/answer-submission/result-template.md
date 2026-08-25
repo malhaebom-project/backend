@@ -23,6 +23,13 @@
 | 200 |  |  |  |  |  |
 | 300 |  |  |  |  |  |
 
+| 동시 제출 | Bucket4j allowed | delayed | rejected | 최소 request 잔여량 | 최소 추정 token 잔여량 |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 10 |  |  |  |  |  |
+| 100 |  |  |  |  |  |
+| 200 |  |  |  |  |  |
+| 300 |  |  |  |  |  |
+
 ## 판정
 
 - 10/100/200/300 네 단계 결과와 누락 응답 0건:
@@ -35,17 +42,18 @@
 - raw 503 p95 12초 이내(최대 queue wait 10초 + 응답 여유 2초):
 - queue size 64 이하:
 - queue full / timeout / cancelled 서버 카운터 기록:
+- Bucket4j allowed / delayed / rejected 및 잔여 quota 기록:
 - probe 성공률 100%, p95 기준 이내:
 - provider/queue 대기 중 Tomcat busy가 max의 25% 미만:
 - Hikari pending이 2초 이상 지속되지 않음:
-- 종료 후 active=0, queue=0, Hikari pending=0:
+- 종료 후 queue=0, Hikari pending=0:
 
 HTTP 응답만으로 queue full과 queue timeout을 구분할 수 없으므로 서버 카운터로
 원인을 분리한다. raw 503은 provider 호출 수가 아니라 HTTP 과부하 응답 수다.
 
 ## 결론
 
-- queue/active 설정 조정 필요 여부:
+- Bucket4j rate limit/queue 설정 조정 필요 여부:
 - 병목과 후속 작업:
 - queue는 짧은 burst를 흡수하지만 처리량을 늘리거나 300건 성공을 보장하지 않는다.
 - queue 대기도 제출 시작 기준 25초 deadline 안에 포함되며 deadline을 연장하지 않는다.

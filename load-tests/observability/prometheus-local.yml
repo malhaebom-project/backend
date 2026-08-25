@@ -8,6 +8,6 @@ scrape_configs:
     metrics_path: /actuator/prometheus
     static_configs:
       - targets:
-          - was:9090
+          - management-tunnel:19090
         labels:
           environment: loadtest

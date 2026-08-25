@@ -9,6 +9,7 @@
 
     ResultRoot = "load-tests/results/aws"
     DockerContainer = "backend-was-1"
+    BackendImage = "malhaebom/backend:latest"
     Scenarios = @(
         @{
             Name = "baseline-retry0"
