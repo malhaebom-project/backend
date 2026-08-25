@@ -5,8 +5,6 @@ param(
     [string]$Manifest,
     [string]$ResultRoot = "load-tests/results",
     [int[]]$Stages = @(10, 100, 200, 300),
-    [ValidateRange(1, 10000)]
-    [int]$AssessmentLimit = 32,
     [ValidateRange(0, 10000)]
     [int]$AssessmentQueueCapacity = 64,
     [ValidateRange(1, 3600)]
@@ -153,7 +151,6 @@ foreach ($stage in $Stages) {
     $recoveryStarted = [DateTimeOffset]::UtcNow
     $recoveryTimedOut = $false
     $collectorExitCode = $null
-    $lastActiveValue = $null
     $lastQueueSizeValue = $null
     $lastPendingValue = $null
     try {
@@ -163,7 +160,6 @@ foreach ($stage in $Stages) {
             "-e", "BASE_URL=$BaseUrl",
             "-e", ("MANIFEST=" + $manifestPath.Replace('\', '/')),
             "-e", "CONCURRENCY=$stage",
-            "-e", "ASSESSMENT_LIMIT=$AssessmentLimit",
             "-e", "ASSESSMENT_QUEUE_CAPACITY=$AssessmentQueueCapacity",
             "-e", ("ASSESSMENT_MAX_QUEUE_WAIT_SECONDS=" `
                 + $AssessmentMaxQueueWaitSeconds),
@@ -220,18 +216,14 @@ foreach ($stage in $Stages) {
         $idleStarted = $null
         while ($true) {
             $managementBase = $ManagementUrl.TrimEnd('/')
-            $activeEndpoint = $managementBase `
-                + "/actuator/metrics/malhaebom.answer.assessment.active"
             $queueSizeEndpoint = $managementBase `
                 + "/actuator/metrics/malhaebom.answer.assessment.queue.size"
             $pendingEndpoint = $managementBase `
                 + "/actuator/metrics/hikaricp.connections.pending"
-            $lastActiveValue = Actuator-GaugeValue $activeEndpoint
             $lastQueueSizeValue = Actuator-GaugeValue `
                 $queueSizeEndpoint $true
             $lastPendingValue = Actuator-GaugeValue $pendingEndpoint
-            if ($lastActiveValue -eq 0 `
-                -and $lastQueueSizeValue -eq 0 `
+            if ($lastQueueSizeValue -eq 0 `
                 -and $lastPendingValue -eq 0) {
                 if ($null -eq $idleStarted) {
                     $idleStarted = [DateTimeOffset]::UtcNow
@@ -270,11 +262,8 @@ foreach ($stage in $Stages) {
         scenario = $Scenario
         stage = $stage
         prometheusRemoteWriteEnabled = [bool]$PrometheusRemoteWriteUrl
-        assessmentLimit = $AssessmentLimit
         assessmentQueueCapacity = $AssessmentQueueCapacity
         assessmentMaxQueueWaitSeconds = $AssessmentMaxQueueWaitSeconds
-        immediateAdmissionCapacity = $AssessmentLimit `
-            + $AssessmentQueueCapacity
         clientMaxRetries = $ClientMaxRetries
         probeBaselineP95Millis = $baselineProbeP95
         probeLoadedP95Millis = $probeP95
@@ -282,7 +271,6 @@ foreach ($stage in $Stages) {
         probeLatencyPassed = $probeLatencyPassed
         metricsCollectorExitCode = $collectorExitCode
         recoveryTimedOut = $recoveryTimedOut
-        recoveredActive = $lastActiveValue
         recoveredQueueSize = $lastQueueSizeValue
         recoveredHikariPending = $lastPendingValue
         recoveryElapsedSeconds = [math]::Round(

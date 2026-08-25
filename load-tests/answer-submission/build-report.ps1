@@ -6,8 +6,6 @@ param(
     [string]$Environment = "local",
     [string]$GitCommit = "",
     [string]$FixtureRunId = "",
-    [ValidateRange(1, 10000)]
-    [int]$AssessmentLimit = 32,
     [ValidateRange(0, 10000)]
     [int]$AssessmentQueueCapacity = 64,
     [ValidateRange(1, 3600)]
@@ -19,7 +17,6 @@ param(
 $ErrorActionPreference = "Stop"
 $stages = @(10, 100, 200, 300)
 $rows = @()
-$immediateAdmissionCapacity = $AssessmentLimit + $AssessmentQueueCapacity
 $overloadP95LimitMillis = $AssessmentMaxQueueWaitSeconds * 1000 + 2000
 
 function Metric-Value($summary, [string]$name, [string]$field) {
@@ -60,7 +57,6 @@ function Read-PrometheusSnapshots([string]$path) {
             }
             $current = [ordered]@{
                 Timestamp = [DateTimeOffset]::Parse($Matches[1])
-                OpenAiActive = 0.0
                 OpenAiQueueSize = 0.0
                 QueueFull = 0.0
                 QueueTimeout = 0.0
@@ -74,9 +70,7 @@ function Read-PrometheusSnapshots([string]$path) {
         if ($null -eq $current) {
             continue
         }
-        if ($line -match '^malhaebom_answer_assessment_active(?:\{.*\})?\s+([-+0-9.eE]+)$') {
-            $current.OpenAiActive = [double]$Matches[1]
-        } elseif ($line -match '^malhaebom_answer_assessment_queue_size(?:\{.*\})?\s+([-+0-9.eE]+)$') {
+        if ($line -match '^malhaebom_answer_assessment_queue_size(?:\{.*\})?\s+([-+0-9.eE]+)$') {
             $current.OpenAiQueueSize = [double]$Matches[1]
         } elseif ($line -match '^malhaebom_answer_assessment_queue_full_total(?:\{.*\})?\s+([-+0-9.eE]+)$') {
             $current.QueueFull = [double]$Matches[1]
@@ -140,10 +134,6 @@ foreach ($stage in $stages) {
         throw "Summary retry setting does not match -ClientMaxRetries: " `
             + "$summaryPath"
     }
-    if ($null -ne $summary.assessmentLimit `
-        -and [int]$summary.assessmentLimit -ne $AssessmentLimit) {
-        throw "Summary active limit does not match -AssessmentLimit: $summaryPath"
-    }
     if ($null -ne $summary.assessmentQueueCapacity `
         -and [int]$summary.assessmentQueueCapacity -ne $AssessmentQueueCapacity) {
         throw "Summary queue capacity does not match report setting: $summaryPath"
@@ -156,8 +146,7 @@ foreach ($stage in $stages) {
 
     $snapshots = @(Read-PrometheusSnapshots $prometheusPath)
     $waitingSnapshots = @($snapshots | Where-Object {
-        ($_.OpenAiActive -gt 0 -or $_.OpenAiQueueSize -gt 0) `
-            -and $_.TomcatMax -gt 0
+        $_.OpenAiQueueSize -gt 0 -and $_.TomcatMax -gt 0
     })
     $minimumBusyPercent = 0
     if ($waitingSnapshots.Count -gt 0) {
@@ -166,16 +155,13 @@ foreach ($stage in $stages) {
         } | Measure-Object -Minimum).Minimum
     }
     $recovered = $false
-    $finalActive = 0
     $finalQueueSize = 0
     $finalHikariPending = 0
     if ($snapshots.Count -gt 0) {
         $last = $snapshots[-1]
-        $finalActive = $last.OpenAiActive
         $finalQueueSize = $last.OpenAiQueueSize
         $finalHikariPending = $last.HikariPending
-        $recovered = $finalActive -eq 0 `
-            -and $finalQueueSize -eq 0 `
+        $recovered = $finalQueueSize -eq 0 `
             -and $finalHikariPending -eq 0
     }
 
@@ -212,8 +198,6 @@ foreach ($stage in $stages) {
         BaselineProbeRate = Metric-Value $summary `
             "probe_baseline_success" "rate"
         ProbeRate = Metric-Value $summary "probe_success" "rate"
-        OpenAiActive = Prometheus-Max $prometheusPath `
-            "malhaebom_answer_assessment_active"
         OpenAiQueueSize = Prometheus-Max $prometheusPath `
             "malhaebom_answer_assessment_queue_size"
         QueueFull = Counter-Delta $snapshots "QueueFull"
@@ -235,7 +219,6 @@ foreach ($stage in $stages) {
                 -and $snapshot.TomcatBusy -ge $snapshot.TomcatMax
         }
         WaitingMinimumBusyPercent = $minimumBusyPercent
-        FinalActive = $finalActive
         FinalQueueSize = $finalQueueSize
         FinalHikariPending = $finalHikariPending
         Recovered = $recovered
@@ -249,10 +232,8 @@ $lines = @(
     "- 실행 환경: $Environment",
     "- Git commit: $GitCommit",
     "- fixture run-id: $FixtureRunId",
-    "- OpenAI active 제한: $AssessmentLimit",
     "- 대기열 용량: $AssessmentQueueCapacity",
     "- 최대 대기 시간: $AssessmentMaxQueueWaitSeconds 초",
-    "- 즉시 수용 가능량(active + queue): $immediateAdmissionCapacity",
     "- 클라이언트 최대 재시도: $ClientMaxRetries",
     "",
     "| 동시 제출 | HTTP 시도 | 평균 시도 | 재시도 | 재시도 회복 | 최종 200 | 최종 503 | raw 503 | 기타 오류 | 누락 | 응답 혼합 |",
@@ -290,12 +271,12 @@ foreach ($row in $rows) {
 
 $lines += @(
     "",
-    "| 동시 제출 | 최대 active | 최대 queue | queue full | queue timeout | queue cancelled | Tomcat 최대 busy / max | Hikari 최대 pending |",
-    "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
+    "| 동시 제출 | 최대 queue | queue full | queue timeout | queue cancelled | Tomcat 최대 busy / max | Hikari 최대 pending |",
+    "| ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
 )
 foreach ($row in $rows) {
-    $lines += "| $($row.Stage) | $($row.OpenAiActive) | " `
-        + "$($row.OpenAiQueueSize) | $($row.QueueFull) | " `
+    $lines += "| $($row.Stage) | $($row.OpenAiQueueSize) | " `
+        + "$($row.QueueFull) | " `
         + "$($row.QueueTimeout) | $($row.QueueCancelled) | " `
         + "$($row.TomcatBusy) / $($row.TomcatMax) | " `
         + "$($row.HikariPending) |"
@@ -303,11 +284,11 @@ foreach ($row in $rows) {
 
 $lines += @(
     "",
-    "| 동시 제출 | Hikari pending 지속(초) | Tomcat 포화 지속(초) | provider/queue 대기 중 Tomcat busy 최저(%) | 종료 active·queue·pending | 복구 |",
+    "| 동시 제출 | Hikari pending 지속(초) | Tomcat 포화 지속(초) | queue 대기 중 Tomcat busy 최저(%) | 종료 queue·pending | 복구 |",
     "| ---: | ---: | ---: | ---: | :---: | :---: |"
 )
 foreach ($row in $rows) {
-    $finalResources = "$($row.FinalActive)·$($row.FinalQueueSize)·$($row.FinalHikariPending)"
+    $finalResources = "$($row.FinalQueueSize)·$($row.FinalHikariPending)"
     $lines += "| $($row.Stage) | $($row.HikariPendingSeconds) | " `
         + "$($row.TomcatSaturatedSeconds) | " `
         + "$([math]::Round($row.WaitingMinimumBusyPercent, 1)) | " `
@@ -319,7 +300,6 @@ $mismatchTotal = ($rows | Measure-Object -Property Mismatch -Sum).Sum
 $missingTotal = ($rows | ForEach-Object {
     $_.Stage - $_.Classified
 } | Measure-Object -Sum).Sum
-$maxOpenAi = ($rows | Measure-Object -Property OpenAiActive -Maximum).Maximum
 $maxQueue = ($rows | Measure-Object -Property OpenAiQueueSize -Maximum).Maximum
 $queueFullTotal = ($rows | Measure-Object -Property QueueFull -Sum).Sum
 $queueTimeoutTotal = ($rows | Measure-Object -Property QueueTimeout -Sum).Sum
@@ -327,9 +307,6 @@ $queueCancelledTotal = ($rows | Measure-Object -Property QueueCancelled -Sum).Su
 $allStagesPresent = $rows.Count -eq $stages.Count
 $allStagesHaveSuccess = ($rows | Where-Object {
     $_.Success -le 0
-}).Count -eq 0
-$allWithinActiveLimitSucceeded = ($rows | Where-Object {
-    $_.Stage -le $AssessmentLimit -and $_.Success -ne $_.Stage
 }).Count -eq 0
 $queueBoundaryMostlyAbsorbed = ($rows | Where-Object {
     $_.Stage -eq 100 -and $_.Success -le [math]::Floor($_.Stage / 2)
@@ -342,9 +319,7 @@ $allProbeLatencyPassed = ($rows | Where-Object {
     $_.ProbeP95 -gt $limit
 }).Count -eq 0
 $overloadObserved = ($rows | Where-Object {
-    $_.Stage -ge 200 `
-        -and $_.Stage -gt $immediateAdmissionCapacity `
-        -and $_.RawOverload -le 0
+    $_.Stage -ge 200 -and $_.RawOverload -le 0
 }).Count -eq 0
 $attemptsBounded = ($rows | Where-Object {
     $_.Attempts -lt $_.Stage `
@@ -388,8 +363,7 @@ $finalSuccessRate = if ($logicalTotal -gt 0) {
     0
 }
 $tomcatReturnedDuringWait = ($rows | Where-Object {
-    ($_.OpenAiActive -gt 0 -or $_.OpenAiQueueSize -gt 0) `
-        -and $_.WaitingMinimumBusyPercent -ge 25
+    $_.OpenAiQueueSize -gt 0 -and $_.WaitingMinimumBusyPercent -ge 25
 }).Count -eq 0
 $lines += @(
     "",
@@ -409,20 +383,18 @@ $lines += @(
     "- raw 503은 provider 호출 수가 아니라 HTTP 과부하 응답 수",
     "- 최종 성공률: $finalSuccessRate%",
     "- 각 단계에서 성공 응답 관찰: $allStagesHaveSuccess",
-    "- active 제한 이하 단계는 전부 성공: $allWithinActiveLimitSucceeded",
     "- 100단계는 과반 성공으로 queue 경계를 대부분 흡수: $queueBoundaryMostlyAbsorbed",
-    "- OpenAI active $AssessmentLimit 이하: $($maxOpenAi -le $AssessmentLimit) (최대 $maxOpenAi)",
     "- queue size $AssessmentQueueCapacity 이하: $($maxQueue -le $AssessmentQueueCapacity) (최대 $maxQueue)",
     "- queue full / timeout / cancelled: $queueFullTotal / $queueTimeoutTotal / $queueCancelledTotal",
-    "- 수용량 $immediateAdmissionCapacity 밖의 200/300단계에서 raw 503 관찰: $overloadObserved",
+    "- 200/300단계에서 raw 503 관찰: $overloadObserved",
     "- 성공 응답 30초 이내: $successDeadlinePassed",
     "- raw 503 p95 $overloadP95LimitMillis ms 이하(대기 $AssessmentMaxQueueWaitSeconds 초 + 응답 여유 2초): $overloadLatencyPassed",
     "- probe 성공률 100%: $allProbeSucceeded",
     "- probe p95가 max(baseline x 2, 1초) 이하: $allProbeLatencyPassed",
     "- Hikari pending 2초 미만: $hikariPassed",
     "- Tomcat max 포화 2초 미만: $tomcatPassed",
-    "- provider/queue 대기 중 Tomcat busy가 max의 25% 아래로 복귀: $tomcatReturnedDuringWait",
-    "- 단계 종료 시 active=0, queue=0, Hikari pending=0: $allRecovered",
+    "- queue 대기 중 Tomcat busy가 max의 25% 아래로 복귀: $tomcatReturnedDuringWait",
+    "- 단계 종료 시 queue=0, Hikari pending=0: $allRecovered",
     "",
     "HTTP 응답만으로 queue full과 queue timeout을 구분할 수 없다. " `
         + "위 서버 queue 카운터로 원인을 분리한다.",

@@ -5,7 +5,6 @@ import { Counter, Rate, Trend } from 'k6/metrics';
 
 const manifestPath = __ENV.MANIFEST;
 const concurrency = Number(__ENV.CONCURRENCY || '10');
-const assessmentLimit = Number(__ENV.ASSESSMENT_LIMIT || '32');
 const assessmentQueueCapacity = Number(
   __ENV.ASSESSMENT_QUEUE_CAPACITY || '64'
 );
@@ -24,9 +23,6 @@ const retryDelayWindows = [
 
 if (!manifestPath) {
   throw new Error('MANIFEST environment variable is required.');
-}
-if (!Number.isInteger(assessmentLimit) || assessmentLimit < 1) {
-  throw new Error('ASSESSMENT_LIMIT must be an integer greater than 0.');
 }
 if (
   !Number.isInteger(assessmentQueueCapacity)
@@ -88,9 +84,7 @@ const probeSuccess = new Rate('probe_success');
 const probeDuration = new Trend('probe_duration', true);
 const baselineProbeSuccess = new Rate('probe_baseline_success');
 const baselineProbeDuration = new Trend('probe_baseline_duration', true);
-const immediateAdmissionCapacity = assessmentLimit + assessmentQueueCapacity;
-const overloadObservationStage = concurrency >= 200
-  && concurrency > immediateAdmissionCapacity;
+const overloadObservationStage = concurrency >= 200;
 const overloadP95LimitMillis = assessmentMaxQueueWaitSeconds * 1000 + 2000;
 
 const thresholds = {
@@ -106,7 +100,7 @@ const thresholds = {
   probe_success: ['rate==1'],
 };
 
-if (concurrency <= assessmentLimit) {
+if (concurrency === 10) {
   thresholds.answer_success = [`count==${concurrency}`];
 } else if (concurrency === 100) {
   thresholds.answer_success = [`count>=${Math.floor(concurrency / 2) + 1}`];
@@ -290,10 +284,8 @@ export function handleSummary(data) {
     runId: manifest.runId,
     scenario: scenarioName,
     concurrency,
-    assessmentLimit,
     assessmentQueueCapacity,
     assessmentMaxQueueWaitSeconds,
-    immediateAdmissionCapacity,
     clientMaxRetries,
     retryDelayWindowsMillis: retryDelayWindows.slice(0, clientMaxRetries),
     generatedAt: new Date().toISOString(),

@@ -47,9 +47,6 @@ class AnswerAssessmentRateLimitQueueTest {
 		assertEquals(64, tasks.stream()
 			.mapToInt(task -> task.started().get()).sum());
 		assertEquals(0.0, gauge(fixture, "queue.size"));
-		assertThrows(io.micrometer.core.instrument.search.MeterNotFoundException.class,
-			() -> fixture.registry()
-				.get("malhaebom.answer.assessment.active").gauge());
 		tasks.forEach(task -> task.future().complete(assessment()));
 	}
 

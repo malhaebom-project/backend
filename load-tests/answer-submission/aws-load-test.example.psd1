@@ -26,7 +26,6 @@
             ClientMaxRetries = 2
         }
     )
-    AssessmentLimit = 32
     AssessmentQueueCapacity = 64
     AssessmentMaxQueueWaitSeconds = 10
     RecoveryTimeoutSeconds = 300

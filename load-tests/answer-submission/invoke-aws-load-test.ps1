@@ -303,7 +303,6 @@ $resultRootBase = if ([System.IO.Path]::IsPathRooted($resultRootSetting)) {
 $dockerContainer = [string](Config-OrDefault `
     "DockerContainer" "backend-was-1")
 $scenarios = Resolve-Scenarios
-$assessmentLimit = [int](Config-OrDefault "AssessmentLimit" 32)
 $assessmentQueueCapacity = [int](Config-OrDefault `
     "AssessmentQueueCapacity" 64)
 $assessmentMaxQueueWaitSeconds = [int](Config-OrDefault `
@@ -316,9 +315,6 @@ $localGrafanaPort = [int](Config-OrDefault "LocalGrafanaPort" 13000)
 $readinessTimeoutSeconds = [int](Config-OrDefault `
     "ReadinessTimeoutSeconds" 120)
 
-if ($assessmentLimit -lt 1) {
-    throw "AssessmentLimit must be greater than 0."
-}
 if ($assessmentQueueCapacity -lt 0) {
     throw "AssessmentQueueCapacity must be greater than or equal to 0."
 }
@@ -375,7 +371,6 @@ $remoteRestoreScript = "load-tests/answer-submission/" +
     "restore-prod-compose.sh"
 $remoteLoadtestCommand = (
     "cd $remoteProjectDirectory && " +
-    "LOADTEST_ASSESSMENT_LIMIT=$assessmentLimit " +
     "LOADTEST_ASSESSMENT_QUEUE_CAPACITY=$assessmentQueueCapacity " +
     "LOADTEST_ASSESSMENT_MAX_QUEUE_WAIT=" +
     "${assessmentMaxQueueWaitSeconds}s " +
@@ -398,7 +393,6 @@ $runPlanPath = Join-Path $resultRoot "run-plan.json"
 [pscustomobject]@{
     testId = $batchRunId
     generatedAt = [DateTimeOffset]::UtcNow.ToString("O")
-    assessmentLimit = $assessmentLimit
     assessmentQueueCapacity = $assessmentQueueCapacity
     assessmentMaxQueueWaitSeconds = $assessmentMaxQueueWaitSeconds
     logicalSubmissions = $logicalSubmissions
@@ -483,7 +477,6 @@ try {
                 Manifest = $manifestPath
                 ResultRoot = $scenarioRoot
                 Stages = $scenario.Stages
-                AssessmentLimit = $assessmentLimit
                 AssessmentQueueCapacity = $assessmentQueueCapacity
                 AssessmentMaxQueueWaitSeconds =
                     $assessmentMaxQueueWaitSeconds
