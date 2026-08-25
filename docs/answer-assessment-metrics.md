@@ -25,6 +25,17 @@ timeout처럼 OpenAI 호출 전에 종료된 작업은 OpenAI 실패에 포함�
 | `malhaebom.answer.assessment.queue.cancelled` | Counter | 대기 중 원래 제출 deadline 또는 호출자 취소로 제거된 누적 수 |
 | `malhaebom.answer.assessment.queue.wait` | Timer | 대기 종료까지 걸린 시간. `result=promoted`, `timeout`, `cancelled`, `shutdown` 태그로 원인을 구분 |
 
+## Bucket4j provider rate limit
+
+| 지표 | 종류 | 태그 | 의미 |
+| --- | --- | --- | --- |
+| `malhaebom.ai.provider.rate.limit.available` | Gauge | `provider=openai`, `quota=requests`, `tokens` | 요청 bucket과 추정 token bucket의 현재 잔여량 |
+| `malhaebom.ai.provider.rate.limit.requests` | Counter | `provider=openai`, `result=allowed`, `delayed`, `rejected` | 즉시 허용, refill 대기, queue 수용 실패로 결정된 누적 수 |
+
+`tokens` 잔여량은 실제 응답 usage가 아니라 요청 시작 전에
+`tokens-per-request` 설정값으로 예약하는 추정 quota다. 실제 과금 토큰은 아래의
+`malhaebom.openai.answer.assessment.tokens`로 확인한다.
+
 ## OpenAI 사용량·실패 원인
 
 | 지표 | 종류 | 태그 | 의미 |

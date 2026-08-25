@@ -269,8 +269,8 @@ answer_unexpected_response`는 항상 사용자 기준 논리적 제출 수와 �
 성공을 기준으로 관찰하며 100% 성공을 hard threshold로 두지
 않는다. 수용량을 충분히 넘는 200·300단계에서는 성공과 raw 정상 과부하 503이
 모두 관찰되어야 한다. 재시도 후 모든 논리적 제출이 성공할 수도 있으므로 retry
-모드의 최종 503은 필수 관찰값이 아니다. 어느 순간에도 active는 32, queue size는
-64를 넘으면 안 된다. 최종 200, 최종 503, 예상 밖 응답의 합은 논리적 제출 수와
+모드의 최종 503은 필수 관찰값이 아니다. 어느 순간에도 queue size는 64를 넘으면
+안 된다. 최종 200, 최종 503, 예상 밖 응답의 합은 논리적 제출 수와
 같아야 하며 누락은 없어야 한다. raw 503은 HTTP 응답 수이지 provider 호출 수가
 아니다.
 
@@ -317,6 +317,8 @@ deadline을 연장하지 않는다.
 | JVM CPU·메모리·GC                            | 스레드·DB 병목과 별개로 JVM 계산량이나 GC 정지가 원인인지 확인하는 보조 지표                               |
 | 컨테이너 CPU·메모리                              | EC2 컨테이너 한도 또는 호스트 자원 부족 여부를 확인하는 보조 지표                                       |
 | OpenAI queue size                              | rate token을 기다리는 FIFO 대기 수. 설정값 64 이하여야 함                                  |
+| Bucket4j available requests / tokens           | OpenAI 요청·추정 토큰 bucket의 현재 잔여량. 0에 가까울수록 다음 refill 대기가 발생하기 쉬움                  |
+| Bucket4j allowed / delayed / rejected           | 즉시 허용, rate token refill 대기, queue 수용 실패로 분류된 누적 결정 수                                 |
 | queue full / timeout / cancelled               | provider 호출 전 종료 원인을 구분하는 서버 누적 카운터. 단계별 첫·마지막 snapshot 차이로 집계함                  |
 | submission prepare result                      | 신규 처리, 완료 결과 재사용, 처리 중 중복 요청, 실패 재시도, 만료 lease 회수를 구분하는 멱등 처리 카운터              |
 
@@ -325,8 +327,8 @@ Hikari `최대 pending`은 특정 1초 표본에서 기다린 스레드 수이�
 pending이 발생해도 2초 전에 해소되고 단계 종료 후 0으로 복구되면 이 테스트의
 실패 기준에는 해당하지 않는다.
 
-OpenAI 답안 평가 limiter가 제공하는 Micrometer 지표의 이름과 의미는
-[답안 평가 동시성 제한 지표](../../docs/answer-assessment-metrics.md)를 참고한다.
+OpenAI 답안 평가 rate limit과 queue가 제공하는 Micrometer 지표의 이름과 의미는
+[답안 평가 rate limit·대기열 지표](../../docs/answer-assessment-metrics.md)를 참고한다.
 
 멱등 처리 결과는
 `malhaebom_answer_submission_prepare_total{result="..."}`로 노출된다.
@@ -339,19 +341,15 @@ OpenAI 답안 평가 limiter가 제공하는 Micrometer 지표의 이름과 의�
 | `retry`      | 실패 상태의 기존 예약으로 평가를 다시 시작함                |
 | `reclaimed`  | 만료된 처리 lease 등 기존 미완료 예약을 다시 선점함           |
 
-`active`가 32 이하라는 사실만으로 테스트가 성공한 것은 아니다. Hikari와
-Tomcat이 먼저 포화되면 요청이 limiter에 도달하지 못해 active가 낮게 보일 수
-있다. 따라서 limiter, DB, Tomcat과 probe를 함께 해석해야 한다.
-
 ## 결과 해석
 
-| 관측 조합                                                     | 해석                                       |
-| --------------------------------------------------------- | ---------------------------------------- |
-| active가 32, queue가 64 경계에 도달하고 바깥 요청이 정상 503이며 probe가 안정적 | limiter, bounded queue와 서버 자원 격리가 의도대로 동작 |
-| active가 32보다 낮은데 Hikari pending이 지속되고 Tomcat·probe가 악화    | limiter 앞의 DB 준비 또는 JPA 자원 수명이 우선 병목     |
-| Hikari는 안정적이지만 Tomcat busy가 OpenAI 대기 중 내려가지 않음           | 비동기 dispatch 또는 요청 스레드 반환 경로 점검 필요       |
-| 서버 자원은 안정적이지만 성공 응답만 느림                                      | 실제 provider 지연 또는 답안 평가 timeout 정책 점검 필요 |
-| 단계 종료 후 queue 또는 pending이 0으로 돌아오지 않음                         | queue 항목 또는 DB connection 누수 가능성       |
+| 관측 조합                                                               | 해석                                                   |
+| ------------------------------------------------------------------- | ---------------------------------------------------- |
+| Bucket4j 잔여량이 0에 가까워지고 delayed·queue가 증가하지만 probe가 안정적           | provider rate limit 대기와 서버 자원 격리가 의도대로 동작             |
+| Bucket4j 잔여량이 충분한데 Hikari pending과 Tomcat·probe가 악화                  | rate limit 앞의 DB 준비 또는 JPA 자원 수명이 우선 병목              |
+| Hikari는 안정적이지만 Tomcat busy가 OpenAI 대기 중 내려가지 않음                     | 비동기 dispatch 또는 요청 스레드 반환 경로 점검 필요                 |
+| 서버 자원은 안정적이지만 성공 응답만 느림                                            | 실제 provider 지연 또는 답안 평가 timeout 정책 점검 필요           |
+| 단계 종료 후 queue 또는 pending이 0으로 돌아오지 않음                               | queue 항목 또는 DB connection 누수 가능성                 |
 
 자동 판정 기준은 다음과 같다.
 
@@ -417,7 +415,8 @@ bounded queue는 짧은 burst의 사용자 체감 성공률을 높일 뿐 provid
 * Java 21과 Gradle Wrapper
 * k6
 * Python 3
-* AWS 실행 시 EC2의 Docker Compose, 로컬 OpenSSH와 EC2 접속 키
+* AWS 실행 시 EC2의 Docker Compose, 로컬 Docker Desktop 또는 Docker Engine,
+  로컬 OpenSSH와 EC2 접속 키
 
 결과와 fixture manifest는 `load-tests/results/`에 생성되며 Git에서 제외된다.
 자동화 스크립트는 macOS에서 Gradle Wrapper를 `bash gradlew`로 실행하므로 실행
@@ -567,10 +566,31 @@ Copy-Item `
 반영되어 있다. API key는 설정 파일에 넣지 않고 기존 `config/application.yaml`을
 재사용한다.
 
-먼저 EC2 backend checkout에서 loadtest Compose를 시작한다.
+운영 기본 이미지는 기존과 같이 `malhaebom/backend:latest`다. 병합 전 브랜치나
+특정 커밋을 검증할 때는 이미지를 `loadtest-<commit-sha>`처럼 변경 불가능한 태그로
+push하고 `.private` 설정의 `BackendImage`에 전체 이미지 이름을 지정한다.
+
+```powershell
+$tag = "loadtest-$(git rev-parse --short HEAD)"
+docker build -t "malhaebom/backend:$tag" .
+docker push "malhaebom/backend:$tag"
+
+# .private/load-tests/aws-load-test.psd1
+BackendImage = "malhaebom/backend:loadtest-a1b2c3d"
+```
+
+먼저 EC2 backend checkout에서 loadtest WAS를 시작한다.
 
 ```bash
 bash load-tests/answer-submission/start-loadtest-compose.sh
+```
+
+수동 전환에서도 환경 변수로 같은 이미지를 고정할 수 있다. 시작 스크립트는 WAS
+이미지를 먼저 pull하므로 EC2의 기존 캐시에 의존하지 않는다.
+
+```bash
+LOADTEST_BACKEND_IMAGE=malhaebom/backend:loadtest-<commit-sha> \
+  bash load-tests/answer-submission/start-loadtest-compose.sh
 ```
 
 그다음 로컬 PowerShell 7에서 시나리오 자동화만 실행한다.
@@ -580,9 +600,11 @@ bash load-tests/answer-submission/start-loadtest-compose.sh
   -ConfirmLiveOpenAiCost
 ```
 
-이 명령은 기존 loadtest Compose의 readiness 확인, SSH tunnel, 시나리오별 fixture
-seed·k6·cleanup만 처리한다. 성공하거나 실패해도 EC2 Compose 환경은 변경하거나
-복구하지 않는다. 결과를 확인하고 모든 fixture가 정리된 뒤 EC2에서 직접 복구한다.
+이 명령은 기존 loadtest WAS의 readiness 확인, 관리 포트 SSH tunnel, 로컬
+Prometheus·Grafana 시작, 시나리오별 fixture seed·k6·cleanup을 처리한다. 성공하거나
+실패해도 EC2 Compose 환경은 변경하거나 복구하지 않는다. 로컬 관측 스택도 결과
+확인을 위해 유지한다. 결과를 확인하고 모든 fixture가 정리된 뒤 EC2에서 직접
+복구한다.
 
 ```bash
 bash load-tests/answer-submission/restore-prod-compose.sh
@@ -591,9 +613,10 @@ bash load-tests/answer-submission/restore-prod-compose.sh
 요약하면 권장 실행 경계는 다음과 같다.
 
 ```text
-loadtest 환경 전환(수동)
-→ 여러 시나리오 실행·fixture cleanup(자동)
-→ 운영 환경 복구(수동)
+EC2 loadtest WAS 전환(수동)
+→ 로컬 관측·여러 시나리오 실행·fixture cleanup(자동)
+→ EC2 운영 환경 복구(수동)
+→ 필요할 때 로컬 관측 스택 종료(수동)
 ```
 
 #### 세부 수동 실행 및 비상 복구
@@ -608,38 +631,36 @@ Linux여도 되며 PowerShell이 필요하지 않다. 평상시 운영 Compose�
 bash load-tests/answer-submission/start-loadtest-compose.sh
 ```
 
-loadtest override는 Prometheus와 Grafana를 함께 시작한다. 백엔드 관리 포트 9090,
-Prometheus 9091, Grafana 3000은 모두 EC2 loopback에만 공개된다. 외부에서는
-여전히 닫혀 있어야 하므로 먼저 세 포트에 직접 연결할 수 없는지 확인한다.
+loadtest override는 EC2에서 WAS의 관리 포트 9090만 loopback에 공개한다.
+Prometheus와 Grafana는 EC2에서 실행하지 않는다. 외부에서는 관리 포트가 여전히
+닫혀 있어야 하므로 직접 연결할 수 없는지 확인한다.
 
 Windows에서는 `TcpTestSucceeded`가 `False`인지 확인한다.
 
 ```powershell
-9090, 9091, 3000 | ForEach-Object {
-  Test-NetConnection 3.35.11.125 -Port $_
-}
+Test-NetConnection 3.35.11.125 -Port 9090
 ```
 
 macOS에서는 다음 명령의 연결이 실패해야 한다.
 
 ```bash
-for port in 9090 9091 3000; do nc -vz 3.35.11.125 "$port"; done
+nc -vz 3.35.11.125 9090
 ```
 
-확인 후 로컬의 별도 terminal에서 SSH tunnel을 연다. 접속 키 경로는 로컬 OS에
-맞게 지정한다.
+확인 후 로컬 PowerShell 7에서 관리 포트 SSH tunnel과 Prometheus·Grafana를 함께
+시작한다. 접속 키 경로는 로컬 OS에 맞게 지정한다. tunnel은 로컬 Compose 안에서
+실행되므로 host network 동작 차이 없이 Windows와 macOS에서 같은 명령을 사용한다.
 
 ```powershell
 $sshKey = '<로컬 EC2 접속 키 경로>'
-ssh -N `
-  -L 19090:127.0.0.1:9090 `
-  -L 19091:127.0.0.1:9091 `
-  -L 13000:127.0.0.1:3000 `
-  -i $sshKey ubuntu@3.35.11.125
+./load-tests/answer-submission/start-local-observability.ps1 `
+  -SshHost ubuntu@3.35.11.125 `
+  -SshIdentityFile $sshKey
 ```
 
-Prometheus는 Compose network에서 `was:9090/actuator/prometheus`를 1초마다
-수집한다. 로컬 k6는 19091 터널을 통해 결과를 Remote Write하고, Grafana는
+로컬 Prometheus 컨테이너는 같은 Compose의 tunnel 컨테이너를 통해 EC2의
+`/actuator/prometheus`를 1초마다 수집한다. 로컬 k6는 로컬 Prometheus로 결과를
+Remote Write하고, Grafana는
 <http://127.0.0.1:13000>에서 로그인 없이 읽기 전용으로 확인한다. 대시보드의
 `Test run`, `Scenario`, `Stage` 변수로 전체 실행, 시나리오와 동시성 단계를 선택한다.
 `Backend resources` 행에서는 Actuator scrape 요청을 제외한 HTTP 상태별 RPS와
@@ -718,26 +739,31 @@ raw 정상 503은 OpenAI 호출 전에 거절되므로 그 자체는 provider �
 
 `PrometheusRemoteWriteUrl`을 지정해도 기존 `summary.json`, `k6-raw.json`과
 Actuator snapshot은 그대로 생성된다. 자동 실행의 k6 지표에는 전체 실행을 나타내는
-`testid`, 설정 항목 이름인 `scenario`, 동시성인 `stage` 태그가 추가된다. Grafana의
+`testid`, 설정 항목 이름인 `load_scenario`, 동시성인 `stage` 태그가 추가된다. Grafana의
 `Test run`, `Scenario`, `Stage` 변수로 세 축을 각각 선택할 수 있다.
 
 부하 테스트와 fixture cleanup을 마치면 EC2에서 운영 Compose만 사용해 서비스를
-재생성한다. `--remove-orphans`가 Prometheus와 Grafana 컨테이너를 제거하고 host의
-9090, 9091, 3000 포트 매핑을 모두 제거한다. Prometheus named volume은 남으므로
-다음 loadtest 실행에서도 최대 14일의 이전 시계열을 조회할 수 있다.
-수동 정리를 빼먹더라도 다음 CI/CD 운영 배포의 `--remove-orphans`가 loadtest 전용
-컨테이너를 제거한다.
+재생성한다. `--remove-orphans`가 EC2의 이전 관측 컨테이너가 남아 있다면 제거하고
+WAS 관리 포트 9090 매핑을 제거한다. Prometheus named volume은 로컬에 남으므로
+EC2를 운영 환경으로 복구한 뒤에도 최대 14일의 이전 시계열을 조회할 수 있다.
 
 ```bash
 bash load-tests/answer-submission/restore-prod-compose.sh
 ```
 
+결과 확인을 마친 뒤 로컬 관측 컨테이너만 종료한다. named volume은 삭제하지 않는다.
+
+```powershell
+./load-tests/answer-submission/stop-local-observability.ps1
+```
+
 ### 선택 사항: 전체 흐름 자동 실행
 
 수동 절차를 반복해야 할 때 사용할 수 있도록 `invoke-aws-load-test.ps1`도 제공한다.
-이 도구는 loadtest Compose 시작부터 SSH tunnel, readiness 확인, 시나리오별 fixture
-seed·k6·cleanup, 운영 Compose 복구까지 모두 수행한다. 운영 Compose 전환과 복구까지
-자동으로 실행한다는 점을 확인한 경우에만 사용한다.
+이 도구는 EC2 loadtest WAS 시작부터 관리 포트 SSH tunnel, 로컬 관측 스택 시작,
+readiness 확인, 시나리오별 fixture seed·k6·cleanup, EC2 운영 Compose 복구까지 모두
+수행한다. 로컬 관측 스택은 결과 확인을 위해 종료하지 않는다. 운영 Compose 전환과
+복구까지 자동으로 실행한다는 점을 확인한 경우에만 사용한다.
 
 한 시나리오의 k6 threshold가 실패해도 나머지 시나리오를 계속 실행하고 마지막에
 실패 목록을 반환한다. fixture cleanup이나 기반 환경이 실패하면 추가 실행을 중단하고

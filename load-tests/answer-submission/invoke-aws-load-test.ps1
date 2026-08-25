@@ -172,42 +172,6 @@ function Wait-PrometheusBackendTarget(
         + "$timeoutSeconds seconds."
 }
 
-function Start-SshTunnel(
-    [string]$sshExecutable,
-    [string[]]$baseArguments,
-    [string]$hostName,
-    [int]$managementPort,
-    [int]$prometheusPort,
-    [int]$grafanaPort
-) {
-    $arguments = @(
-        $baseArguments
-        "-N"
-        "-o", "ExitOnForwardFailure=yes"
-        "-o", "ServerAliveInterval=30"
-        "-L", "${managementPort}:127.0.0.1:9090"
-        "-L", "${prometheusPort}:127.0.0.1:9091"
-        "-L", "${grafanaPort}:127.0.0.1:3000"
-        $hostName
-    )
-    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
-    $startInfo.FileName = $sshExecutable
-    $startInfo.UseShellExecute = $false
-    $startInfo.CreateNoWindow = $true
-    foreach ($argument in $arguments) {
-        [void]$startInfo.ArgumentList.Add([string]$argument)
-    }
-    $process = [System.Diagnostics.Process]::Start($startInfo)
-    if ($null -eq $process) {
-        throw "Failed to start the SSH tunnel."
-    }
-    Start-Sleep -Seconds 1
-    if ($process.HasExited) {
-        throw "SSH tunnel exited immediately with code $($process.ExitCode)."
-    }
-    return $process
-}
-
 function Invoke-RemoteCommand(
     [string]$sshExecutable,
     [string[]]$baseArguments,
@@ -302,6 +266,11 @@ $resultRootBase = if ([System.IO.Path]::IsPathRooted($resultRootSetting)) {
 }
 $dockerContainer = [string](Config-OrDefault `
     "DockerContainer" "backend-was-1")
+$backendImage = [string](Config-OrDefault `
+    "BackendImage" "malhaebom/backend:latest")
+if ($backendImage -notmatch '^[A-Za-z0-9._/:@-]+$') {
+    throw "BackendImage contains unsupported characters: $backendImage"
+}
 $scenarios = Resolve-Scenarios
 $assessmentQueueCapacity = [int](Config-OrDefault `
     "AssessmentQueueCapacity" 64)
@@ -327,17 +296,18 @@ if ($recoveryTimeoutSeconds -lt 1 -or $readinessTimeoutSeconds -lt 1) {
 Assert-TcpPort "LocalManagementPort" $localManagementPort
 Assert-TcpPort "LocalPrometheusPort" $localPrometheusPort
 Assert-TcpPort "LocalGrafanaPort" $localGrafanaPort
-$localTunnelPorts = @(
+$localPorts = @(
     $localManagementPort,
     $localPrometheusPort,
     $localGrafanaPort
 )
-if (@($localTunnelPorts | Select-Object -Unique).Count -ne 3) {
-    throw "Local tunnel ports must be distinct."
+if (@($localPorts | Select-Object -Unique).Count -ne 3) {
+    throw "Local management, Prometheus and Grafana ports must be distinct."
 }
 
 $sshExecutable = Assert-Command "ssh"
 [void](Assert-Command "k6")
+[void](Assert-Command "docker")
 if (-not $IsWindows) {
     [void](Assert-Command "bash")
 }
@@ -371,6 +341,7 @@ $remoteRestoreScript = "load-tests/answer-submission/" +
     "restore-prod-compose.sh"
 $remoteLoadtestCommand = (
     "cd $remoteProjectDirectory && " +
+    "LOADTEST_BACKEND_IMAGE=$backendImage " +
     "LOADTEST_ASSESSMENT_QUEUE_CAPACITY=$assessmentQueueCapacity " +
     "LOADTEST_ASSESSMENT_MAX_QUEUE_WAIT=" +
     "${assessmentMaxQueueWaitSeconds}s " +
@@ -383,6 +354,8 @@ $remoteRestoreCommand = (
 $batchRunId = "aws-" + [DateTimeOffset]::UtcNow.ToString("yyyyMMddTHHmmssZ")
 $resultRoot = Join-Path $resultRootBase $batchRunId
 $runStagesScript = Join-Path $PSScriptRoot "run-stages.ps1"
+$startLocalObservabilityScript = Join-Path $PSScriptRoot `
+    "start-local-observability.ps1"
 $logicalSubmissions = ($scenarios | Measure-Object `
     -Property LogicalSubmissions -Sum).Sum
 $maximumHttpAttempts = ($scenarios | Measure-Object `
@@ -393,6 +366,7 @@ $runPlanPath = Join-Path $resultRoot "run-plan.json"
 [pscustomobject]@{
     testId = $batchRunId
     generatedAt = [DateTimeOffset]::UtcNow.ToString("O")
+    backendImage = $backendImage
     assessmentQueueCapacity = $assessmentQueueCapacity
     assessmentMaxQueueWaitSeconds = $assessmentMaxQueueWaitSeconds
     logicalSubmissions = $logicalSubmissions
@@ -417,7 +391,6 @@ foreach ($scenario in $scenarios) {
 
 $previousProfile = $env:SPRING_PROFILES_ACTIVE
 $previousOpenAiRetries = $env:SPRING_AI_OPENAI_MAX_RETRIES
-$tunnelProcess = $null
 $primaryError = $null
 $cleanupErrors = [System.Collections.Generic.List[string]]::new()
 $pendingManifests = [System.Collections.Generic.List[string]]::new()
@@ -428,17 +401,20 @@ try {
     $env:SPRING_AI_OPENAI_MAX_RETRIES = "0"
 
     if ($SkipComposeLifecycle) {
-        Write-Host "Using the existing remote load-test Compose stack."
+        Write-Host "Using the existing remote load-test WAS."
     } else {
-        Write-Host "Starting the remote load-test observability stack..."
+        Write-Host "Starting the remote load-test WAS..."
         Invoke-RemoteCommand $sshExecutable $sshBaseArguments $sshHost `
             $remoteLoadtestCommand
     }
 
-    Write-Host "Starting SSH tunnels..."
-    $tunnelProcess = Start-SshTunnel $sshExecutable $sshBaseArguments `
-        $sshHost $localManagementPort $localPrometheusPort $localGrafanaPort
-
+    Write-Host "Starting the local management tunnel, Prometheus and Grafana..."
+    & $startLocalObservabilityScript `
+        -SshHost $sshHost `
+        -SshIdentityFile $sshIdentityFile `
+        -ManagementPort $localManagementPort `
+        -PrometheusPort $localPrometheusPort `
+        -GrafanaPort $localGrafanaPort
     Wait-HttpEndpoint "Backend management endpoint" `
         "http://127.0.0.1:$localManagementPort/actuator/health" `
         $readinessTimeoutSeconds
@@ -523,14 +499,6 @@ try {
             )
         }
     }
-    if ($null -ne $tunnelProcess -and -not $tunnelProcess.HasExited) {
-        try {
-            $tunnelProcess.Kill($true)
-            $tunnelProcess.WaitForExit(5000)
-        } catch {
-            $cleanupErrors.Add("SSH tunnel cleanup failed: $($_.Exception.Message)")
-        }
-    }
     if (-not $SkipComposeLifecycle) {
         try {
             Write-Host "Restoring the remote production Compose stack..."
@@ -542,8 +510,9 @@ try {
             )
         }
     } else {
-        Write-Host "Leaving the remote load-test Compose stack unchanged."
+        Write-Host "Leaving the remote load-test WAS unchanged."
     }
+    Write-Host "Leaving local Prometheus and Grafana running for result review."
     $env:SPRING_PROFILES_ACTIVE = $previousProfile
     $env:SPRING_AI_OPENAI_MAX_RETRIES = $previousOpenAiRetries
     $env:JAVA_HOME = $previousJavaHome
