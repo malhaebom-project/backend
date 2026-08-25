@@ -41,6 +41,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
@@ -64,6 +65,7 @@ import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerSubmissionMet
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.AnswerAssessmentService;
 import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
+import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
@@ -122,6 +124,8 @@ class LearningAnswerConcurrencyJpaTest {
 	private JdbcTemplate jdbcTemplate;
 	@Autowired
 	private PlatformTransactionManager transactionManager;
+	@MockitoBean
+	private ChildProfileService childProfileService;
 
 	@BeforeEach
 	void setUp() {
@@ -141,7 +145,7 @@ class LearningAnswerConcurrencyJpaTest {
 		LearningSessionQuestion question = session.getCurrentQuestion();
 		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(question, 1);
 		CompletionStage<AnswerSubmissionResult> firstRequest =
-			learningAnswerService.submitAsync(
+			learningAnswerService.submitAsync(LearningJpaTestFixture.USER_ID,
 				session.getId(),
 				question.getId(),
 				speechAnswer.getId()
@@ -153,7 +157,7 @@ class LearningAnswerConcurrencyJpaTest {
 
 			assertApiException(
 				ErrorCode.ANSWER_SUBMISSION_PROCESSING,
-				() -> await(learningAnswerService.submitAsync(
+				() -> await(learningAnswerService.submitAsync(LearningJpaTestFixture.USER_ID,
 					session.getId(),
 					question.getId(),
 					speechAnswer.getId()
@@ -182,7 +186,7 @@ class LearningAnswerConcurrencyJpaTest {
 		SpeechAnswer firstSpeech = saveCompletedSpeechAnswer(question, 1);
 		SpeechAnswer secondSpeech = saveCompletedSpeechAnswer(question, 2);
 		CompletionStage<AnswerSubmissionResult> firstRequest =
-			learningAnswerService.submitAsync(
+			learningAnswerService.submitAsync(LearningJpaTestFixture.USER_ID,
 				session.getId(),
 				question.getId(),
 				firstSpeech.getId()
@@ -194,7 +198,7 @@ class LearningAnswerConcurrencyJpaTest {
 
 			assertApiException(
 				ErrorCode.ANSWER_SUBMISSION_CONFLICT,
-				() -> await(learningAnswerService.submitAsync(
+				() -> await(learningAnswerService.submitAsync(LearningJpaTestFixture.USER_ID,
 					session.getId(),
 					question.getId(),
 					secondSpeech.getId()
@@ -219,7 +223,7 @@ class LearningAnswerConcurrencyJpaTest {
 		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(question, 1);
 		Processing expired = assertInstanceOf(
 			Processing.class,
-			submissionTransactionService.prepare(
+			submissionTransactionService.prepare(LearningJpaTestFixture.USER_ID,
 				session.getId(),
 				question.getId(),
 				speechAnswer.getId()
@@ -233,7 +237,7 @@ class LearningAnswerConcurrencyJpaTest {
 
 		Processing reclaimed = assertInstanceOf(
 			Processing.class,
-			submissionTransactionService.prepare(
+			submissionTransactionService.prepare(LearningJpaTestFixture.USER_ID,
 				session.getId(),
 				question.getId(),
 				speechAnswer.getId()
@@ -282,7 +286,7 @@ class LearningAnswerConcurrencyJpaTest {
 		long submissionsBefore = answerSubmissionRepository.count();
 
 		CompletionStage<AnswerSubmissionResult> firstRequest =
-			learningAnswerService.submitAsync(
+			learningAnswerService.submitAsync(LearningJpaTestFixture.USER_ID,
 				firstSession.getId(),
 				firstQuestion.getId(),
 				firstSpeech.getId()
@@ -291,7 +295,7 @@ class LearningAnswerConcurrencyJpaTest {
 		assertFalse(firstRequest.toCompletableFuture().isDone());
 
 		CompletionStage<AnswerSubmissionResult> secondRequest =
-			learningAnswerService.submitAsync(
+			learningAnswerService.submitAsync(LearningJpaTestFixture.USER_ID,
 				secondSession.getId(),
 				secondQuestion.getId(),
 				secondSpeech.getId()
@@ -435,7 +439,7 @@ class LearningAnswerConcurrencyJpaTest {
 		SubmissionFixture queued = submissionFixture(1);
 		CompletionStage<AnswerSubmissionResult> firstRequest = submitAsync(first);
 		assertTrue(assessmentGenerator.awaitAssessmentStarted());
-		var queuedTask = learningAnswerService.submitAsync(
+		var queuedTask = learningAnswerService.submitAsync(LearningJpaTestFixture.USER_ID,
 			queued.session().getId(),
 			queued.question().getId(),
 			queued.speechAnswer().getId()
@@ -470,7 +474,7 @@ class LearningAnswerConcurrencyJpaTest {
 		SubmissionFixture replacement = submissionFixture(1);
 		CompletionStage<AnswerSubmissionResult> firstRequest = submitAsync(first);
 		assertTrue(assessmentGenerator.awaitAssessmentStarted());
-		var cancelledTask = learningAnswerService.submitAsync(
+		var cancelledTask = learningAnswerService.submitAsync(LearningJpaTestFixture.USER_ID,
 			cancelled.session().getId(),
 			cancelled.question().getId(),
 			cancelled.speechAnswer().getId()
@@ -503,7 +507,7 @@ class LearningAnswerConcurrencyJpaTest {
 			Future<Boolean> cancellation = executor.submit(cancelledTask::cancel);
 
 			assertTrue(queueTimeoutScheduler.awaitCancellation());
-			var replacementTask = learningAnswerService.submitAsync(
+			var replacementTask = learningAnswerService.submitAsync(LearningJpaTestFixture.USER_ID,
 				replacement.session().getId(),
 				replacement.question().getId(),
 				replacement.speechAnswer().getId()
@@ -577,7 +581,7 @@ class LearningAnswerConcurrencyJpaTest {
 	private CompletionStage<AnswerSubmissionResult> submitAsync(
 		SubmissionFixture fixture
 	) {
-		return learningAnswerService.submitAsync(
+		return learningAnswerService.submitAsync(LearningJpaTestFixture.USER_ID,
 			fixture.session().getId(),
 			fixture.question().getId(),
 			fixture.speechAnswer().getId()

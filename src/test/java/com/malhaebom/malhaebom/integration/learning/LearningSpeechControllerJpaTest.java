@@ -33,6 +33,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
@@ -53,10 +54,12 @@ import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.presentation.LearningSpeechController;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
+import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import com.malhaebom.malhaebom.support.StubLoginUserArgumentResolver;
 
 import jakarta.servlet.AsyncEvent;
 import jakarta.servlet.AsyncListener;
@@ -81,6 +84,8 @@ class LearningSpeechControllerJpaTest {
 	private QuestionRepository questionRepository;
 	@Autowired
 	private SpeechAnswerRepository speechAnswerRepository;
+	@MockitoBean
+	private ChildProfileService childProfileService;
 
 	private TestSpeechTranscriber transcriber;
 	private SpeechTranscriptionConcurrencyLimiter concurrencyLimiter;
@@ -113,6 +118,9 @@ class LearningSpeechControllerJpaTest {
 				asyncProperties
 			)
 		)
+			.setCustomArgumentResolvers(
+				new StubLoginUserArgumentResolver(LearningJpaTestFixture.USER_ID)
+			)
 			.setControllerAdvice(new ApiExceptionHandler())
 			.build();
 		session = saveSession();

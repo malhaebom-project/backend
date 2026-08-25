@@ -18,11 +18,13 @@ import org.springframework.web.multipart.MultipartFile;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
+import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.SpeechAnswerResponse;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
+import com.malhaebom.malhaebom.service.dto.LoginUser;
 
 import lombok.RequiredArgsConstructor;
 
@@ -42,6 +44,7 @@ public class LearningSpeechController {
 		consumes = MediaType.MULTIPART_FORM_DATA_VALUE
 	)
 	public DeferredResult<ApiResponse<SpeechAnswerResponse>> upload(
+		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId,
 		@PathVariable Long sessionQuestionId,
 		@RequestHeader(
@@ -53,6 +56,7 @@ public class LearningSpeechController {
 		validateRequestKey(requestKey);
 		SpeechAudio speechAudio = toSpeechAudio(audio);
 		SpeechAnswerTask task = speechAnswerService.uploadAsync(
+			loginUser.userId(),
 			sessionId,
 			sessionQuestionId,
 			requestKey,

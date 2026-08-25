@@ -12,6 +12,7 @@ import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionReposit
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 
 final class LearningJpaTestFixture {
+	static final Long USER_ID = 1L;
 
 	private LearningJpaTestFixture() {
 	}
@@ -19,6 +20,15 @@ final class LearningJpaTestFixture {
 	static LearningSession saveSession(
 		QuestionRepository questionRepository,
 		LearningSessionRepository sessionRepository,
+		String hintText
+	) {
+		return saveSession(questionRepository, sessionRepository, 1L, hintText);
+	}
+
+	static LearningSession saveSession(
+		QuestionRepository questionRepository,
+		LearningSessionRepository sessionRepository,
+		Long childId,
 		String hintText
 	) {
 		Question question = questionRepository.saveAndFlush(
@@ -38,7 +48,7 @@ final class LearningJpaTestFixture {
 		);
 		return sessionRepository.saveAndFlush(
 			LearningSession.create(
-				1L,
+				childId,
 				LearningTopic.DAILY_LIFE,
 				Difficulty.EASY,
 				List.of(question)

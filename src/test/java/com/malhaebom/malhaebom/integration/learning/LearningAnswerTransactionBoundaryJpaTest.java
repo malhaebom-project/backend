@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
@@ -48,6 +49,7 @@ import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerSubmissionMet
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.AnswerAssessmentService;
 import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
+import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
@@ -89,6 +91,8 @@ class LearningAnswerTransactionBoundaryJpaTest {
 	private TestClock clock;
 	@Autowired
 	private PlatformTransactionManager transactionManager;
+	@MockitoBean
+	private ChildProfileService childProfileService;
 
 	@BeforeEach
 	void setUp() {
@@ -253,7 +257,7 @@ class LearningAnswerTransactionBoundaryJpaTest {
 		assessmentGenerator.willReturn(assessment);
 
 		CompletionStage<AnswerSubmissionResult> submission =
-			learningAnswerService.submitAsync(
+			learningAnswerService.submitAsync(LearningJpaTestFixture.USER_ID,
 				session.getId(),
 				question.getId(),
 				speechAnswer.getId()
@@ -298,7 +302,7 @@ class LearningAnswerTransactionBoundaryJpaTest {
 		CompletableFuture<AnswerAssessment> assessment =
 			new CompletableFuture<>();
 		assessmentGenerator.willReturn(assessment);
-		AnswerSubmissionTask submission = learningAnswerService.submitAsync(
+		AnswerSubmissionTask submission = learningAnswerService.submitAsync(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			question.getId(),
 			speechAnswer.getId()
@@ -419,7 +423,7 @@ class LearningAnswerTransactionBoundaryJpaTest {
 		Long sessionQuestionId,
 		Long speechAnswerId
 	) {
-		return await(learningAnswerService.submitAsync(
+		return await(learningAnswerService.submitAsync(LearningJpaTestFixture.USER_ID,
 			sessionId,
 			sessionQuestionId,
 			speechAnswerId

@@ -19,14 +19,16 @@ import lombok.RequiredArgsConstructor;
 public class LearningHintService {
 
 	private final LearningSessionRepository learningSessionRepository;
+	private final ChildProfileService childProfileService;
 
 	@Transactional
-	public Question request(Long sessionId, Long questionId) {
+	public Question request(Long userId, Long sessionId, Long questionId) {
 		LearningSession session = learningSessionRepository
 			.findForUpdateById(sessionId)
 			.orElseThrow(() -> new ApiException(
 				ErrorCode.LEARNING_SESSION_NOT_FOUND
 			));
+		childProfileService.getOwnedActive(userId, session.getChildId());
 		validateInProgress(session);
 		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
 		validateCurrentQuestion(currentQuestion, questionId);

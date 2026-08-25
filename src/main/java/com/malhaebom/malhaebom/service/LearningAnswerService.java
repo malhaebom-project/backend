@@ -42,16 +42,18 @@ public class LearningAnswerService {
 	private final AnswerSubmissionRepository answerSubmissionRepository;
 	private final AnswerAssessmentService answerAssessmentService;
 	private final AnswerSubmissionTransactionService submissionTransactionService;
+	private final ChildProfileService childProfileService;
 	private final Clock clock;
 
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public AnswerSubmissionTask submitAsync(
+		Long userId,
 		Long sessionId,
 		Long sessionQuestionId,
 		Long speechAnswerId
 	) {
 		AnswerSubmissionPreparation preparation = submissionTransactionService
-			.prepare(sessionId, sessionQuestionId, speechAnswerId);
+			.prepare(userId, sessionId, sessionQuestionId, speechAnswerId);
 		return switch (preparation) {
 			case Completed completed -> AnswerSubmissionTask.completed(
 				completed.result()
@@ -248,12 +250,13 @@ public class LearningAnswerService {
 	}
 
 	@Transactional
-	public void skipRetry(Long sessionId, Long sessionQuestionId) {
+	public void skipRetry(Long userId, Long sessionId, Long sessionQuestionId) {
 		LearningSession session = learningSessionRepository
 			.findForUpdateById(sessionId)
 			.orElseThrow(() -> new ApiException(
 				ErrorCode.LEARNING_SESSION_NOT_FOUND
 			));
+		childProfileService.getOwnedActive(userId, session.getChildId());
 		validateInProgress(session);
 		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
 		validateCurrentQuestion(currentQuestion, sessionQuestionId);

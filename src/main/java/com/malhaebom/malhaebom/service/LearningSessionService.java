@@ -59,19 +59,25 @@ public class LearningSessionService {
 		return learningSessionRepository.save(session);
 	}
 
-	public LearningSessionQuestion getNextQuestion(Long sessionId) {
+	@Transactional(readOnly = true)
+	public LearningSessionQuestion getNextQuestion(Long userId, Long sessionId) {
 		LearningSession session = getSession(sessionId);
+		validateOwned(userId, session);
 		validateInProgress(session);
 		return session.getCurrentQuestion();
 	}
 
-	public LearningSession get(Long sessionId) {
-		return getSession(sessionId);
+	@Transactional(readOnly = true)
+	public LearningSession get(Long userId, Long sessionId) {
+		LearningSession session = getSession(sessionId);
+		validateOwned(userId, session);
+		return session;
 	}
 
 	@Transactional
-	public LearningSession complete(Long sessionId) {
+	public LearningSession complete(Long userId, Long sessionId) {
 		LearningSession session = getSession(sessionId);
+		validateOwned(userId, session);
 		if (!session.isCompleted()) {
 			throw new ApiException(
 				ErrorCode.INVALID_REQUEST,
@@ -97,6 +103,10 @@ public class LearningSessionService {
 				exception
 			);
 		}
+	}
+
+	private void validateOwned(Long userId, LearningSession session) {
+		childProfileService.getOwnedActive(userId, session.getChildId());
 	}
 
 	private void validateInProgress(LearningSession session) {

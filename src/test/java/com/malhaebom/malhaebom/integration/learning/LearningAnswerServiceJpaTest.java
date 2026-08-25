@@ -4,6 +4,7 @@ import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiEx
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doThrow;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.persistence.EntityManager;
@@ -46,6 +48,7 @@ import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerSubmissionMet
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.AnswerAssessmentService;
 import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
+import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
@@ -74,6 +77,8 @@ class LearningAnswerServiceJpaTest {
 	private AnswerSubmissionRepository answerSubmissionRepository;
 	@Autowired
 	private EntityManager entityManager;
+	@MockitoBean
+	private ChildProfileService childProfileService;
 
 	private TestAnswerAssessmentGenerator assessmentGenerator;
 	private SimpleMeterRegistry meterRegistry;
@@ -97,6 +102,7 @@ class LearningAnswerServiceJpaTest {
 				Duration.ofSeconds(60)
 			),
 			clock,
+			childProfileService,
 			new MicrometerAnswerSubmissionMetricsRecorder(meterRegistry)
 		);
 		learningAnswerService = new LearningAnswerService(
@@ -105,6 +111,7 @@ class LearningAnswerServiceJpaTest {
 			answerSubmissionRepository,
 			assessmentService,
 			submissionTransactionService,
+			childProfileService,
 			clock
 		);
 	}
@@ -290,7 +297,7 @@ class LearningAnswerServiceJpaTest {
 		assessmentGenerator.willReturn(assessment);
 
 		CompletionStage<AnswerSubmissionResult> failedSubmission =
-			learningAnswerService.submitAsync(
+			learningAnswerService.submitAsync(LearningJpaTestFixture.USER_ID,
 				session.getId(),
 				question.getId(),
 				speechAnswer.getId()
@@ -374,7 +381,7 @@ class LearningAnswerServiceJpaTest {
 		LearningSession session = saveSession();
 		LearningSessionQuestion question = session.getCurrentQuestion();
 		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(session);
-		submissionTransactionService.prepare(
+		submissionTransactionService.prepare(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			question.getId(),
 			speechAnswer.getId()
@@ -436,7 +443,7 @@ class LearningAnswerServiceJpaTest {
 		LearningSessionQuestion question = session.getCurrentQuestion();
 		SpeechAnswer first = saveCompletedSpeechAnswer(session, 1);
 		SpeechAnswer second = saveCompletedSpeechAnswer(session, 2);
-		submissionTransactionService.prepare(
+		submissionTransactionService.prepare(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			question.getId(),
 			first.getId()
@@ -502,6 +509,26 @@ class LearningAnswerServiceJpaTest {
 	}
 
 	@Test
+	void 다른_사용자는_답변을_제출할_수_없다() {
+		LearningSession session = saveSession();
+		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(session);
+		Long otherUserId = 999L;
+		doThrow(new ApiException(ErrorCode.CHILD_ACCESS_DENIED))
+			.when(childProfileService).getOwnedActive(otherUserId, session.getChildId());
+
+		assertApiException(ErrorCode.CHILD_ACCESS_DENIED,
+			() -> learningAnswerService.submitAsync(
+				otherUserId,
+				session.getId(),
+				session.getCurrentQuestion().getId(),
+				speechAnswer.getId()
+			));
+
+		assertEquals(0, answerSubmissionRepository.count());
+		assertEquals(0, answerRepository.count());
+	}
+
+	@Test
 	void 첫_오답의_재시도를_건너뛰면_오답_횟수를_유지하고_다음_문제로_이동한다() {
 		LearningSession session = saveSessionWithTwoQuestions();
 		LearningSessionQuestion skippedQuestion = session.getCurrentQuestion();
@@ -513,7 +540,7 @@ class LearningAnswerServiceJpaTest {
 			speechAnswer.getId()
 		);
 
-		learningAnswerService.skipRetry(
+		learningAnswerService.skipRetry(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			skippedQuestion.getId()
 		);
@@ -538,7 +565,7 @@ class LearningAnswerServiceJpaTest {
 			speechAnswer.getId()
 		);
 
-		learningAnswerService.skipRetry(session.getId(), question.getId());
+		learningAnswerService.skipRetry(LearningJpaTestFixture.USER_ID, session.getId(), question.getId());
 
 		assertTrue(session.isCompleted());
 		assertEquals(1, session.getCurrentQuestionIndex());
@@ -550,7 +577,7 @@ class LearningAnswerServiceJpaTest {
 
 		assertApiException(
 			ErrorCode.INVALID_REQUEST,
-			() -> learningAnswerService.skipRetry(
+			() -> learningAnswerService.skipRetry(LearningJpaTestFixture.USER_ID,
 				session.getId(),
 				session.getCurrentQuestion().getId()
 			)
@@ -572,7 +599,7 @@ class LearningAnswerServiceJpaTest {
 
 		assertApiException(
 			ErrorCode.INVALID_REQUEST,
-			() -> learningAnswerService.skipRetry(
+			() -> learningAnswerService.skipRetry(LearningJpaTestFixture.USER_ID,
 				session.getId(),
 				question.getId()
 			)
@@ -585,7 +612,7 @@ class LearningAnswerServiceJpaTest {
 
 		assertApiException(
 			ErrorCode.CURRENT_QUESTION_MISMATCH,
-			() -> learningAnswerService.skipRetry(session.getId(), 999L)
+			() -> learningAnswerService.skipRetry(LearningJpaTestFixture.USER_ID, session.getId(), 999L)
 		);
 	}
 
@@ -596,7 +623,7 @@ class LearningAnswerServiceJpaTest {
 
 		assertApiException(
 			ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS,
-			() -> learningAnswerService.skipRetry(session.getId(), 999L)
+			() -> learningAnswerService.skipRetry(LearningJpaTestFixture.USER_ID, session.getId(), 999L)
 		);
 	}
 
@@ -604,8 +631,23 @@ class LearningAnswerServiceJpaTest {
 	void 존재하지_않는_세션의_재시도는_건너뛸_수_없다() {
 		assertApiException(
 			ErrorCode.LEARNING_SESSION_NOT_FOUND,
-			() -> learningAnswerService.skipRetry(999L, 999L)
+			() -> learningAnswerService.skipRetry(LearningJpaTestFixture.USER_ID, 999L, 999L)
 		);
+	}
+
+	@Test
+	void 다른_사용자는_재시도를_건너뛸_수_없다() {
+		LearningSession session = saveSession();
+		LearningSessionQuestion question = session.getCurrentQuestion();
+		Long otherUserId = 999L;
+		doThrow(new ApiException(ErrorCode.CHILD_ACCESS_DENIED))
+			.when(childProfileService).getOwnedActive(otherUserId, session.getChildId());
+
+		assertApiException(ErrorCode.CHILD_ACCESS_DENIED,
+			() -> learningAnswerService.skipRetry(otherUserId, session.getId(), question.getId()));
+
+		assertEquals(0, question.getWrongAnswerCount());
+		assertFalse(question.isCompleted());
 	}
 
 	private LearningSession saveSession() {
@@ -621,7 +663,7 @@ class LearningAnswerServiceJpaTest {
 		Long sessionQuestionId,
 		Long speechAnswerId
 	) {
-		return await(learningAnswerService.submitAsync(
+		return await(learningAnswerService.submitAsync(LearningJpaTestFixture.USER_ID,
 			sessionId,
 			sessionQuestionId,
 			speechAnswerId

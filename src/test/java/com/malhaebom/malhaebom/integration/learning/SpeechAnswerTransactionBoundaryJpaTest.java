@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.zaxxer.hikari.HikariDataSource;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
@@ -41,6 +42,7 @@ import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
+import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
@@ -85,6 +87,8 @@ class SpeechAnswerTransactionBoundaryJpaTest {
 	private PlatformTransactionManager transactionManager;
 	@Autowired
 	private DataSource dataSource;
+	@MockitoBean
+	private ChildProfileService childProfileService;
 
 	@BeforeEach
 	void setUp() {
@@ -105,7 +109,7 @@ class SpeechAnswerTransactionBoundaryJpaTest {
 		);
 		Long sessionQuestionId = session.getCurrentQuestion().getId();
 
-		SpeechAnswerTask task = speechAnswerService.uploadAsync(
+		SpeechAnswerTask task = speechAnswerService.uploadAsync(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			sessionQuestionId,
 			REQUEST_KEY,

@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
@@ -28,6 +29,7 @@ import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
 import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
+import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
@@ -55,6 +57,8 @@ class SpeechAnswerServiceJpaTest {
 	private QuestionRepository questionRepository;
 	@Autowired
 	private SpeechAnswerRepository speechAnswerRepository;
+	@MockitoBean
+	private ChildProfileService childProfileService;
 
 	private TestSpeechTranscriber transcriber;
 	private SpeechAnswerService speechAnswerService;
@@ -118,7 +122,7 @@ class SpeechAnswerServiceJpaTest {
 	}
 
 	private SpeechAnswerResult upload() {
-		return await(speechAnswerService.uploadAsync(
+		return await(speechAnswerService.uploadAsync(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			sessionQuestionId,
 			REQUEST_KEY,

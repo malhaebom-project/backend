@@ -51,10 +51,11 @@ public class LearningSessionController {
 
 	@GetMapping("/{sessionId}/questions/next")
 	public ApiResponse<NextQuestionResponse> getNextQuestion(
+		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId
 	) {
 		LearningSessionQuestion sessionQuestion =
-			learningSessionService.getNextQuestion(sessionId);
+			learningSessionService.getNextQuestion(loginUser.userId(), sessionId);
 		return ApiResponse.success(
 			NextQuestionResponse.from(
 				sessionQuestion,
@@ -67,20 +68,25 @@ public class LearningSessionController {
 
 	@GetMapping("/{sessionId}")
 	public ApiResponse<LearningSessionResponse> get(
+		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId
 	) {
 		return ApiResponse.success(
-			LearningSessionResponse.from(learningSessionService.get(sessionId))
+			LearningSessionResponse.from(learningSessionService.get(
+				loginUser.userId(),
+				sessionId
+			))
 		);
 	}
 
 	@PostMapping("/{sessionId}/complete")
 	public ApiResponse<LearningSessionResponse> complete(
+		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId
 	) {
 		return ApiResponse.success(
 			LearningSessionResponse.from(
-				learningSessionService.complete(sessionId)
+				learningSessionService.complete(loginUser.userId(), sessionId)
 			),
 			"학습을 완료했습니다."
 		);
