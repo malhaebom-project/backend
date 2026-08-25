@@ -44,10 +44,12 @@ public class AnswerSubmissionTransactionService {
 	private final AnswerSubmissionRepository answerSubmissionRepository;
 	private final AnswerSubmissionPolicyProperties policyProperties;
 	private final Clock clock;
+	private final ChildProfileService childProfileService;
 	private final AnswerSubmissionMetricsRecorder metrics;
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public AnswerSubmissionPreparation prepare(
+		Long userId,
 		Long sessionId,
 		Long sessionQuestionId,
 		Long speechAnswerId
@@ -56,13 +58,13 @@ public class AnswerSubmissionTransactionService {
 			clock.instant(),
 			policyProperties.processingTimeout()
 		);
-		answerSubmissionRepository
-				.findBySpeechAnswer_Id(speechAnswerId)
-				.ifPresent(existing ->
-						validateRequestPath(existing, sessionId, sessionQuestionId)
-				);
-
 		LearningSession session = getSessionForUpdate(sessionId);
+		childProfileService.getOwnedActive(userId, session.getChildId());
+		answerSubmissionRepository
+			.findBySpeechAnswer_Id(speechAnswerId)
+			.ifPresent(existing ->
+				validateRequestPath(existing, sessionId, sessionQuestionId)
+			);
 		AnswerSubmission lockedExisting = answerSubmissionRepository
 			.findForUpdateBySpeechAnswer_Id(speechAnswerId)
 			.orElse(null);

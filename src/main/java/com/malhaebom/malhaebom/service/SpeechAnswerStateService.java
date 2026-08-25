@@ -29,9 +29,11 @@ public class SpeechAnswerStateService {
 	private final LearningSessionRepository learningSessionRepository;
 	private final SpeechAnswerRepository speechAnswerRepository;
 	private final SpeechAnswerAsyncProperties asyncProperties;
+	private final ChildProfileService childProfileService;
 
 	@Transactional
 	public SpeechAnswerStartResult start(
+		Long userId,
 		Long sessionId,
 		Long sessionQuestionId,
 		String requestKey
@@ -43,6 +45,7 @@ public class SpeechAnswerStateService {
 			.orElseThrow(() -> new ApiException(
 				ErrorCode.LEARNING_SESSION_NOT_FOUND
 			));
+		childProfileService.getOwnedActive(userId, session.getChildId());
 		validateInProgress(session);
 		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
 		validateCurrentQuestion(currentQuestion, sessionQuestionId);

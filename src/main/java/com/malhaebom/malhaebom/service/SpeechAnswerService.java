@@ -77,6 +77,7 @@ public class SpeechAnswerService implements SmartLifecycle {
 
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public SpeechAnswerTask uploadAsync(
+		Long userId,
 		Long sessionId,
 		Long sessionQuestionId,
 		String requestKey,
@@ -88,6 +89,7 @@ public class SpeechAnswerService implements SmartLifecycle {
 		try {
 			validateAcceptingRequests();
 			return uploadWhileRunning(
+				userId,
 				sessionId,
 				sessionQuestionId,
 				requestKey,
@@ -99,6 +101,7 @@ public class SpeechAnswerService implements SmartLifecycle {
 	}
 
 	private SpeechAnswerTask uploadWhileRunning(
+		Long userId,
 		Long sessionId,
 		Long sessionQuestionId,
 		String requestKey,
@@ -109,6 +112,7 @@ public class SpeechAnswerService implements SmartLifecycle {
 		requestLock.lock();
 		try {
 			SpeechAnswerStartResult startResult = stateService.start(
+				userId,
 				sessionId,
 				sessionQuestionId,
 				requestKey

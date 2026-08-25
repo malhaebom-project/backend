@@ -15,8 +15,10 @@ import com.malhaebom.malhaebom.presentation.dto.SubmitAnswerResponse;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.async.AnswerSubmissionAsyncProperties;
+import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionTask;
+import com.malhaebom.malhaebom.service.dto.LoginUser;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,11 +33,13 @@ public class LearningAnswerController {
 
 	@PostMapping("/{sessionId}/questions/{sessionQuestionId}/answers")
 	public DeferredResult<ApiResponse<SubmitAnswerResponse>> submit(
+		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId,
 		@PathVariable Long sessionQuestionId,
 		@Valid @RequestBody SubmitAnswerRequest request
 	) {
 		AnswerSubmissionTask submission = learningAnswerService.submitAsync(
+			loginUser.userId(),
 			sessionId,
 			sessionQuestionId,
 			request.speechAnswerId()
@@ -72,10 +76,15 @@ public class LearningAnswerController {
 
 	@PostMapping("/{sessionId}/questions/{sessionQuestionId}/skip-retry")
 	public ApiResponse<Void> skipRetry(
+		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId,
 		@PathVariable Long sessionQuestionId
 	) {
-		learningAnswerService.skipRetry(sessionId, sessionQuestionId);
+		learningAnswerService.skipRetry(
+			loginUser.userId(),
+			sessionId,
+			sessionQuestionId
+		);
 		return ApiResponse.success(null);
 	}
 }

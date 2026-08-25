@@ -4,6 +4,7 @@ import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiEx
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doThrow;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -15,6 +16,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
@@ -23,10 +25,12 @@ import com.malhaebom.malhaebom.domain.learning.SpeechProcessingStatus;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
+import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
+import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
 
 import jakarta.persistence.EntityManager;
@@ -52,13 +56,15 @@ class SpeechAnswerStateServiceJpaTest {
 	private JdbcTemplate jdbcTemplate;
 	@Autowired
 	private EntityManager entityManager;
+	@MockitoBean
+	private ChildProfileService childProfileService;
 
 	@Test
 	void 현재_문제의_첫_음성_답변을_저장한다() {
 		LearningSession session = saveSession();
 		Long sessionQuestionId = currentQuestionId(session);
 
-		SpeechAnswerStartResult startResult = stateService.start(
+		SpeechAnswerStartResult startResult = stateService.start(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			sessionQuestionId,
 			REQUEST_KEY
@@ -81,7 +87,7 @@ class SpeechAnswerStateServiceJpaTest {
 	void 다시_녹음하면_다음_녹음_순번을_저장한다() {
 		LearningSession session = saveSession();
 		Long sessionQuestionId = currentQuestionId(session);
-		SpeechAnswerStartResult firstStart = stateService.start(
+		SpeechAnswerStartResult firstStart = stateService.start(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			sessionQuestionId,
 			"first-request-key"
@@ -94,7 +100,7 @@ class SpeechAnswerStateServiceJpaTest {
 			STT_PROVIDER
 		);
 
-		SpeechAnswer second = stateService.start(
+		SpeechAnswer second = stateService.start(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			sessionQuestionId,
 			"second-request-key"
@@ -108,7 +114,7 @@ class SpeechAnswerStateServiceJpaTest {
 	void 완료된_멱등_요청은_저장된_결과를_반환한다() {
 		LearningSession session = saveSession();
 		Long sessionQuestionId = currentQuestionId(session);
-		SpeechAnswerStartResult firstStart = stateService.start(
+		SpeechAnswerStartResult firstStart = stateService.start(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			sessionQuestionId,
 			REQUEST_KEY
@@ -122,7 +128,7 @@ class SpeechAnswerStateServiceJpaTest {
 			STT_PROVIDER
 		);
 
-		SpeechAnswer resolved = stateService.start(
+		SpeechAnswer resolved = stateService.start(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			sessionQuestionId,
 			REQUEST_KEY
@@ -137,13 +143,13 @@ class SpeechAnswerStateServiceJpaTest {
 	void 처리_중인_멱등_요청은_동일한_처리_토큰으로_반환한다() {
 		LearningSession session = saveSession();
 		Long sessionQuestionId = currentQuestionId(session);
-		SpeechAnswerStartResult first = stateService.start(
+		SpeechAnswerStartResult first = stateService.start(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			sessionQuestionId,
 			REQUEST_KEY
 		);
 
-		SpeechAnswerStartResult existing = stateService.start(
+		SpeechAnswerStartResult existing = stateService.start(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			sessionQuestionId,
 			REQUEST_KEY
@@ -163,7 +169,7 @@ class SpeechAnswerStateServiceJpaTest {
 	void 만료된_PROCESSING은_새_토큰으로_회수하고_이전_완료를_차단한다() {
 		LearningSession session = saveSession();
 		Long sessionQuestionId = currentQuestionId(session);
-		SpeechAnswerStartResult first = stateService.start(
+		SpeechAnswerStartResult first = stateService.start(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			sessionQuestionId,
 			REQUEST_KEY
@@ -176,7 +182,7 @@ class SpeechAnswerStateServiceJpaTest {
 		);
 		entityManager.clear();
 
-		SpeechAnswerStartResult reclaimed = stateService.start(
+		SpeechAnswerStartResult reclaimed = stateService.start(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			sessionQuestionId,
 			REQUEST_KEY
@@ -225,7 +231,7 @@ class SpeechAnswerStateServiceJpaTest {
 	void 실패한_멱등_요청은_새_행을_만들지_않는다() {
 		LearningSession session = saveSession();
 		Long sessionQuestionId = currentQuestionId(session);
-		SpeechAnswerStartResult firstStart = stateService.start(
+		SpeechAnswerStartResult firstStart = stateService.start(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			sessionQuestionId,
 			REQUEST_KEY
@@ -240,7 +246,7 @@ class SpeechAnswerStateServiceJpaTest {
 
 		assertApiException(
 			ErrorCode.STT_PROCESSING_FAILED,
-			() -> stateService.start(
+			() -> stateService.start(LearningJpaTestFixture.USER_ID,
 				session.getId(),
 				sessionQuestionId,
 				REQUEST_KEY
@@ -255,7 +261,7 @@ class SpeechAnswerStateServiceJpaTest {
 
 		assertApiException(
 			ErrorCode.CURRENT_QUESTION_MISMATCH,
-			() -> stateService.start(
+			() -> stateService.start(LearningJpaTestFixture.USER_ID,
 				session.getId(),
 				999L,
 				REQUEST_KEY
@@ -268,7 +274,7 @@ class SpeechAnswerStateServiceJpaTest {
 	void 다른_문제의_멱등키는_재사용할_수_없다() {
 		LearningSession firstSession = saveSession();
 		LearningSession secondSession = saveSession();
-		stateService.start(
+		stateService.start(LearningJpaTestFixture.USER_ID,
 			firstSession.getId(),
 			currentQuestionId(firstSession),
 			REQUEST_KEY
@@ -276,7 +282,7 @@ class SpeechAnswerStateServiceJpaTest {
 
 		assertApiException(
 			ErrorCode.CURRENT_QUESTION_MISMATCH,
-			() -> stateService.start(
+			() -> stateService.start(LearningJpaTestFixture.USER_ID,
 				secondSession.getId(),
 				currentQuestionId(secondSession),
 				REQUEST_KEY
@@ -307,12 +313,25 @@ class SpeechAnswerStateServiceJpaTest {
 
 		assertApiException(
 			ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS,
-			() -> stateService.start(
+			() -> stateService.start(LearningJpaTestFixture.USER_ID,
 				session.getId(),
 				sessionQuestionId,
 				REQUEST_KEY
 			)
 		);
+		assertEquals(0, speechAnswerRepository.count());
+	}
+
+	@Test
+	void 다른_사용자는_음성_답변을_시작할_수_없다() {
+		LearningSession session = saveSession();
+		Long otherUserId = 999L;
+		doThrow(new ApiException(ErrorCode.CHILD_ACCESS_DENIED))
+			.when(childProfileService).getOwnedActive(otherUserId, session.getChildId());
+
+		assertApiException(ErrorCode.CHILD_ACCESS_DENIED,
+			() -> stateService.start(otherUserId, session.getId(), currentQuestionId(session), REQUEST_KEY));
+
 		assertEquals(0, speechAnswerRepository.count());
 	}
 

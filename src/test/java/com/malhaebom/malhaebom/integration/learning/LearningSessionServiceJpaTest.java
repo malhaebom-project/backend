@@ -149,13 +149,14 @@ class LearningSessionServiceJpaTest {
 		LearningSession session = LearningJpaTestFixture.saveSession(
 			questionRepository,
 			learningSessionRepository,
+			childId,
 			null
 		);
 		session.complete();
 
 		assertApiException(
 			ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS,
-			() -> learningSessionService.getNextQuestion(session.getId())
+			() -> learningSessionService.getNextQuestion(userId, session.getId())
 		);
 	}
 
@@ -164,12 +165,47 @@ class LearningSessionServiceJpaTest {
 		LearningSession session = LearningJpaTestFixture.saveSession(
 			questionRepository,
 			learningSessionRepository,
+			childId,
 			null
 		);
 
 		assertApiException(
 			ErrorCode.INVALID_REQUEST,
-			() -> learningSessionService.complete(session.getId())
+			() -> learningSessionService.complete(userId, session.getId())
+		);
+	}
+
+	@Test
+	void 다른_사용자는_학습_세션을_조회하거나_완료할_수_없다() {
+		LearningSession session = LearningJpaTestFixture.saveSession(
+			questionRepository,
+			learningSessionRepository,
+			childId,
+			null
+		);
+		User otherUser = userRepository.saveAndFlush(User.create(
+			"Other Guardian",
+			"other-guardian@example.com",
+			"encoded-password"
+		));
+
+		assertApiException(
+			ErrorCode.CHILD_ACCESS_DENIED,
+			() -> learningSessionService.get(otherUser.getId(), session.getId())
+		);
+		assertApiException(
+			ErrorCode.CHILD_ACCESS_DENIED,
+			() -> learningSessionService.getNextQuestion(
+				otherUser.getId(),
+				session.getId()
+			)
+		);
+		assertApiException(
+			ErrorCode.CHILD_ACCESS_DENIED,
+			() -> learningSessionService.complete(
+				otherUser.getId(),
+				session.getId()
+			)
 		);
 	}
 

@@ -34,6 +34,7 @@ import com.malhaebom.malhaebom.infra.async.AnswerSubmissionAsyncProperties;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionTask;
+import com.malhaebom.malhaebom.support.StubLoginUserArgumentResolver;
 
 import jakarta.servlet.AsyncEvent;
 import jakarta.servlet.AsyncListener;
@@ -44,6 +45,7 @@ class LearningAnswerControllerTest {
 	private static final Long SESSION_ID = 1L;
 	private static final Long SESSION_QUESTION_ID = 2L;
 	private static final Long SPEECH_ANSWER_ID = 3L;
+	private static final Long USER_ID = 4L;
 	private static final String ENDPOINT =
 		"/api/v1/learning-sessions/{sessionId}/questions/"
 			+ "{sessionQuestionId}/answers";
@@ -61,6 +63,9 @@ class LearningAnswerControllerTest {
 				new AnswerSubmissionAsyncProperties(Duration.ofSeconds(30))
 			)
 		)
+			.setCustomArgumentResolvers(
+				new StubLoginUserArgumentResolver(USER_ID)
+			)
 			.setControllerAdvice(new ApiExceptionHandler())
 			.build();
 	}
@@ -87,6 +92,7 @@ class LearningAnswerControllerTest {
 		CompletableFuture<AnswerSubmissionResult> submission =
 			new CompletableFuture<>();
 		when(learningAnswerService.submitAsync(
+			USER_ID,
 			SESSION_ID,
 			SESSION_QUESTION_ID,
 			SPEECH_ANSWER_ID
@@ -112,6 +118,7 @@ class LearningAnswerControllerTest {
 			.andExpect(jsonPath("$.data.score").value(100));
 
 		verify(learningAnswerService).submitAsync(
+			USER_ID,
 			SESSION_ID,
 			SESSION_QUESTION_ID,
 			SPEECH_ANSWER_ID
@@ -124,6 +131,7 @@ class LearningAnswerControllerTest {
 		CompletableFuture<AnswerSubmissionResult> submission =
 			new CompletableFuture<>();
 		when(learningAnswerService.submitAsync(
+			USER_ID,
 			SESSION_ID,
 			SESSION_QUESTION_ID,
 			SPEECH_ANSWER_ID
@@ -150,6 +158,7 @@ class LearningAnswerControllerTest {
 			new CompletableFuture<>();
 		AtomicBoolean cancelled = new AtomicBoolean();
 		when(learningAnswerService.submitAsync(
+			USER_ID,
 			SESSION_ID,
 			SESSION_QUESTION_ID,
 			SPEECH_ANSWER_ID

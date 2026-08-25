@@ -38,6 +38,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,6 +60,7 @@ import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimite
 import com.malhaebom.malhaebom.presentation.LearningSpeechController;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
+import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
@@ -66,6 +68,7 @@ import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import com.malhaebom.malhaebom.support.StubLoginUserArgumentResolver;
 
 @DataJpaTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -104,6 +107,8 @@ class SpeechAnswerConcurrencyJpaTest {
 	private JdbcTemplate jdbcTemplate;
 	@Autowired
 	private PlatformTransactionManager transactionManager;
+	@MockitoBean
+	private ChildProfileService childProfileService;
 
 	private String requestPrefix;
 	private MockMvc mockMvc;
@@ -115,6 +120,9 @@ class SpeechAnswerConcurrencyJpaTest {
 		mockMvc = MockMvcBuilders.standaloneSetup(
 			new LearningSpeechController(speechAnswerService, asyncProperties)
 		)
+			.setCustomArgumentResolvers(
+				new StubLoginUserArgumentResolver(LearningJpaTestFixture.USER_ID)
+			)
 			.setControllerAdvice(new ApiExceptionHandler())
 			.build();
 	}
@@ -275,7 +283,7 @@ class SpeechAnswerConcurrencyJpaTest {
 		LearningSession session = saveSession();
 		Long sessionQuestionId = session.getCurrentQuestion().getId();
 		String requestKey = requestKey("lease-complete-race");
-		SpeechAnswerStartResult processing = stateService.start(
+		SpeechAnswerStartResult processing = stateService.start(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			sessionQuestionId,
 			requestKey
@@ -311,7 +319,7 @@ class SpeechAnswerConcurrencyJpaTest {
 		CompletableFuture<SpeechAnswerStartResult> reclaim =
 			CompletableFuture.supplyAsync(() -> {
 				reclaimStarted.countDown();
-				return stateService.start(
+				return stateService.start(LearningJpaTestFixture.USER_ID,
 					session.getId(),
 					sessionQuestionId,
 					requestKey
@@ -350,7 +358,7 @@ class SpeechAnswerConcurrencyJpaTest {
 		);
 		LearningSession session = saveSession();
 		Long sessionQuestionId = session.getCurrentQuestion().getId();
-		SpeechAnswerTask active = drainingService.uploadAsync(
+		SpeechAnswerTask active = drainingService.uploadAsync(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			sessionQuestionId,
 			requestKey("shutdown-active"),
@@ -363,7 +371,7 @@ class SpeechAnswerConcurrencyJpaTest {
 		assertEquals(1L, shutdown.getCount());
 		ApiException rejected = assertThrows(
 			ApiException.class,
-			() -> drainingService.uploadAsync(
+			() -> drainingService.uploadAsync(LearningJpaTestFixture.USER_ID,
 				session.getId(),
 				sessionQuestionId,
 				requestKey("shutdown-rejected"),
@@ -397,7 +405,7 @@ class SpeechAnswerConcurrencyJpaTest {
 		LearningSession session = saveSession();
 		Long sessionQuestionId = session.getCurrentQuestion().getId();
 		String requestKey = requestKey("shutdown-timeout");
-		SpeechAnswerTask active = drainingService.uploadAsync(
+		SpeechAnswerTask active = drainingService.uploadAsync(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			sessionQuestionId,
 			requestKey,
@@ -460,7 +468,7 @@ class SpeechAnswerConcurrencyJpaTest {
 		Long sessionQuestionId,
 		String requestSuffix
 	) {
-		return speechAnswerService.uploadAsync(
+		return speechAnswerService.uploadAsync(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			sessionQuestionId,
 			requestKey(requestSuffix),
