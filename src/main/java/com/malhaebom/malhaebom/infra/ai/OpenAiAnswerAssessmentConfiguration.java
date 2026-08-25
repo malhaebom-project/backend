@@ -16,7 +16,8 @@ import org.springframework.context.annotation.Configuration;
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({
 	OpenAiAnswerAssessmentProperties.class,
-	AnswerAssessmentConcurrencyProperties.class
+	AnswerAssessmentConcurrencyProperties.class,
+	OpenAiAnswerAssessmentRateLimitProperties.class
 })
 public class OpenAiAnswerAssessmentConfiguration {
 

@@ -2,7 +2,6 @@ package com.malhaebom.malhaebom.infra.ai;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -19,13 +18,22 @@ import org.springframework.stereotype.Component;
 
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.infra.ai.OpenAiAnswerAssessmentRateLimiter.AcquireResult;
 import com.malhaebom.malhaebom.infra.observability.AnswerAssessmentMetricsRecorder;
 import com.malhaebom.malhaebom.infra.observability.AnswerAssessmentMetricsRecorder.QueueWaitResult;
+import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 
 @Component
 public class AnswerAssessmentConcurrencyLimiter {
+
+	private static final OpenAiAnswerAssessmentRateLimitProperties
+		DEFAULT_RATE_LIMIT = new OpenAiAnswerAssessmentRateLimitProperties(
+			400,
+			400_000,
+			3_000
+		);
 
 	private final Object lock = new Object();
 	private final int maxConcurrentRequests;
@@ -35,38 +43,41 @@ public class AnswerAssessmentConcurrencyLimiter {
 	private final boolean ownsTimeoutScheduler;
 	private final LongSupplier nanoTime;
 	private final AnswerAssessmentMetricsRecorder metrics;
+	private final OpenAiAnswerAssessmentRateLimiter rateLimiter;
 	private final Set<QueueEntry> queue = new LinkedHashSet<>();
 	private final AtomicInteger activeRequests = new AtomicInteger();
 	private final AtomicInteger queuedRequests = new AtomicInteger();
 
 	private boolean accepting = true;
+	private AnswerAssessmentQueueTimeoutScheduler.TimeoutHandle rateRetryHandle;
 
 	@Autowired
 	public AnswerAssessmentConcurrencyLimiter(
 		AnswerAssessmentConcurrencyProperties properties,
 		AnswerAssessmentMetricsRecorder metrics,
+		OpenAiAnswerAssessmentRateLimiter rateLimiter,
 		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler
 	) {
-		this(
-			properties,
-			metrics,
-			timeoutScheduler,
-			System::nanoTime,
-			false
-		);
+		this(properties, metrics, rateLimiter, timeoutScheduler,
+			System::nanoTime, false);
 	}
 
 	public AnswerAssessmentConcurrencyLimiter(
 		AnswerAssessmentConcurrencyProperties properties,
 		AnswerAssessmentMetricsRecorder metrics
 	) {
-		this(
-			properties,
-			metrics,
+		this(properties, metrics, defaultRateLimiter(),
 			new ExecutorAnswerAssessmentQueueTimeoutScheduler(),
-			System::nanoTime,
-			true
-		);
+			System::nanoTime, true);
+	}
+
+	public AnswerAssessmentConcurrencyLimiter(
+		AnswerAssessmentConcurrencyProperties properties,
+		AnswerAssessmentMetricsRecorder metrics,
+		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler
+	) {
+		this(properties, metrics, defaultRateLimiter(), timeoutScheduler,
+			System::nanoTime, false);
 	}
 
 	AnswerAssessmentConcurrencyLimiter(
@@ -75,90 +86,76 @@ public class AnswerAssessmentConcurrencyLimiter {
 		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler,
 		LongSupplier nanoTime
 	) {
-		this(properties, metrics, timeoutScheduler, nanoTime, false);
+		this(properties, metrics, defaultRateLimiter(), timeoutScheduler,
+			nanoTime, false);
+	}
+
+	AnswerAssessmentConcurrencyLimiter(
+		AnswerAssessmentConcurrencyProperties properties,
+		AnswerAssessmentMetricsRecorder metrics,
+		OpenAiAnswerAssessmentRateLimiter rateLimiter,
+		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler,
+		LongSupplier nanoTime
+	) {
+		this(properties, metrics, rateLimiter, timeoutScheduler, nanoTime, false);
 	}
 
 	private AnswerAssessmentConcurrencyLimiter(
 		AnswerAssessmentConcurrencyProperties properties,
 		AnswerAssessmentMetricsRecorder metrics,
+		OpenAiAnswerAssessmentRateLimiter rateLimiter,
 		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler,
 		LongSupplier nanoTime,
 		boolean ownsTimeoutScheduler
 	) {
 		Objects.requireNonNull(properties, "동시성 설정은 null일 수 없습니다.");
 		this.metrics = Objects.requireNonNull(
-			metrics,
-			"답안 평가 지표 기록기는 null일 수 없습니다."
-		);
+			metrics, "답안 평가 지표 기록기는 null일 수 없습니다.");
+		this.rateLimiter = Objects.requireNonNull(
+			rateLimiter, "OpenAI rate limiter는 null일 수 없습니다.");
 		this.timeoutScheduler = Objects.requireNonNull(
-			timeoutScheduler,
-			"대기열 timeout scheduler는 null일 수 없습니다."
-		);
+			timeoutScheduler, "대기열 timeout scheduler는 null일 수 없습니다.");
 		this.nanoTime = Objects.requireNonNull(
-			nanoTime,
-			"단조 시간 공급자는 null일 수 없습니다."
-		);
+			nanoTime, "단조 시간 공급자는 null일 수 없습니다.");
 		this.ownsTimeoutScheduler = ownsTimeoutScheduler;
 		maxConcurrentRequests = properties.maxConcurrentRequests();
 		queueCapacity = properties.queueCapacity();
 		maxQueueWait = properties.maxQueueWait();
-		metrics.bind(
-			activeRequests::get,
-			maxConcurrentRequests,
-			queuedRequests::get,
-			queueCapacity
-		);
+		metrics.bind(activeRequests::get, maxConcurrentRequests,
+			queuedRequests::get, queueCapacity);
 	}
 
 	public AnswerAssessmentTask execute(
 		Supplier<AnswerAssessmentTask> taskSupplier
 	) {
-		Objects.requireNonNull(
-			taskSupplier,
-			"제한할 작업은 null일 수 없습니다."
-		);
-
+		Objects.requireNonNull(taskSupplier, "제한할 작업은 null일 수 없습니다.");
 		QueueEntry entry = new QueueEntry(taskSupplier, nanoTime.getAsLong());
 		Admission admission;
 		synchronized (lock) {
 			if (!accepting) {
 				entry.state = State.TERMINAL;
 				admission = Admission.SHUTDOWN;
-			} else if (
-				activeRequests.get() < maxConcurrentRequests
-					&& queue.isEmpty()
-			) {
-				entry.state = State.STARTING;
-				activeRequests.incrementAndGet();
-				admission = Admission.START;
-			} else if (queue.size() < queueCapacity) {
-				try {
-					entry.timeoutHandle = timeoutScheduler.schedule(
-						() -> timeout(entry),
-						maxQueueWait
-					);
-					queue.add(entry);
-					queuedRequests.incrementAndGet();
-					metrics.recordQueued();
-					admission = Admission.QUEUE;
-				} catch (RuntimeException exception) {
-					entry.state = State.TERMINAL;
-					entry.schedulingFailure = exception;
-					admission = Admission.SCHEDULER_FAILURE;
+			} else if (activeRequests.get() < maxConcurrentRequests
+				&& queue.isEmpty()) {
+				AcquireResult rate = rateLimiter.tryAcquire();
+				if (rate.allowed()) {
+					entry.state = State.STARTING;
+					activeRequests.incrementAndGet();
+					admission = Admission.START;
+				} else {
+					admission = enqueueRateDelayed(entry, rate.retryAfter());
 				}
 			} else {
-				admission = Admission.FULL;
+				admission = enqueue(entry);
 			}
 		}
 
 		switch (admission) {
 			case START -> start(entry);
-			case QUEUE -> {
-			}
+			case QUEUE -> { }
 			case FULL -> rejectFull(entry);
-			case SHUTDOWN -> entry.result.completeExceptionally(
-				shutdownException()
-			);
+			case RATE_REJECTED -> rejectRate(entry);
+			case SHUTDOWN -> entry.result.completeExceptionally(shutdownException());
 			case SCHEDULER_FAILURE -> failScheduling(entry);
 		}
 		return entry.task;
@@ -172,6 +169,7 @@ public class AnswerAssessmentConcurrencyLimiter {
 				return;
 			}
 			accepting = false;
+			cancelRateRetry();
 			for (QueueEntry entry : queue) {
 				entry.state = State.TERMINAL;
 				cancelTimeout(entry);
@@ -180,23 +178,59 @@ public class AnswerAssessmentConcurrencyLimiter {
 			queue.clear();
 			queuedRequests.set(0);
 		}
-
 		for (QueueEntry entry : shutdownEntries) {
 			recordWait(entry, QueueWaitResult.SHUTDOWN);
 			entry.result.completeExceptionally(shutdownException());
 		}
-		if (
-			ownsTimeoutScheduler
-				&& timeoutScheduler instanceof AutoCloseable closeable
-		) {
+		if (ownsTimeoutScheduler
+			&& timeoutScheduler instanceof AutoCloseable closeable) {
 			try {
 				closeable.close();
 			} catch (Exception exception) {
 				throw new IllegalStateException(
 					"답안 평가 대기열 scheduler를 종료할 수 없습니다.",
-					exception
-				);
+					exception);
 			}
+		}
+	}
+
+	private Admission enqueueRateDelayed(QueueEntry entry, Duration retryAfter) {
+		if (queueCapacity == 0) {
+			return Admission.RATE_REJECTED;
+		}
+		Admission admission = enqueue(entry);
+		if (admission != Admission.QUEUE) {
+			return admission;
+		}
+		markRateDelayed(entry);
+		try {
+			scheduleRateRetry(retryAfter);
+			return admission;
+		} catch (RuntimeException exception) {
+			queue.remove(entry);
+			queuedRequests.decrementAndGet();
+			cancelTimeout(entry);
+			entry.state = State.TERMINAL;
+			entry.schedulingFailure = exception;
+			return Admission.SCHEDULER_FAILURE;
+		}
+	}
+
+	private Admission enqueue(QueueEntry entry) {
+		if (queue.size() >= queueCapacity) {
+			return Admission.FULL;
+		}
+		try {
+			entry.timeoutHandle = timeoutScheduler.schedule(
+				() -> timeout(entry), maxQueueWait);
+			queue.add(entry);
+			queuedRequests.incrementAndGet();
+			metrics.recordQueued();
+			return Admission.QUEUE;
+		} catch (RuntimeException exception) {
+			entry.state = State.TERMINAL;
+			entry.schedulingFailure = exception;
+			return Admission.SCHEDULER_FAILURE;
 		}
 	}
 
@@ -204,15 +238,12 @@ public class AnswerAssessmentConcurrencyLimiter {
 		metrics.recordAccepted();
 		AnswerAssessmentTask activeTask;
 		try {
-			activeTask = Objects.requireNonNull(
-				entry.taskSupplier.get(),
-				"제한된 작업은 null을 반환할 수 없습니다."
-			);
+			activeTask = Objects.requireNonNull(entry.taskSupplier.get(),
+				"제한된 작업은 null을 반환할 수 없습니다.");
 		} catch (RuntimeException exception) {
 			finishActive(entry, null, exception);
 			return;
 		}
-
 		boolean cancelRequested;
 		synchronized (lock) {
 			if (entry.state != State.STARTING) {
@@ -222,10 +253,8 @@ public class AnswerAssessmentConcurrencyLimiter {
 			entry.state = State.ACTIVE;
 			cancelRequested = entry.cancelRequested;
 		}
-
 		activeTask.result().whenComplete(
-			(result, exception) -> finishActive(entry, result, exception)
-		);
+			(result, exception) -> finishActive(entry, result, exception));
 		if (cancelRequested) {
 			activeTask.cancel();
 		}
@@ -236,36 +265,25 @@ public class AnswerAssessmentConcurrencyLimiter {
 		AnswerAssessment result,
 		Throwable exception
 	) {
-		List<QueueEntry> expiredEntries = new ArrayList<>();
-		QueueEntry promoted;
+		List<QueueEntry> expired = new ArrayList<>();
+		List<QueueEntry> promoted = new ArrayList<>();
 		synchronized (lock) {
 			if (entry.state != State.STARTING && entry.state != State.ACTIVE) {
 				return;
 			}
 			entry.state = State.TERMINAL;
 			activeRequests.decrementAndGet();
-			promoted = accepting
-				? pollQueuedForPromotion(expiredEntries)
-				: null;
-			if (promoted != null) {
-				promoted.state = State.STARTING;
-				activeRequests.incrementAndGet();
+			if (accepting) {
+				drainQueue(expired, promoted);
 			}
 		}
-
 		if (exception == null) {
 			metrics.recordCompleted();
 		} else {
 			metrics.recordFailed();
 		}
-		if (promoted != null) {
-			metrics.recordPromoted();
-			recordWait(promoted, QueueWaitResult.PROMOTED);
-			start(promoted);
-		}
-		for (QueueEntry expired : expiredEntries) {
-			completeTimeout(expired);
-		}
+		startPromoted(promoted);
+		completeExpired(expired);
 		if (exception == null) {
 			entry.result.complete(result);
 		} else {
@@ -273,31 +291,57 @@ public class AnswerAssessmentConcurrencyLimiter {
 		}
 	}
 
-	private QueueEntry pollQueuedForPromotion(
-		List<QueueEntry> expiredEntries
+	private void drainQueue(
+		List<QueueEntry> expired,
+		List<QueueEntry> promoted
 	) {
 		long now = nanoTime.getAsLong();
-		Iterator<QueueEntry> iterator = queue.iterator();
-		while (iterator.hasNext()) {
-			QueueEntry candidate = iterator.next();
-			iterator.remove();
-			queuedRequests.decrementAndGet();
-			if (candidate.state == State.QUEUED) {
-				cancelTimeout(candidate);
-				if (queueWaitExpired(candidate, now)) {
-					candidate.state = State.TERMINAL;
-					expiredEntries.add(candidate);
-					continue;
-				}
-				return candidate;
+		while (activeRequests.get() < maxConcurrentRequests
+			&& !queue.isEmpty()) {
+			QueueEntry candidate = queue.iterator().next();
+			if (candidate.state != State.QUEUED) {
+				removeQueued(candidate);
+				continue;
+			}
+			if (queueWaitExpired(candidate, now)) {
+				removeQueued(candidate);
+				candidate.state = State.TERMINAL;
+				expired.add(candidate);
+				continue;
+			}
+			AcquireResult rate = rateLimiter.tryAcquire();
+			if (!rate.allowed()) {
+				markRateDelayed(candidate);
+				scheduleRateRetry(rate.retryAfter());
+				return;
+			}
+			removeQueued(candidate);
+			candidate.state = State.STARTING;
+			activeRequests.incrementAndGet();
+			promoted.add(candidate);
+		}
+		if (queue.isEmpty()) {
+			cancelRateRetry();
+		}
+	}
+
+	private void rateRetry() {
+		List<QueueEntry> expired = new ArrayList<>();
+		List<QueueEntry> promoted = new ArrayList<>();
+		synchronized (lock) {
+			rateRetryHandle = null;
+			if (accepting) {
+				drainQueue(expired, promoted);
 			}
 		}
-		return null;
+		startPromoted(promoted);
+		completeExpired(expired);
 	}
 
 	private boolean cancel(QueueEntry entry) {
 		AnswerAssessmentTask activeTask = null;
-		boolean cancelledWhileQueued = false;
+		List<QueueEntry> expired = new ArrayList<>();
+		List<QueueEntry> promoted = new ArrayList<>();
 		synchronized (lock) {
 			switch (entry.state) {
 				case QUEUED -> {
@@ -307,7 +351,9 @@ public class AnswerAssessmentConcurrencyLimiter {
 					cancelTimeout(entry);
 					queuedRequests.decrementAndGet();
 					entry.state = State.TERMINAL;
-					cancelledWhileQueued = true;
+					if (accepting) {
+						drainQueue(expired, promoted);
+					}
 				}
 				case STARTING -> {
 					entry.cancelRequested = true;
@@ -319,40 +365,63 @@ public class AnswerAssessmentConcurrencyLimiter {
 				}
 			}
 		}
-
-		if (cancelledWhileQueued) {
+		if (entry.state == State.TERMINAL && activeTask == null) {
 			metrics.recordQueueCancelled();
 			recordWait(entry, QueueWaitResult.CANCELLED);
-			return entry.result.cancel(false);
+			boolean cancelled = entry.result.cancel(false);
+			startPromoted(promoted);
+			completeExpired(expired);
+			return cancelled;
 		}
 		return activeTask != null && activeTask.cancel();
 	}
 
 	private void timeout(QueueEntry entry) {
+		List<QueueEntry> expired = new ArrayList<>();
+		List<QueueEntry> promoted = new ArrayList<>();
 		synchronized (lock) {
 			if (entry.state != State.QUEUED || !queue.remove(entry)) {
 				return;
 			}
 			queuedRequests.decrementAndGet();
 			entry.state = State.TERMINAL;
+			if (accepting) {
+				drainQueue(expired, promoted);
+			}
 		}
 		completeTimeout(entry);
+		startPromoted(promoted);
+		completeExpired(expired);
+	}
+
+	private void startPromoted(List<QueueEntry> entries) {
+		for (QueueEntry entry : entries) {
+			metrics.recordPromoted();
+			recordWait(entry, QueueWaitResult.PROMOTED);
+			start(entry);
+		}
+	}
+
+	private void completeExpired(List<QueueEntry> entries) {
+		for (QueueEntry entry : entries) {
+			completeTimeout(entry);
+		}
 	}
 
 	private void completeTimeout(QueueEntry entry) {
 		metrics.recordQueueTimeout();
 		metrics.recordRejected();
+		if (entry.rateDelayed) {
+			rateLimiter.recordRejected();
+		}
 		recordWait(entry, QueueWaitResult.TIMEOUT);
 		entry.result.completeExceptionally(overloadedException());
 	}
 
 	private void failScheduling(QueueEntry entry) {
-		entry.result.completeExceptionally(
-			new IllegalStateException(
-				"답안 평가 대기열 timeout을 예약할 수 없습니다.",
-				entry.schedulingFailure
-			)
-		);
+		entry.result.completeExceptionally(new IllegalStateException(
+			"답안 평가 대기열 timeout을 예약할 수 없습니다.",
+			entry.schedulingFailure));
 	}
 
 	private void rejectFull(QueueEntry entry) {
@@ -360,6 +429,43 @@ public class AnswerAssessmentConcurrencyLimiter {
 		metrics.recordRejected();
 		entry.state = State.TERMINAL;
 		entry.result.completeExceptionally(overloadedException());
+	}
+
+	private void rejectRate(QueueEntry entry) {
+		rateLimiter.recordRejected();
+		metrics.recordQueueFull();
+		metrics.recordRejected();
+		entry.state = State.TERMINAL;
+		entry.result.completeExceptionally(overloadedException());
+	}
+
+	private void markRateDelayed(QueueEntry entry) {
+		if (!entry.rateDelayed) {
+			entry.rateDelayed = true;
+			rateLimiter.recordDelayed();
+		}
+	}
+
+	private void scheduleRateRetry(Duration retryAfter) {
+		if (rateRetryHandle != null) {
+			return;
+		}
+		Duration delay = retryAfter.isZero() || retryAfter.isNegative()
+			? Duration.ofNanos(1) : retryAfter;
+		rateRetryHandle = timeoutScheduler.schedule(this::rateRetry, delay);
+	}
+
+	private void cancelRateRetry() {
+		if (rateRetryHandle != null) {
+			rateRetryHandle.cancel();
+			rateRetryHandle = null;
+		}
+	}
+
+	private void removeQueued(QueueEntry entry) {
+		queue.remove(entry);
+		queuedRequests.decrementAndGet();
+		cancelTimeout(entry);
 	}
 
 	private void cancelTimeout(QueueEntry entry) {
@@ -385,24 +491,20 @@ public class AnswerAssessmentConcurrencyLimiter {
 	}
 
 	private IllegalStateException shutdownException() {
-		return new IllegalStateException(
-			"답안 평가 동시성 제한기가 종료되었습니다."
-		);
+		return new IllegalStateException("답안 평가 동시성 제한기가 종료되었습니다.");
+	}
+
+	private static OpenAiAnswerAssessmentRateLimiter defaultRateLimiter() {
+		return new OpenAiAnswerAssessmentRateLimiter(
+			DEFAULT_RATE_LIMIT, ProviderRateLimitMetricsRecorder.NOOP);
 	}
 
 	private enum Admission {
-		START,
-		QUEUE,
-		FULL,
-		SHUTDOWN,
-		SCHEDULER_FAILURE
+		START, QUEUE, FULL, RATE_REJECTED, SHUTDOWN, SCHEDULER_FAILURE
 	}
 
 	private enum State {
-		QUEUED,
-		STARTING,
-		ACTIVE,
-		TERMINAL
+		QUEUED, STARTING, ACTIVE, TERMINAL
 	}
 
 	private final class QueueEntry {
@@ -411,15 +513,14 @@ public class AnswerAssessmentConcurrencyLimiter {
 		private final CompletableFuture<AnswerAssessment> result =
 			new CompletableFuture<>();
 		private final AnswerAssessmentTask task = new AnswerAssessmentTask(
-			result,
-			() -> cancel(this)
-		);
+			result, () -> cancel(this));
 		private final long enqueuedAtNanos;
 		private State state = State.QUEUED;
 		private AnswerAssessmentQueueTimeoutScheduler.TimeoutHandle timeoutHandle;
 		private AnswerAssessmentTask activeTask;
 		private RuntimeException schedulingFailure;
 		private boolean cancelRequested;
+		private boolean rateDelayed;
 
 		private QueueEntry(
 			Supplier<AnswerAssessmentTask> taskSupplier,

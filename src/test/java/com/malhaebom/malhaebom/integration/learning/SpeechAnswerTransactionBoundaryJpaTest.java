@@ -39,7 +39,10 @@ import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository
 import com.malhaebom.malhaebom.infra.async.AsyncConfiguration;
 import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
+import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
+import com.malhaebom.malhaebom.infra.speech.GoogleSpeechRateLimitProperties;
 import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter;
+import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionRateLimiter;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
@@ -174,6 +177,14 @@ class SpeechAnswerTransactionBoundaryJpaTest {
 			SpeechAnswerAsyncProperties properties
 		) {
 			return new SpeechTranscriptionConcurrencyLimiter(properties);
+		}
+
+		@Bean
+		SpeechTranscriptionRateLimiter rateLimiter() {
+			return new SpeechTranscriptionRateLimiter(
+				new GoogleSpeechRateLimitProperties(240),
+				ProviderRateLimitMetricsRecorder.NOOP
+			);
 		}
 	}
 
