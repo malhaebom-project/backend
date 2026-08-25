@@ -35,6 +35,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -56,7 +57,10 @@ import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.async.AsyncConfiguration;
 import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
+import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
+import com.malhaebom.malhaebom.infra.speech.GoogleSpeechRateLimitProperties;
 import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter;
+import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionRateLimiter;
 import com.malhaebom.malhaebom.presentation.LearningSpeechController;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
@@ -221,6 +225,68 @@ class SpeechAnswerConcurrencyJpaTest {
 			ErrorCode.STT_PROCESSING_FAILED.getMessage(),
 			failed.getFailureMessage()
 		);
+	}
+
+	@Test
+	void STT_rate_거절은_Google을_호출하지_않고_DB_FAILED와_permit을_복구한다() {
+		SpeechAnswerAsyncProperties properties =
+			new SpeechAnswerAsyncProperties(
+				Duration.ofSeconds(20),
+				MAX_CONCURRENT_REQUESTS,
+				Duration.ofSeconds(60),
+				Duration.ofSeconds(20)
+			);
+		SpeechTranscriptionConcurrencyLimiter concurrencyLimiter =
+			new SpeechTranscriptionConcurrencyLimiter(properties);
+		SpeechAnswerService rateLimitedService = new SpeechAnswerService(
+			stateService,
+			transcriber,
+			Runnable::run,
+			concurrencyLimiter,
+			new SpeechTranscriptionRateLimiter(
+				new GoogleSpeechRateLimitProperties(1),
+				ProviderRateLimitMetricsRecorder.NOOP
+			),
+			properties
+		);
+		LearningSession session = saveSession();
+		Long sessionQuestionId = session.getCurrentQuestion().getId();
+		SpeechAnswerTask first = rateLimitedService.uploadAsync(
+			LearningJpaTestFixture.USER_ID,
+			session.getId(),
+			sessionQuestionId,
+			requestKey("rate-first"),
+			AUDIO
+		);
+		assertTrue(transcriber.complete(0));
+		await(first);
+
+		String rejectedKey = requestKey("rate-rejected");
+		SpeechAnswerTask rejected = rateLimitedService.uploadAsync(
+			LearningJpaTestFixture.USER_ID,
+			session.getId(),
+			sessionQuestionId,
+			rejectedKey,
+			AUDIO
+		);
+
+		ApiException failure = assertThrows(
+			ApiException.class,
+			() -> await(rejected)
+		);
+		assertEquals(ErrorCode.AI_REQUEST_LIMIT_EXCEEDED,
+			failure.getErrorCode());
+		assertEquals(HttpStatus.TOO_MANY_REQUESTS,
+			failure.getErrorCode().getHttpStatus());
+		assertEquals(1, transcriber.callCount());
+		assertEquals(0, concurrencyLimiter.activeRequests());
+		SpeechAnswer failed = speechAnswerRepository
+			.findByRequestKey(rejectedKey)
+			.orElseThrow();
+		assertEquals(SpeechProcessingStatus.FAILED,
+			failed.getProcessingStatus());
+		assertEquals(ErrorCode.AI_REQUEST_LIMIT_EXCEEDED.getMessage(),
+			failed.getFailureMessage());
 	}
 
 	@Test
@@ -539,6 +605,14 @@ class SpeechAnswerConcurrencyJpaTest {
 			SpeechAnswerAsyncProperties properties
 		) {
 			return new SpeechTranscriptionConcurrencyLimiter(properties);
+		}
+
+		@Bean
+		SpeechTranscriptionRateLimiter rateLimiter() {
+			return new SpeechTranscriptionRateLimiter(
+				new GoogleSpeechRateLimitProperties(240),
+				ProviderRateLimitMetricsRecorder.NOOP
+			);
 		}
 
 		@Bean

@@ -73,6 +73,8 @@ gcp:
   credentials: file:./config/google-credentials.json
   stt:
     enabled: true
+    rate-limit:
+      requests-per-minute: ${STT_RATE_LIMIT_REQUESTS_PER_MINUTE:240}
     language-code: en-US
     timeout: 15s
     location: us

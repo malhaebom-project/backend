@@ -16,6 +16,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Service;
@@ -27,8 +28,11 @@ import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.async.AsyncConfiguration;
 import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
+import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
+import com.malhaebom.malhaebom.infra.speech.GoogleSpeechRateLimitProperties;
 import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter;
 import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter.Permit;
+import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionRateLimiter;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
@@ -50,6 +54,7 @@ public class SpeechAnswerService implements SmartLifecycle {
 	private final SpeechTranscriber transcriber;
 	private final Executor completionExecutor;
 	private final SpeechTranscriptionConcurrencyLimiter concurrencyLimiter;
+	private final SpeechTranscriptionRateLimiter rateLimiter;
 	private final SpeechAnswerAsyncProperties asyncProperties;
 	private final ConcurrentMap<String, InFlightSpeechAnswerTask> inFlightTasks =
 		new ConcurrentHashMap<>();
@@ -60,19 +65,42 @@ public class SpeechAnswerService implements SmartLifecycle {
 		new CompletableFuture<>();
 	private volatile boolean running = true;
 
+	@Autowired
 	public SpeechAnswerService(
 		SpeechAnswerStateService stateService,
 		SpeechTranscriber transcriber,
 		@Qualifier(AsyncConfiguration.SPEECH_COMPLETION_EXECUTOR)
 		Executor completionExecutor,
 		SpeechTranscriptionConcurrencyLimiter concurrencyLimiter,
+		SpeechTranscriptionRateLimiter rateLimiter,
 		SpeechAnswerAsyncProperties asyncProperties
 	) {
 		this.stateService = stateService;
 		this.transcriber = transcriber;
 		this.completionExecutor = completionExecutor;
 		this.concurrencyLimiter = concurrencyLimiter;
+		this.rateLimiter = rateLimiter;
 		this.asyncProperties = asyncProperties;
+	}
+
+	public SpeechAnswerService(
+		SpeechAnswerStateService stateService,
+		SpeechTranscriber transcriber,
+		Executor completionExecutor,
+		SpeechTranscriptionConcurrencyLimiter concurrencyLimiter,
+		SpeechAnswerAsyncProperties asyncProperties
+	) {
+		this(
+			stateService,
+			transcriber,
+			completionExecutor,
+			concurrencyLimiter,
+			new SpeechTranscriptionRateLimiter(
+				new GoogleSpeechRateLimitProperties(240),
+				ProviderRateLimitMetricsRecorder.NOOP
+			),
+			asyncProperties
+		);
 	}
 
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -160,6 +188,17 @@ public class SpeechAnswerService implements SmartLifecycle {
 				started.getId(),
 				startResult.processingToken(),
 				provider,
+				ErrorCode.STT_PROCESSING_OVERLOADED,
+				startedAt
+			);
+		}
+		if (!rateLimiter.tryAcquire()) {
+			permit.release();
+			return reject(
+				started.getId(),
+				startResult.processingToken(),
+				provider,
+				ErrorCode.AI_REQUEST_LIMIT_EXCEEDED,
 				startedAt
 			);
 		}
@@ -253,11 +292,10 @@ public class SpeechAnswerService implements SmartLifecycle {
 		Long speechAnswerId,
 		String processingToken,
 		String provider,
+		ErrorCode errorCode,
 		long startedAt
 	) {
-		ApiException overload = new ApiException(
-			ErrorCode.STT_PROCESSING_OVERLOADED
-		);
+		ApiException overload = new ApiException(errorCode);
 		CompletableFuture<SpeechAnswerResult> result = new CompletableFuture<>();
 		fail(
 			speechAnswerId,
