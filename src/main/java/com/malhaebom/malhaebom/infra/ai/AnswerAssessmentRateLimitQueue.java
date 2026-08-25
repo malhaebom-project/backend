@@ -26,7 +26,7 @@ import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 
 @Component
-public class AnswerAssessmentConcurrencyLimiter {
+public class AnswerAssessmentRateLimitQueue {
 
 	private static final OpenAiAnswerAssessmentRateLimitProperties
 		DEFAULT_RATE_LIMIT = new OpenAiAnswerAssessmentRateLimitProperties(
@@ -36,7 +36,6 @@ public class AnswerAssessmentConcurrencyLimiter {
 		);
 
 	private final Object lock = new Object();
-	private final int maxConcurrentRequests;
 	private final int queueCapacity;
 	private final Duration maxQueueWait;
 	private final AnswerAssessmentQueueTimeoutScheduler timeoutScheduler;
@@ -45,15 +44,14 @@ public class AnswerAssessmentConcurrencyLimiter {
 	private final AnswerAssessmentMetricsRecorder metrics;
 	private final OpenAiAnswerAssessmentRateLimiter rateLimiter;
 	private final Set<QueueEntry> queue = new LinkedHashSet<>();
-	private final AtomicInteger activeRequests = new AtomicInteger();
 	private final AtomicInteger queuedRequests = new AtomicInteger();
 
 	private boolean accepting = true;
 	private AnswerAssessmentQueueTimeoutScheduler.TimeoutHandle rateRetryHandle;
 
 	@Autowired
-	public AnswerAssessmentConcurrencyLimiter(
-		AnswerAssessmentConcurrencyProperties properties,
+	public AnswerAssessmentRateLimitQueue(
+		AnswerAssessmentQueueProperties properties,
 		AnswerAssessmentMetricsRecorder metrics,
 		OpenAiAnswerAssessmentRateLimiter rateLimiter,
 		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler
@@ -62,26 +60,8 @@ public class AnswerAssessmentConcurrencyLimiter {
 			System::nanoTime, false);
 	}
 
-	public AnswerAssessmentConcurrencyLimiter(
-		AnswerAssessmentConcurrencyProperties properties,
-		AnswerAssessmentMetricsRecorder metrics
-	) {
-		this(properties, metrics, defaultRateLimiter(),
-			new ExecutorAnswerAssessmentQueueTimeoutScheduler(),
-			System::nanoTime, true);
-	}
-
-	public AnswerAssessmentConcurrencyLimiter(
-		AnswerAssessmentConcurrencyProperties properties,
-		AnswerAssessmentMetricsRecorder metrics,
-		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler
-	) {
-		this(properties, metrics, defaultRateLimiter(), timeoutScheduler,
-			System::nanoTime, false);
-	}
-
-	AnswerAssessmentConcurrencyLimiter(
-		AnswerAssessmentConcurrencyProperties properties,
+	AnswerAssessmentRateLimitQueue(
+		AnswerAssessmentQueueProperties properties,
 		AnswerAssessmentMetricsRecorder metrics,
 		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler,
 		LongSupplier nanoTime
@@ -90,8 +70,26 @@ public class AnswerAssessmentConcurrencyLimiter {
 			nanoTime, false);
 	}
 
-	AnswerAssessmentConcurrencyLimiter(
-		AnswerAssessmentConcurrencyProperties properties,
+	public AnswerAssessmentRateLimitQueue(
+		AnswerAssessmentQueueProperties properties,
+		AnswerAssessmentMetricsRecorder metrics
+	) {
+		this(properties, metrics, defaultRateLimiter(),
+			new ExecutorAnswerAssessmentQueueTimeoutScheduler(),
+			System::nanoTime, true);
+	}
+
+	public AnswerAssessmentRateLimitQueue(
+		AnswerAssessmentQueueProperties properties,
+		AnswerAssessmentMetricsRecorder metrics,
+		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler
+	) {
+		this(properties, metrics, defaultRateLimiter(), timeoutScheduler,
+			System::nanoTime, false);
+	}
+
+	AnswerAssessmentRateLimitQueue(
+		AnswerAssessmentQueueProperties properties,
 		AnswerAssessmentMetricsRecorder metrics,
 		OpenAiAnswerAssessmentRateLimiter rateLimiter,
 		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler,
@@ -100,15 +98,15 @@ public class AnswerAssessmentConcurrencyLimiter {
 		this(properties, metrics, rateLimiter, timeoutScheduler, nanoTime, false);
 	}
 
-	private AnswerAssessmentConcurrencyLimiter(
-		AnswerAssessmentConcurrencyProperties properties,
+	private AnswerAssessmentRateLimitQueue(
+		AnswerAssessmentQueueProperties properties,
 		AnswerAssessmentMetricsRecorder metrics,
 		OpenAiAnswerAssessmentRateLimiter rateLimiter,
 		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler,
 		LongSupplier nanoTime,
 		boolean ownsTimeoutScheduler
 	) {
-		Objects.requireNonNull(properties, "동시성 설정은 null일 수 없습니다.");
+		Objects.requireNonNull(properties, "대기열 설정은 null일 수 없습니다.");
 		this.metrics = Objects.requireNonNull(
 			metrics, "답안 평가 지표 기록기는 null일 수 없습니다.");
 		this.rateLimiter = Objects.requireNonNull(
@@ -118,11 +116,9 @@ public class AnswerAssessmentConcurrencyLimiter {
 		this.nanoTime = Objects.requireNonNull(
 			nanoTime, "단조 시간 공급자는 null일 수 없습니다.");
 		this.ownsTimeoutScheduler = ownsTimeoutScheduler;
-		maxConcurrentRequests = properties.maxConcurrentRequests();
 		queueCapacity = properties.queueCapacity();
 		maxQueueWait = properties.maxQueueWait();
-		metrics.bind(activeRequests::get, maxConcurrentRequests,
-			queuedRequests::get, queueCapacity);
+		metrics.bind(queuedRequests::get, queueCapacity);
 	}
 
 	public AnswerAssessmentTask execute(
@@ -135,12 +131,10 @@ public class AnswerAssessmentConcurrencyLimiter {
 			if (!accepting) {
 				entry.state = State.TERMINAL;
 				admission = Admission.SHUTDOWN;
-			} else if (activeRequests.get() < maxConcurrentRequests
-				&& queue.isEmpty()) {
+			} else if (queue.isEmpty()) {
 				AcquireResult rate = rateLimiter.tryAcquire();
 				if (rate.allowed()) {
 					entry.state = State.STARTING;
-					activeRequests.incrementAndGet();
 					admission = Admission.START;
 				} else {
 					admission = enqueueRateDelayed(entry, rate.retryAfter());
@@ -207,9 +201,7 @@ public class AnswerAssessmentConcurrencyLimiter {
 			scheduleRateRetry(retryAfter);
 			return admission;
 		} catch (RuntimeException exception) {
-			queue.remove(entry);
-			queuedRequests.decrementAndGet();
-			cancelTimeout(entry);
+			removeQueued(entry);
 			entry.state = State.TERMINAL;
 			entry.schedulingFailure = exception;
 			return Admission.SCHEDULER_FAILURE;
@@ -241,7 +233,7 @@ public class AnswerAssessmentConcurrencyLimiter {
 			activeTask = Objects.requireNonNull(entry.taskSupplier.get(),
 				"제한된 작업은 null을 반환할 수 없습니다.");
 		} catch (RuntimeException exception) {
-			finishActive(entry, null, exception);
+			finish(entry, null, exception);
 			return;
 		}
 		boolean cancelRequested;
@@ -254,39 +246,28 @@ public class AnswerAssessmentConcurrencyLimiter {
 			cancelRequested = entry.cancelRequested;
 		}
 		activeTask.result().whenComplete(
-			(result, exception) -> finishActive(entry, result, exception));
+			(result, exception) -> finish(entry, result, exception));
 		if (cancelRequested) {
 			activeTask.cancel();
 		}
 	}
 
-	private void finishActive(
+	private void finish(
 		QueueEntry entry,
 		AnswerAssessment result,
 		Throwable exception
 	) {
-		List<QueueEntry> expired = new ArrayList<>();
-		List<QueueEntry> promoted = new ArrayList<>();
 		synchronized (lock) {
 			if (entry.state != State.STARTING && entry.state != State.ACTIVE) {
 				return;
 			}
 			entry.state = State.TERMINAL;
-			activeRequests.decrementAndGet();
-			if (accepting) {
-				drainQueue(expired, promoted);
-			}
 		}
 		if (exception == null) {
 			metrics.recordCompleted();
-		} else {
-			metrics.recordFailed();
-		}
-		startPromoted(promoted);
-		completeExpired(expired);
-		if (exception == null) {
 			entry.result.complete(result);
 		} else {
+			metrics.recordFailed();
 			entry.result.completeExceptionally(exception);
 		}
 	}
@@ -296,8 +277,7 @@ public class AnswerAssessmentConcurrencyLimiter {
 		List<QueueEntry> promoted
 	) {
 		long now = nanoTime.getAsLong();
-		while (activeRequests.get() < maxConcurrentRequests
-			&& !queue.isEmpty()) {
+		while (!queue.isEmpty()) {
 			QueueEntry candidate = queue.iterator().next();
 			if (candidate.state != State.QUEUED) {
 				removeQueued(candidate);
@@ -317,12 +297,9 @@ public class AnswerAssessmentConcurrencyLimiter {
 			}
 			removeQueued(candidate);
 			candidate.state = State.STARTING;
-			activeRequests.incrementAndGet();
 			promoted.add(candidate);
 		}
-		if (queue.isEmpty()) {
-			cancelRateRetry();
-		}
+		cancelRateRetry();
 	}
 
 	private void rateRetry() {
@@ -340,6 +317,7 @@ public class AnswerAssessmentConcurrencyLimiter {
 
 	private boolean cancel(QueueEntry entry) {
 		AnswerAssessmentTask activeTask = null;
+		boolean cancelledWhileQueued = false;
 		List<QueueEntry> expired = new ArrayList<>();
 		List<QueueEntry> promoted = new ArrayList<>();
 		synchronized (lock) {
@@ -351,6 +329,7 @@ public class AnswerAssessmentConcurrencyLimiter {
 					cancelTimeout(entry);
 					queuedRequests.decrementAndGet();
 					entry.state = State.TERMINAL;
+					cancelledWhileQueued = true;
 					if (accepting) {
 						drainQueue(expired, promoted);
 					}
@@ -365,7 +344,7 @@ public class AnswerAssessmentConcurrencyLimiter {
 				}
 			}
 		}
-		if (entry.state == State.TERMINAL && activeTask == null) {
+		if (cancelledWhileQueued) {
 			metrics.recordQueueCancelled();
 			recordWait(entry, QueueWaitResult.CANCELLED);
 			boolean cancelled = entry.result.cancel(false);
@@ -491,7 +470,7 @@ public class AnswerAssessmentConcurrencyLimiter {
 	}
 
 	private IllegalStateException shutdownException() {
-		return new IllegalStateException("답안 평가 동시성 제한기가 종료되었습니다.");
+		return new IllegalStateException("답안 평가 rate limit 대기열이 종료되었습니다.");
 	}
 
 	private static OpenAiAnswerAssessmentRateLimiter defaultRateLimiter() {

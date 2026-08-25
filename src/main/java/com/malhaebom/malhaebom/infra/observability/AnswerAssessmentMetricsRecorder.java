@@ -6,8 +6,6 @@ import java.util.function.IntSupplier;
 public interface AnswerAssessmentMetricsRecorder {
 
 	void bind(
-		IntSupplier activeRequests,
-		int concurrentLimit,
 		IntSupplier queuedRequests,
 		int queueCapacity
 	);

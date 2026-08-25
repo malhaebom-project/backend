@@ -296,7 +296,7 @@ public class OpenAiAnswerAssessmentGenerator
 
 	private final OpenAIClientAsync openAiClient;
 	private final OpenAiAnswerAssessmentProperties properties;
-	private final AnswerAssessmentConcurrencyLimiter concurrencyLimiter;
+	private final AnswerAssessmentRateLimitQueue rateLimitQueue;
 	private final OpenAiAnswerAssessmentMetricsRecorder metricsRecorder;
 	private final BeanOutputConverter<AnswerAssessment> outputConverter;
 	private final ResponseFormatJsonSchema responseFormat;
@@ -304,12 +304,12 @@ public class OpenAiAnswerAssessmentGenerator
 	public OpenAiAnswerAssessmentGenerator(
 		OpenAIClientAsync openAiClient,
 		OpenAiAnswerAssessmentProperties properties,
-		AnswerAssessmentConcurrencyLimiter concurrencyLimiter,
+		AnswerAssessmentRateLimitQueue rateLimitQueue,
 		OpenAiAnswerAssessmentMetricsRecorder metricsRecorder
 	) {
 		this.openAiClient = openAiClient;
 		this.properties = properties;
-		this.concurrencyLimiter = concurrencyLimiter;
+		this.rateLimitQueue = rateLimitQueue;
 		this.metricsRecorder = metricsRecorder;
 		this.outputConverter = new BeanOutputConverter<>(AnswerAssessment.class);
 		this.responseFormat = createResponseFormat(
@@ -322,7 +322,7 @@ public class OpenAiAnswerAssessmentGenerator
 		AnswerAssessmentInput input
 	) {
 		Objects.requireNonNull(input, "채점 입력은 null일 수 없습니다.");
-		return concurrencyLimiter.execute(() -> generate(input));
+		return rateLimitQueue.execute(() -> generate(input));
 	}
 
 	private AnswerAssessmentTask generate(

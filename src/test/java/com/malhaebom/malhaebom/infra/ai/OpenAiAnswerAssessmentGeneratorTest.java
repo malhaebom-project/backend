@@ -261,84 +261,11 @@ class OpenAiAnswerAssessmentGeneratorTest {
 	}
 
 	@Test
-	void active와_queue가_차면_그_다음_요청은_OpenAI_호출_없이_거절한다() {
+	void 채점_작업을_취소하면_OpenAI_HTTP_요청에_취소를_전파한다() {
 		AsyncClientFixture fixture = asyncClientFixture();
 		OpenAiAnswerAssessmentGenerator generator = generator(
 			fixture.client(),
-			1,
-			1
-		);
-
-		CompletableFuture<AnswerAssessment> first = generator
-			.generateAsync(assessmentInput("He is running."))
-			.result()
-			.toCompletableFuture();
-		CompletableFuture<AnswerAssessment> queued = generator
-			.generateAsync(assessmentInput("He is running."))
-			.result()
-			.toCompletableFuture();
-		CompletableFuture<AnswerAssessment> rejected = generator
-			.generateAsync(assessmentInput("He is running."))
-			.result()
-			.toCompletableFuture();
-
-		CompletionException exception = assertThrows(
-			CompletionException.class,
-			rejected::join
-		);
-		ApiException cause = assertInstanceOf(
-			ApiException.class,
-			exception.getCause()
-		);
-		assertEquals(
-			ErrorCode.ANSWER_ASSESSMENT_OVERLOADED,
-			cause.getErrorCode()
-		);
-		verify(fixture.completions(), times(1)).create(
-			any(ChatCompletionCreateParams.class)
-		);
-
-		fixture.response().complete(chatCompletion());
-		first.join();
-		queued.join();
-		verify(fixture.completions(), times(2)).create(
-			any(ChatCompletionCreateParams.class)
-		);
-	}
-
-	@Test
-	void queued_작업_취소는_OpenAI를_호출하지_않고_대기열에서_제거한다() {
-		AsyncClientFixture fixture = asyncClientFixture();
-		OpenAiAnswerAssessmentGenerator generator = generator(
-			fixture.client(),
-			1,
-			1
-		);
-		AnswerAssessmentTask first = generator.generateAsync(
-			assessmentInput("He is running.")
-		);
-		AnswerAssessmentTask queued = generator.generateAsync(
-			assessmentInput("He is running.")
-		);
-
-		assertTrue(queued.cancel());
-		verify(fixture.completions(), times(1)).create(
-			any(ChatCompletionCreateParams.class)
-		);
-
-		fixture.response().complete(chatCompletion());
-		first.result().toCompletableFuture().join();
-		verify(fixture.completions(), times(1)).create(
-			any(ChatCompletionCreateParams.class)
-		);
-	}
-
-	@Test
-	void 채점_작업을_취소하면_OpenAI_HTTP_요청을_취소하고_자리를_반환한다() {
-		AsyncClientFixture fixture = asyncClientFixture();
-		OpenAiAnswerAssessmentGenerator generator = generator(
-			fixture.client(),
-			1
+			0
 		);
 		AnswerAssessmentTask task = generator.generateAsync(
 			assessmentInput("He is running.")
@@ -372,48 +299,33 @@ class OpenAiAnswerAssessmentGeneratorTest {
 	private OpenAiAnswerAssessmentGenerator generator(
 		OpenAIClientAsync client
 	) {
-		return generator(client, 32);
+		return generator(client, 0);
 	}
 
 	private OpenAiAnswerAssessmentGenerator generator(
 		OpenAIClientAsync client,
 		SimpleMeterRegistry meterRegistry
 	) {
-		return generator(client, 32, 0, meterRegistry);
+		return generator(client, 0, meterRegistry);
 	}
 
 	private OpenAiAnswerAssessmentGenerator generator(
 		OpenAIClientAsync client,
-		int maxConcurrentRequests
-	) {
-		return generator(client, maxConcurrentRequests, 0);
-	}
-
-	private OpenAiAnswerAssessmentGenerator generator(
-		OpenAIClientAsync client,
-		int maxConcurrentRequests,
 		int queueCapacity
 	) {
-		return generator(
-			client,
-			maxConcurrentRequests,
-			queueCapacity,
-			new SimpleMeterRegistry()
-		);
+		return generator(client, queueCapacity, new SimpleMeterRegistry());
 	}
 
 	private OpenAiAnswerAssessmentGenerator generator(
 		OpenAIClientAsync client,
-		int maxConcurrentRequests,
 		int queueCapacity,
 		SimpleMeterRegistry meterRegistry
 	) {
 		return new OpenAiAnswerAssessmentGenerator(
 			client,
 			properties(),
-			new AnswerAssessmentConcurrencyLimiter(
-				new AnswerAssessmentConcurrencyProperties(
-					maxConcurrentRequests,
+			new AnswerAssessmentRateLimitQueue(
+				new AnswerAssessmentQueueProperties(
 					queueCapacity,
 					queueCapacity == 0
 						? Duration.ZERO

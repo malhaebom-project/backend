@@ -33,9 +33,7 @@ public class MicrometerAnswerAssessmentMetricsRecorder
 	private final Map<QueueWaitResult, Timer> queueWaitTimers =
 		new EnumMap<>(QueueWaitResult.class);
 
-	private IntSupplier activeRequests;
 	private IntSupplier queuedRequests;
-	private int concurrentLimit;
 	private int queueCapacity;
 	private boolean bound;
 
@@ -64,24 +62,14 @@ public class MicrometerAnswerAssessmentMetricsRecorder
 
 	@Override
 	public synchronized void bind(
-		IntSupplier activeRequests,
-		int concurrentLimit,
 		IntSupplier queuedRequests,
 		int queueCapacity
 	) {
 		if (bound) {
 			throw new IllegalStateException("답안 평가 지표는 이미 연결되었습니다.");
 		}
-		this.activeRequests = Objects.requireNonNull(activeRequests);
 		this.queuedRequests = Objects.requireNonNull(queuedRequests);
-		this.concurrentLimit = concurrentLimit;
 		this.queueCapacity = queueCapacity;
-		Gauge.builder(METRIC_PREFIX + "active", this, recorder ->
-			recorder.activeRequests.getAsInt()
-		).register(meterRegistry);
-		Gauge.builder(METRIC_PREFIX + "limit", this, recorder ->
-			recorder.concurrentLimit
-		).register(meterRegistry);
 		Gauge.builder(METRIC_PREFIX + "queue.size", this, recorder ->
 			recorder.queuedRequests.getAsInt()
 		).register(meterRegistry);
