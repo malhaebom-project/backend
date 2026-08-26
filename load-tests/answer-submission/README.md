@@ -26,7 +26,7 @@ FIFO queue 64건의 경계가 지켜지는지, 동시에 호출한 다른 API가
 | Overload          | bounded queue 용량을 넘었거나 queue 대기 제한을 넘은 상태. 둘 다 특정 오류 코드의 503으로 종료한다. HTTP만으로 원인을 구분할 수 없어 서버 queue 지표를 함께 본다. |
 | Timeout           | 정해진 시간 안에 응답을 받지 못해 호출자가 기다리기를 중단한 상태. 이 테스트에서는 예상 밖 실패로 분류한다.                                                          |
 | Run ID            | 한 번 생성한 fixture 집합을 식별하는 값. 다른 실행의 테스트 데이터를 구분하고 정확히 정리하는 데 사용한다.                                                       |
-| Manifest          | run-id와 단계별 `sessionId`, `sessionQuestionId`, `speechAnswerId`를 기록한 JSON 파일. k6 실행과 fixture cleanup이 같은 대상을 사용하도록 연결한다. |
+| Manifest          | run-id, 테스트 사용자 access token과 단계별 `sessionId`, `sessionQuestionId`, `speechAnswerId`를 기록한 로컬 JSON 파일. k6 실행과 fixture cleanup이 같은 대상을 사용하도록 연결하며 Git에 포함하지 않는다. |
 | Cleanup           | manifest에 기록된 테스트 데이터를 DB에서 삭제하는 작업. 테스트 성공·실패와 관계없이 다시 실행할 수 있다.                                                       |
 
 ### 동시성 및 서버 자원
@@ -413,7 +413,7 @@ bounded queue는 짧은 burst의 사용자 체감 성공률을 높일 뿐 provid
 
 * PowerShell 7 (`pwsh`). Windows와 macOS에서 같은 `.ps1`을 실행한다.
 * Java 21과 Gradle Wrapper
-* k6
+* 로컬 단독 실행 시 k6. AWS 자동화는 Compose의 고정 버전 k6 이미지를 사용한다.
 * Python 3
 * AWS 실행 시 EC2의 Docker Compose, 로컬 Docker Desktop 또는 Docker Engine,
   로컬 OpenSSH와 EC2 접속 키
@@ -427,8 +427,9 @@ bounded queue는 짧은 burst의 사용자 체감 성공률을 높일 뿐 provid
 ## 로컬 실행
 
 아래 명령은 프로젝트 루트의 서로 다른 PowerShell 7 (`pwsh`)에서 실행한다.
-PowerShell과 k6, Python은 로컬 Windows 또는 macOS에 설치하며 EC2에는 설치하지
-않는다. DB 파일 이름은 실행마다 새 값으로 바꿔 이전 결과와 격리한다.
+PowerShell과 Python은 로컬 Windows 또는 macOS에 설치하며 EC2에는 설치하지
+않는다. 로컬 단독 실행에서만 host k6가 필요하다. DB 파일 이름은 실행마다 새
+값으로 바꿔 이전 결과와 격리한다.
 
 기본값은 queue capacity 64, max queue wait 10초다. 다른 설정을 계측할 때는
 백엔드의 `ANSWER_ASSESSMENT_QUEUE_CAPACITY`, `ANSWER_ASSESSMENT_MAX_QUEUE_WAIT`와
@@ -621,8 +622,9 @@ EC2 loadtest WAS 전환(수동)
 
 #### 세부 수동 실행 및 비상 복구
 
-아래 PowerShell 스크립트와 k6는 로컬 Windows 또는 macOS에서 실행한다. EC2는
-Linux여도 되며 PowerShell이 필요하지 않다. 평상시 운영 Compose는 Actuator 관리
+아래 PowerShell 스크립트는 로컬 Windows 또는 macOS에서 실행하고 k6는 로컬
+Docker Compose 네트워크에서 실행한다. EC2는 Linux여도 되며 PowerShell이 필요하지
+않다. 평상시 운영 Compose는 Actuator 관리
 포트를 host에 공개하지 않는다. 부하 테스트를 시작하기 전에 EC2의 backend checkout
 루트에서 loadtest 시작 스크립트를 실행한다. 실행 권한 비트에 의존하지 않도록
 `bash`로 호출한다.
@@ -659,8 +661,9 @@ $sshKey = '<로컬 EC2 접속 키 경로>'
 ```
 
 로컬 Prometheus 컨테이너는 같은 Compose의 tunnel 컨테이너를 통해 EC2의
-`/actuator/prometheus`를 1초마다 수집한다. 로컬 k6는 로컬 Prometheus로 결과를
-Remote Write하고, Grafana는
+`/actuator/prometheus`를 1초마다 수집한다. k6 컨테이너는 host port proxy를
+거치지 않고 `management-tunnel:18080`으로 요청하며 `prometheus:9090`으로 결과를
+Remote Write한다. Grafana는
 <http://127.0.0.1:13000>에서 로그인 없이 읽기 전용으로 확인한다. 대시보드의
 `Test run`, `Scenario`, `Stage` 변수로 전체 실행, 시나리오와 동시성 단계를 선택한다.
 `Backend resources` 행에서는 Actuator scrape 요청을 제외한 HTTP 상태별 RPS와
@@ -696,17 +699,18 @@ $stages = @(10, 100, 200, 300)
   "-PloadTestManifest=$manifest"
 ```
 
-같은 PowerShell에서 생성된 manifest와 결과 경로를 사용해 k6를 실행한다.
+같은 PowerShell에서 생성된 manifest와 결과 경로를 사용해 Docker k6를 실행한다.
 
 ```powershell
 $sshKey = '<로컬 EC2 접속 키 경로>'
 ./load-tests/answer-submission/run-stages.ps1 `
-  -BaseUrl http://3.35.11.125 `
+  -BaseUrl http://127.0.0.1:18080 `
   -ManagementUrl http://127.0.0.1:19090 `
   -PrometheusRemoteWriteUrl http://127.0.0.1:19091/api/v1/write `
   -Manifest $manifest `
   -ResultRoot $resultRoot `
   -Stages $stages `
+  -RunK6InDocker `
   -DockerContainer backend-was-1 `
   -SshHost ubuntu@3.35.11.125 `
   -SshIdentityFile $sshKey `

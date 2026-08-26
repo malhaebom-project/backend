@@ -51,6 +51,10 @@ if (
 }
 
 const manifest = JSON.parse(open(manifestPath));
+const accessToken = manifest.accessToken;
+if (!accessToken) {
+  throw new Error('Manifest does not contain an access token.');
+}
 const stage = manifest.stages.find((candidate) =>
   Number(candidate.concurrency) === concurrency
 );
@@ -183,7 +187,10 @@ export function submitAnswer() {
         + `/questions/${fixture.sessionQuestionId}/answers`,
       JSON.stringify({ speechAnswerId: fixture.speechAnswerId }),
       {
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
         redirects: 0,
         timeout: '35s',
         tags: {
@@ -305,7 +312,6 @@ function summaryLine(data) {
       : 0;
   return [
     `answer load scenario=${scenarioName} stage=${concurrency}`,
-    `admission_capacity=${immediateAdmissionCapacity}`,
     `attempts=${value('answer_attempts')}`,
     `retries=${value('answer_retry_attempts')}`,
     `retry_recovered=${value('answer_retry_recovered')}`,

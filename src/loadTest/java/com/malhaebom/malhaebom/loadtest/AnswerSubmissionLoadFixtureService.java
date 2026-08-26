@@ -24,6 +24,8 @@ import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionReposit
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.domain.repository.UserRepository;
+import com.malhaebom.malhaebom.infra.auth.jwt.JwtProperties;
+import com.malhaebom.malhaebom.infra.auth.jwt.JwtProvider;
 import com.malhaebom.malhaebom.loadtest.AnswerSubmissionLoadFixtureManifest.Fixture;
 import com.malhaebom.malhaebom.loadtest.AnswerSubmissionLoadFixtureManifest.StageFixtures;
 
@@ -41,6 +43,8 @@ public class AnswerSubmissionLoadFixtureService {
 	private final LearningSessionRepository learningSessionRepository;
 	private final SpeechAnswerRepository speechAnswerRepository;
 	private final JdbcTemplate jdbcTemplate;
+	private final JwtProvider jwtProvider;
+	private final JwtProperties jwtProperties;
 
 	public AnswerSubmissionLoadFixtureService(
 		UserRepository userRepository,
@@ -48,7 +52,9 @@ public class AnswerSubmissionLoadFixtureService {
 		QuestionRepository questionRepository,
 		LearningSessionRepository learningSessionRepository,
 		SpeechAnswerRepository speechAnswerRepository,
-		JdbcTemplate jdbcTemplate
+		JdbcTemplate jdbcTemplate,
+		JwtProvider jwtProvider,
+		JwtProperties jwtProperties
 	) {
 		this.userRepository = userRepository;
 		this.childProfileRepository = childProfileRepository;
@@ -56,6 +62,8 @@ public class AnswerSubmissionLoadFixtureService {
 		this.learningSessionRepository = learningSessionRepository;
 		this.speechAnswerRepository = speechAnswerRepository;
 		this.jdbcTemplate = jdbcTemplate;
+		this.jwtProvider = jwtProvider;
+		this.jwtProperties = jwtProperties;
 	}
 
 	@Transactional
@@ -135,6 +143,11 @@ public class AnswerSubmissionLoadFixtureService {
 		speechAnswerRepository.flush();
 		return new AnswerSubmissionLoadFixtureManifest(
 			runId,
+			jwtProvider.createToken(
+				owner.getId(),
+				jwtProperties.access().expiration(),
+				jwtProperties.access().signingKey()
+			),
 			question.getId(),
 			stageFixtures
 		);

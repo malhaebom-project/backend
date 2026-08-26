@@ -4,6 +4,7 @@ import java.util.List;
 
 public record AnswerSubmissionLoadFixtureManifest(
 	String runId,
+	String accessToken,
 	Long questionId,
 	List<StageFixtures> stages
 ) {
