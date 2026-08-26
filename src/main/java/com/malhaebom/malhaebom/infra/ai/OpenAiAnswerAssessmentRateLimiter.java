@@ -45,6 +45,8 @@ public class OpenAiAnswerAssessmentRateLimiter {
 		tokensPerRequest = properties.tokensPerRequest();
 		requestBucket = bucket(properties.requestsPerMinute(), timeMeter);
 		tokenBucket = bucket(properties.tokensPerMinute(), timeMeter);
+		metrics.bindCapacity(PROVIDER, "requests", properties.requestsPerMinute());
+		metrics.bindCapacity(PROVIDER, "tokens", properties.tokensPerMinute());
 		metrics.bindAvailable(PROVIDER, "requests", requestBucket::getAvailableTokens);
 		metrics.bindAvailable(PROVIDER, "tokens", tokenBucket::getAvailableTokens);
 	}

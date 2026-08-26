@@ -205,17 +205,21 @@ probe 시나리오를 자동으로 연장한다.
 7. `run-stages.ps1`이 `max(baseline p95 × 2, 1초)`로 해당 단계의 probe p95
    허용값을 계산해 추가 판정한다.
 
-8. queue size와 Hikari pending이 10초 연속 0인지 확인한다. 해당
-   단계의 k6 실행 시작 시점부터 기본 300초 안에 복구되지 않으면 다음 단계로
+8. queue size와 Hikari pending이 10초 연속 0인지 확인한다. k6 종료 후
+   기본 300초 안에 복구되지 않으면 다음 단계로
    진행하지 않는다.
 
 9. 지표 수집기를 종료하고 `stage-evaluation.json`과 `k6-exit-code.txt`를
    기록한다.
 
-10. threshold가 실패했지만 자원이 복구됐다면 실패 단계를 기록하고 다음 단계도
+10. 1초 Actuator snapshot에서 CPU 피크 시점의 Bucket4j·queue·Tomcat·Hikari
+    상태와 단계별 결과를 계산해 `stage-observability-summary.json`에 기록한다.
+    Prometheus Remote Write를 사용 중이면 Grafana 요약표용 지표도 게시한다.
+
+11. threshold가 실패했지만 자원이 복구됐다면 실패 단계를 기록하고 다음 단계도
     실행한다. 자원 복구가 timeout되면 즉시 전체 실행을 중단한다.
 
-11. 네 단계를 모두 실행한 뒤 실패 단계가 하나라도 있으면
+12. 네 단계를 모두 실행한 뒤 실패 단계가 하나라도 있으면
     `run-stages.ps1`이 최종 실패를 반환한다.
 
 ### 답안 제출 VU 하나의 분류 순서
@@ -317,7 +321,7 @@ deadline을 연장하지 않는다.
 | JVM CPU·메모리·GC                            | 스레드·DB 병목과 별개로 JVM 계산량이나 GC 정지가 원인인지 확인하는 보조 지표                               |
 | 컨테이너 CPU·메모리                              | EC2 컨테이너 한도 또는 호스트 자원 부족 여부를 확인하는 보조 지표                                       |
 | OpenAI queue size                              | rate token을 기다리는 FIFO 대기 수. 설정값 64 이하여야 함                                  |
-| Bucket4j available requests / tokens           | OpenAI 요청·추정 토큰 bucket의 현재 잔여량. 0에 가까울수록 다음 refill 대기가 발생하기 쉬움                  |
+| Bucket4j capacity / available requests / tokens | 실행 중인 OpenAI 요청·추정 토큰 bucket의 설정 용량과 현재 잔여량. 잔여량이 0에 가까울수록 다음 refill 대기가 발생하기 쉬움 |
 | Bucket4j allowed / delayed / rejected           | 즉시 허용, rate token refill 대기, queue 수용 실패로 분류된 누적 결정 수                                 |
 | queue full / timeout / cancelled               | provider 호출 전 종료 원인을 구분하는 서버 누적 카운터. 단계별 첫·마지막 snapshot 차이로 집계함                  |
 | submission prepare result                      | 신규 처리, 완료 결과 재사용, 처리 중 중복 요청, 실패 재시도, 만료 lease 회수를 구분하는 멱등 처리 카운터              |
@@ -401,6 +405,7 @@ bounded queue는 짧은 burst의 사용자 체감 성공률을 높일 뿐 provid
 | `stage-{N}/summary.json`                           | k6 집계 지표와 threshold 결과                 |
 | `stage-{N}/k6-raw.json`                            | 요청별 k6 원시 시계열                          |
 | `stage-{N}/stage-evaluation.json`                  | probe 허용값, collector 종료 상태, 자원 회복 결과   |
+| `stage-{N}/stage-observability-summary.json`       | Grafana 단계 비교·CPU 피크 문맥·핵심 이벤트 요약    |
 | `stage-{N}/server-metrics/actuator-prometheus.txt` | 1초 간격 Actuator·Prometheus 전체 snapshot  |
 | `stage-{N}/server-metrics/docker-stats.jsonl`      | AWS 실행 시 컨테이너 CPU·메모리 snapshot         |
 | `stage-{N}/server-metrics/backend-container.log`   | AWS 실행 단계 동안의 백엔드 컨테이너 로그              |
@@ -666,6 +671,12 @@ $sshKey = '<로컬 EC2 접속 키 경로>'
 Remote Write한다. Grafana는
 <http://127.0.0.1:13000>에서 로그인 없이 읽기 전용으로 확인한다. 대시보드의
 `Test run`, `Scenario`, `Stage` 변수로 전체 실행, 시나리오와 동시성 단계를 선택한다.
+새로 실행한 테스트는 stage 활성 구간과 baseline·부하 probe·answer burst·측정 종료
+이벤트를 k6 지표로 기록한다. 따라서 `Stage`를 선택하면 OpenAI 보호 및 Backend
+시계열도 해당 단계 구간만 표시되고, 이벤트는 모든 시계열 패널의 세로 annotation으로
+표시된다. `Stage comparison and critical events` 행은 단계별 요청 결과, Bucket4j와
+queue 보호 상태, CPU 피크 당시의 서버 상태, burst 기준 핵심 이벤트 시각을 표로
+보여준다.
 `Backend resources` 행에서는 Actuator scrape 요청을 제외한 HTTP 상태별 RPS와
 경로별 p95·p99, 실제 OpenAI HTTP 시도 횟수와 p95·p99, JVM heap·CPU·GC pause,
 Hikari connection 획득 지연과 timeout을 함께 확인할 수 있다. OpenAI HTTP 시도
@@ -745,6 +756,9 @@ raw 정상 503은 OpenAI 호출 전에 거절되므로 그 자체는 provider �
 Actuator snapshot은 그대로 생성된다. 자동 실행의 k6 지표에는 전체 실행을 나타내는
 `testid`, 설정 항목 이름인 `load_scenario`, 동시성인 `stage` 태그가 추가된다. Grafana의
 `Test run`, `Scenario`, `Stage` 변수로 세 축을 각각 선택할 수 있다.
+단계 종료 후 계산한 요약 지표도 같은 세 태그로 Remote Write하므로 여러 stage를
+선택해 한 표에서 비교할 수 있다. 이 요약표와 stage 범위 필터는 이벤트·요약 지표를
+기록하도록 변경된 버전으로 새로 실행한 테스트부터 적용된다.
 
 부하 테스트와 fixture cleanup을 마치면 EC2에서 운영 Compose만 사용해 서비스를
 재생성한다. `--remove-orphans`가 EC2의 이전 관측 컨테이너가 남아 있다면 제거하고

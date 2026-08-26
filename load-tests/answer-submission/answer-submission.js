@@ -1,7 +1,7 @@
 import http from 'k6/http';
 import exec from 'k6/execution';
 import { check, sleep } from 'k6';
-import { Counter, Rate, Trend } from 'k6/metrics';
+import { Counter, Gauge, Rate, Trend } from 'k6/metrics';
 
 const manifestPath = __ENV.MANIFEST;
 const concurrency = Number(__ENV.CONCURRENCY || '10');
@@ -88,6 +88,9 @@ const probeSuccess = new Rate('probe_success');
 const probeDuration = new Trend('probe_duration', true);
 const baselineProbeSuccess = new Rate('probe_baseline_success');
 const baselineProbeDuration = new Trend('probe_baseline_duration', true);
+const loadtestEvent = new Counter('loadtest_event');
+const loadtestStageActive = new Gauge('loadtest_stage_active');
+const loadtestStageElapsed = new Gauge('loadtest_stage_elapsed_seconds');
 const overloadObservationStage = concurrency >= 200;
 const overloadP95LimitMillis = assessmentMaxQueueWaitSeconds * 1000 + 2000;
 
@@ -131,6 +134,7 @@ const retryBudgetSeconds = retryDelayWindows
   );
 const answerMaxDurationSeconds = 33 + retryBudgetSeconds;
 const loadedProbeDurationSeconds = answerMaxDurationSeconds + 2;
+const stageMeasurementDurationSeconds = 14 + answerMaxDurationSeconds;
 
 export const options = {
   discardResponseBodies: false,
@@ -163,9 +167,47 @@ export const options = {
       maxDuration: `${answerMaxDurationSeconds}s`,
       gracefulStop: '0s',
     },
+    loadtest_timeline: {
+      executor: 'shared-iterations',
+      exec: 'recordTimeline',
+      vus: 1,
+      iterations: 1,
+      maxDuration: `${stageMeasurementDurationSeconds + 2}s`,
+    },
   },
   thresholds,
 };
+
+export function recordTimeline() {
+  const events = [
+    { name: 'stage_start', offsetSeconds: 0 },
+    { name: 'loaded_probe_start', offsetSeconds: 12 },
+    { name: 'answer_burst_start', offsetSeconds: 14 },
+    {
+      name: 'stage_measurement_end',
+      offsetSeconds: stageMeasurementDurationSeconds,
+    },
+  ];
+  events.forEach((event) => loadtestEvent.add(0, { event: event.name }));
+  sleep(0.1);
+
+  for (
+    let elapsedSeconds = 0;
+    elapsedSeconds <= stageMeasurementDurationSeconds;
+    elapsedSeconds += 1
+  ) {
+    events
+      .filter((event) => event.offsetSeconds === elapsedSeconds)
+      .forEach((event) => loadtestEvent.add(1, { event: event.name }));
+    loadtestStageActive.add(
+      elapsedSeconds < stageMeasurementDurationSeconds ? 1 : 0
+    );
+    loadtestStageElapsed.add(elapsedSeconds);
+    if (elapsedSeconds < stageMeasurementDurationSeconds) {
+      sleep(1);
+    }
+  }
+}
 
 export function submitAnswer() {
   const fixtureIndex = exec.scenario.iterationInTest;

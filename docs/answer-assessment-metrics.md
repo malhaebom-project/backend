@@ -29,6 +29,7 @@ timeout처럼 OpenAI 호출 전에 종료된 작업은 OpenAI 실패에 포함�
 
 | 지표 | 종류 | 태그 | 의미 |
 | --- | --- | --- | --- |
+| `malhaebom.ai.provider.rate.limit.capacity` | Gauge | `provider=openai`, `quota=requests`, `tokens` | 실행 중인 설정에서 생성한 요청 bucket과 추정 token bucket의 최대 용량 |
 | `malhaebom.ai.provider.rate.limit.available` | Gauge | `provider=openai`, `quota=requests`, `tokens` | 요청 bucket과 추정 token bucket의 현재 잔여량 |
 | `malhaebom.ai.provider.rate.limit.requests` | Counter | `provider=openai`, `result=allowed`, `delayed`, `rejected` | 즉시 허용, refill 대기, queue 수용 실패로 결정된 누적 수 |
 
