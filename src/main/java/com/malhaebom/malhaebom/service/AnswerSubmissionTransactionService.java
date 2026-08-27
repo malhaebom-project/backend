@@ -169,7 +169,7 @@ public class AnswerSubmissionTransactionService {
 			throw new ApiException(ErrorCode.ANSWER_SUBMISSION_PROCESSING);
 		}
 
-		ensureCanProcess(session, submission);
+		validateSubmissionTarget(session, submission);
 		boolean retryingFailed =
 			submission.getStatus() == AnswerSubmissionStatus.FAILED;
 		if (retryingFailed) {
@@ -298,12 +298,12 @@ public class AnswerSubmissionTransactionService {
 		}
 	}
 
-	private void ensureCanProcess(
+	private void validateSubmissionTarget(
 		LearningSession session,
 		AnswerSubmission submission
 	) {
 		try {
-			session.ensureCanProcess(submission);
+			session.validateAnswerSubmissionTarget(submission);
 		} catch (LearningSessionAnswerSubmissionException exception) {
 			throw toApiException(exception);
 		}

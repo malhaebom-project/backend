@@ -101,7 +101,7 @@ public class LearningSession extends BaseEntity {
 		}
 	}
 
-	public void ensureCanProcess(AnswerSubmission submission) {
+	public void validateAnswerSubmissionTarget(AnswerSubmission submission) {
 		Objects.requireNonNull(
 			submission,
 			"답변 제출 예약은 null일 수 없습니다."
