@@ -31,6 +31,7 @@ import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerRequest;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
@@ -122,11 +123,14 @@ class SpeechAnswerServiceJpaTest {
 	}
 
 	private SpeechAnswerResult upload() {
-		return await(speechAnswerService.uploadAsync(LearningJpaTestFixture.USER_ID,
-			session.getId(),
-			sessionQuestionId,
-			REQUEST_KEY,
-			AUDIO
+		return await(speechAnswerService.uploadAsync(
+			new SpeechAnswerRequest(
+				LearningJpaTestFixture.USER_ID,
+				session.getId(),
+				sessionQuestionId,
+				REQUEST_KEY,
+				AUDIO
+			)
 		).result());
 	}
 

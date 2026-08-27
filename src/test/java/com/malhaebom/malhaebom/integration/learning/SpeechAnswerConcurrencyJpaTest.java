@@ -68,6 +68,7 @@ import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerRequest;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
@@ -252,22 +253,14 @@ class SpeechAnswerConcurrencyJpaTest {
 		LearningSession session = saveSession();
 		Long sessionQuestionId = session.getCurrentQuestion().getId();
 		SpeechAnswerTask first = rateLimitedService.uploadAsync(
-			LearningJpaTestFixture.USER_ID,
-			session.getId(),
-			sessionQuestionId,
-			requestKey("rate-first"),
-			AUDIO
+			speechRequest(session, sessionQuestionId, requestKey("rate-first"))
 		);
 		assertTrue(transcriber.complete(0));
 		await(first);
 
 		String rejectedKey = requestKey("rate-rejected");
 		SpeechAnswerTask rejected = rateLimitedService.uploadAsync(
-			LearningJpaTestFixture.USER_ID,
-			session.getId(),
-			sessionQuestionId,
-			rejectedKey,
-			AUDIO
+			speechRequest(session, sessionQuestionId, rejectedKey)
 		);
 
 		ApiException failure = assertThrows(
@@ -424,11 +417,8 @@ class SpeechAnswerConcurrencyJpaTest {
 		);
 		LearningSession session = saveSession();
 		Long sessionQuestionId = session.getCurrentQuestion().getId();
-		SpeechAnswerTask active = drainingService.uploadAsync(LearningJpaTestFixture.USER_ID,
-			session.getId(),
-			sessionQuestionId,
-			requestKey("shutdown-active"),
-			AUDIO
+		SpeechAnswerTask active = drainingService.uploadAsync(
+			speechRequest(session, sessionQuestionId, requestKey("shutdown-active"))
 		);
 		CountDownLatch shutdown = new CountDownLatch(1);
 
@@ -437,11 +427,12 @@ class SpeechAnswerConcurrencyJpaTest {
 		assertEquals(1L, shutdown.getCount());
 		ApiException rejected = assertThrows(
 			ApiException.class,
-			() -> drainingService.uploadAsync(LearningJpaTestFixture.USER_ID,
-				session.getId(),
-				sessionQuestionId,
-				requestKey("shutdown-rejected"),
-				AUDIO
+			() -> drainingService.uploadAsync(
+				speechRequest(
+					session,
+					sessionQuestionId,
+					requestKey("shutdown-rejected")
+				)
 			)
 		);
 		assertEquals(
@@ -471,11 +462,8 @@ class SpeechAnswerConcurrencyJpaTest {
 		LearningSession session = saveSession();
 		Long sessionQuestionId = session.getCurrentQuestion().getId();
 		String requestKey = requestKey("shutdown-timeout");
-		SpeechAnswerTask active = drainingService.uploadAsync(LearningJpaTestFixture.USER_ID,
-			session.getId(),
-			sessionQuestionId,
-			requestKey,
-			AUDIO
+		SpeechAnswerTask active = drainingService.uploadAsync(
+			speechRequest(session, sessionQuestionId, requestKey)
 		);
 		CountDownLatch shutdown = new CountDownLatch(1);
 
@@ -534,10 +522,21 @@ class SpeechAnswerConcurrencyJpaTest {
 		Long sessionQuestionId,
 		String requestSuffix
 	) {
-		return speechAnswerService.uploadAsync(LearningJpaTestFixture.USER_ID,
+		return speechAnswerService.uploadAsync(
+			speechRequest(session, sessionQuestionId, requestKey(requestSuffix))
+		);
+	}
+
+	private SpeechAnswerRequest speechRequest(
+		LearningSession session,
+		Long sessionQuestionId,
+		String requestKey
+	) {
+		return new SpeechAnswerRequest(
+			LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			sessionQuestionId,
-			requestKey(requestSuffix),
+			requestKey,
 			AUDIO
 		);
 	}

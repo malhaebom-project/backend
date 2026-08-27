@@ -22,6 +22,7 @@ import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.SpeechAnswerResponse;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerRequest;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.LoginUser;
@@ -34,8 +35,6 @@ import lombok.RequiredArgsConstructor;
 public class LearningSpeechController {
 
 	private static final long MAX_AUDIO_FILE_SIZE = 5L * 1024 * 1024;
-	private static final int MAX_REQUEST_KEY_LENGTH = 100;
-
 	private final SpeechAnswerService speechAnswerService;
 	private final SpeechAnswerAsyncProperties asyncProperties;
 
@@ -53,14 +52,15 @@ public class LearningSpeechController {
 		) String requestKey,
 		@RequestPart(value = "audio", required = false) MultipartFile audio
 	) {
-		validateRequestKey(requestKey);
 		SpeechAudio speechAudio = toSpeechAudio(audio);
 		SpeechAnswerTask task = speechAnswerService.uploadAsync(
-			loginUser.userId(),
-			sessionId,
-			sessionQuestionId,
-			requestKey,
-			speechAudio
+			new SpeechAnswerRequest(
+				loginUser.userId(),
+				sessionId,
+				sessionQuestionId,
+				requestKey,
+				speechAudio
+			)
 		);
 		DeferredResult<ApiResponse<SpeechAnswerResponse>> response =
 			new DeferredResult<>(asyncProperties.requestTimeout().toMillis());
@@ -168,19 +168,4 @@ public class LearningSpeechController {
 			.replace(" ", "");
 	}
 
-	private void validateRequestKey(String requestKey) {
-		if (requestKey == null || requestKey.isBlank()) {
-			throw new ApiException(
-				ErrorCode.INVALID_REQUEST,
-				"중복 요청 방지를 위한 요청 식별 키가 필요합니다."
-			);
-		}
-
-		if (requestKey.length() > MAX_REQUEST_KEY_LENGTH) {
-			throw new ApiException(
-				ErrorCode.INVALID_REQUEST,
-				"요청 식별 키는 100자를 초과할 수 없습니다."
-			);
-		}
-	}
 }
