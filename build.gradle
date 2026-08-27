@@ -59,17 +59,31 @@ sourceSets {
 		compileClasspath += sourceSets.main.output
 		runtimeClasspath += sourceSets.main.output
 	}
+	answerAssessmentEval {
+		java.srcDir 'src/answerAssessmentEval/java'
+		resources.srcDir 'src/test/resources'
+		compileClasspath += sourceSets.main.output
+		runtimeClasspath += sourceSets.main.output
+	}
+	test {
+		compileClasspath += sourceSets.answerAssessmentEval.output
+		runtimeClasspath += sourceSets.answerAssessmentEval.output
+	}
 }
 
 configurations {
 	loadTestImplementation.extendsFrom implementation
 	loadTestRuntimeOnly.extendsFrom runtimeOnly
+	answerAssessmentEvalImplementation.extendsFrom implementation
+	answerAssessmentEvalRuntimeOnly.extendsFrom runtimeOnly
 }
 
 idea {
 	module {
 		testSources.from(sourceSets.loadTest.java.srcDirs)
 		testResources.from(sourceSets.loadTest.resources.srcDirs)
+		testSources.from(sourceSets.answerAssessmentEval.java.srcDirs)
+		testResources.from(sourceSets.answerAssessmentEval.resources.srcDirs)
 	}
 }
 
@@ -120,6 +134,47 @@ tasks.register('loadTestServer', JavaExec) {
 	dependsOn tasks.named('loadTestClasses')
 	classpath = sourceSets.loadTest.runtimeClasspath
 	mainClass = 'com.malhaebom.malhaebom.MalhaebomApplication'
+}
+
+tasks.register('answerAssessmentEval', JavaExec) {
+	description = 'Runs the repeated live OpenAI answer-assessment evaluation.'
+	group = 'verification'
+	dependsOn tasks.named('answerAssessmentEvalClasses')
+	classpath = sourceSets.answerAssessmentEval.runtimeClasspath
+	mainClass = 'com.malhaebom.malhaebom.infra.ai.AnswerAssessmentEvaluationTool'
+
+	systemProperty 'eval.dataset', providers.gradleProperty('evalDataset').getOrElse(
+		'src/test/resources/answer-assessment-eval-dataset-v2.json'
+	)
+	systemProperty 'eval.output-dir', providers.gradleProperty('evalOutputDir').getOrElse(
+		'build/reports/answer-assessment-eval'
+	)
+	systemProperty 'eval.rounds', providers.gradleProperty('evalRounds').getOrElse('10')
+	systemProperty 'eval.seed', providers.gradleProperty('evalSeed').getOrElse('20260826')
+	systemProperty 'eval.timeout-seconds', providers.gradleProperty('evalTimeoutSeconds').getOrElse('90')
+	systemProperty 'eval.model', providers.gradleProperty('evalModel').getOrElse('gpt-5.6-terra')
+	systemProperty 'eval.allow-unreviewed', providers.gradleProperty('evalAllowUnreviewed').getOrElse('false')
+
+	doFirst {
+		if (!environment.OPENAI_API_KEY) {
+			def privateConfig = file('config/application.yaml')
+			if (!privateConfig.exists()) {
+				throw new GradleException('OPENAI_API_KEY is absent and config/application.yaml was not found.')
+			}
+			def keyLine = privateConfig.readLines('UTF-8').find {
+				it ==~ /\s*OPENAI_API_KEY\s*:\s*.+/
+			}
+			if (keyLine == null) {
+				throw new GradleException('OPENAI_API_KEY was not found in the environment or private config.')
+			}
+			def apiKey = keyLine.replaceFirst(/^\s*OPENAI_API_KEY\s*:\s*/, '').trim()
+			if ((apiKey.startsWith('"') && apiKey.endsWith('"'))
+				|| (apiKey.startsWith("'") && apiKey.endsWith("'"))) {
+				apiKey = apiKey.substring(1, apiKey.length() - 1)
+			}
+			environment 'OPENAI_API_KEY', apiKey
+		}
+	}
 }
 
 tasks.named('bootJar') {

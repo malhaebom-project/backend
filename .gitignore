@@ -25,6 +25,7 @@ bin/
 !.run/Test.run.xml
 !.run/Live Test.run.xml
 !.run/Load Test Server.run.xml
+!.run/Answer Assessment Eval.run.xml
 *.iws
 *.iml
 *.ipr
