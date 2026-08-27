@@ -172,7 +172,7 @@ export const options = {
       exec: 'recordTimeline',
       vus: 1,
       iterations: 1,
-      maxDuration: `${stageMeasurementDurationSeconds + 2}s`,
+      maxDuration: `${stageMeasurementDurationSeconds + 4}s`,
     },
   },
   thresholds,
@@ -189,13 +189,17 @@ export function recordTimeline() {
     },
   ];
   events.forEach((event) => loadtestEvent.add(0, { event: event.name }));
-  sleep(0.1);
+  // Remote Write must flush the zero baseline before an event increments.
+  sleep(1.1);
 
   for (
     let elapsedSeconds = 0;
     elapsedSeconds <= stageMeasurementDurationSeconds;
     elapsedSeconds += 1
   ) {
+    events
+      .filter((event) => event.offsetSeconds > elapsedSeconds)
+      .forEach((event) => loadtestEvent.add(0, { event: event.name }));
     events
       .filter((event) => event.offsetSeconds === elapsedSeconds)
       .forEach((event) => loadtestEvent.add(1, { event: event.name }));
@@ -207,6 +211,8 @@ export function recordTimeline() {
       sleep(1);
     }
   }
+  // Keep the VU alive until the final event increment has been flushed.
+  sleep(1.1);
 }
 
 export function submitAnswer() {
