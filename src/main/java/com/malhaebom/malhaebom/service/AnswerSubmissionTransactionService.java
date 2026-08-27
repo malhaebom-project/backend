@@ -15,6 +15,7 @@ import com.malhaebom.malhaebom.domain.learning.AnswerSubmission;
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionProcessingException;
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionReservationException;
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionStatus;
+import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionTarget;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionAnswerSubmissionException;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
@@ -80,20 +81,20 @@ public class AnswerSubmissionTransactionService {
 			);
 		}
 
-		ensureCanReserve(session, sessionQuestionId);
+		AnswerSubmissionTarget target = getAnswerSubmissionTarget(
+			session,
+			sessionQuestionId
+		);
 		SpeechAnswer speechAnswer = getSpeechAnswer(speechAnswerId);
+		int attemptNo = getNextAttemptNo(sessionQuestionId);
+		AnswerSubmission submission = reserveSubmission(
+			target,
+			speechAnswer,
+			attemptNo
+		);
 		validateSpeechAnswerNotUsed(speechAnswerId);
 		validateNoConflictingSubmission(sessionQuestionId);
-
-		int attemptNo = getNextAttemptNo(sessionQuestionId);
-		AnswerSubmission submission = answerSubmissionRepository.save(
-			reserveSubmission(
-				session,
-				sessionQuestionId,
-				speechAnswer,
-				attemptNo
-			)
-		);
+		answerSubmissionRepository.save(submission);
 		AnswerSubmissionPreparation preparation = claim(
 			submission,
 			clock.instant(),
@@ -275,30 +276,23 @@ public class AnswerSubmissionTransactionService {
 	}
 
 	private AnswerSubmission reserveSubmission(
-		LearningSession session,
-		Long sessionQuestionId,
+		AnswerSubmissionTarget target,
 		SpeechAnswer speechAnswer,
 		int attemptNo
 	) {
 		try {
-			return session.reserveAnswerSubmission(
-				sessionQuestionId,
-				speechAnswer,
-				attemptNo
-			);
+			return target.reserve(speechAnswer, attemptNo);
 		} catch (AnswerSubmissionReservationException exception) {
-			throw toApiException(exception);
-		} catch (LearningSessionAnswerSubmissionException exception) {
 			throw toApiException(exception);
 		}
 	}
 
-	private void ensureCanReserve(
+	private AnswerSubmissionTarget getAnswerSubmissionTarget(
 		LearningSession session,
 		Long sessionQuestionId
 	) {
 		try {
-			session.ensureCanReserveAnswerSubmission(sessionQuestionId);
+			return session.answerSubmissionTarget(sessionQuestionId);
 		} catch (LearningSessionAnswerSubmissionException exception) {
 			throw toApiException(exception);
 		}

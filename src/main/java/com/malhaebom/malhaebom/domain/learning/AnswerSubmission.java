@@ -83,7 +83,7 @@ public class AnswerSubmission extends BaseEntity {
 	@Column(name = "failure_message", length = 1000)
 	private String failureMessage;
 
-	public static AnswerSubmission reserve(
+	static AnswerSubmission reserve(
 		LearningSessionQuestion sessionQuestion,
 		SpeechAnswer speechAnswer,
 		int attemptNo
@@ -235,24 +235,6 @@ public class AnswerSubmission extends BaseEntity {
 			throw new IllegalArgumentException("세션 문제는 null일 수 없습니다.");
 		}
 
-		if (!sessionQuestion.getLearningSession().isInProgress()
-			|| sessionQuestion.isCompleted()) {
-			throw new LearningSessionAnswerSubmissionException(
-				LearningSessionAnswerSubmissionException.Reason.SESSION_NOT_IN_PROGRESS,
-				"진행 중인 문제만 제출을 예약할 수 있습니다."
-			);
-		}
-
-		LearningSessionQuestion currentQuestion = sessionQuestion
-			.getLearningSession()
-			.getCurrentQuestion();
-		if (!isSameQuestion(sessionQuestion, currentQuestion)) {
-			throw new LearningSessionAnswerSubmissionException(
-				LearningSessionAnswerSubmissionException.Reason.CURRENT_QUESTION_MISMATCH,
-				"현재 문제만 제출을 예약할 수 있습니다."
-			);
-		}
-
 		if (speechAnswer == null) {
 			throw new IllegalArgumentException("음성 답변은 null일 수 없습니다.");
 		}
@@ -277,19 +259,6 @@ public class AnswerSubmission extends BaseEntity {
 				"답변 가능 횟수를 초과했습니다."
 			);
 		}
-	}
-
-	private static boolean isSameQuestion(
-		LearningSessionQuestion first,
-		LearningSessionQuestion second
-	) {
-		if (first == second) {
-			return true;
-		}
-
-		return first.getId() != null
-			&& second.getId() != null
-			&& Objects.equals(first.getId(), second.getId());
 	}
 
 	private static void validateText(

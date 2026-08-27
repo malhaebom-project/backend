@@ -43,7 +43,8 @@ class AnswerSubmissionRepositoryJpaTest {
 		LearningSessionQuestion question = session.getCurrentQuestion();
 		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(question, 1);
 		AnswerSubmission saved = answerSubmissionRepository.saveAndFlush(
-			AnswerSubmission.reserve(question, speechAnswer, 1)
+			session.answerSubmissionTarget(question.getId())
+				.reserve(speechAnswer, 1)
 		);
 
 		entityManager.clear();
@@ -65,33 +66,37 @@ class AnswerSubmissionRepositoryJpaTest {
 
 	@Test
 	void 같은_음성_답변은_두_번_예약할_수_없다() {
-		LearningSessionQuestion question = saveSession().getCurrentQuestion();
+		LearningSession session = saveSession();
+		LearningSessionQuestion question = session.getCurrentQuestion();
 		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(question, 1);
 		answerSubmissionRepository.saveAndFlush(
-			AnswerSubmission.reserve(question, speechAnswer, 1)
+			session.answerSubmissionTarget(question.getId())
+				.reserve(speechAnswer, 1)
 		);
 
 		assertThrows(
 			DataIntegrityViolationException.class,
 			() -> answerSubmissionRepository.saveAndFlush(
-				AnswerSubmission.reserve(question, speechAnswer, 2)
+				session.answerSubmissionTarget(question.getId())
+					.reserve(speechAnswer, 2)
 			)
 		);
 	}
 
 	@Test
 	void 같은_문제의_같은_시도_번호는_두_번_예약할_수_없다() {
-		LearningSessionQuestion question = saveSession().getCurrentQuestion();
+		LearningSession session = saveSession();
+		LearningSessionQuestion question = session.getCurrentQuestion();
 		SpeechAnswer first = saveCompletedSpeechAnswer(question, 1);
 		SpeechAnswer second = saveCompletedSpeechAnswer(question, 2);
 		answerSubmissionRepository.saveAndFlush(
-			AnswerSubmission.reserve(question, first, 1)
+			session.answerSubmissionTarget(question.getId()).reserve(first, 1)
 		);
 
 		assertThrows(
 			DataIntegrityViolationException.class,
 			() -> answerSubmissionRepository.saveAndFlush(
-				AnswerSubmission.reserve(question, second, 1)
+				session.answerSubmissionTarget(question.getId()).reserve(second, 1)
 			)
 		);
 	}

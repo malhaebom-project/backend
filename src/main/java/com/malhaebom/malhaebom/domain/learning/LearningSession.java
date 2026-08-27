@@ -79,21 +79,11 @@ public class LearningSession extends BaseEntity {
 		return questions.getCurrent();
 	}
 
-	public AnswerSubmission reserveAnswerSubmission(
-		Long sessionQuestionId,
-		SpeechAnswer speechAnswer,
-		int attemptNo
+	public AnswerSubmissionTarget answerSubmissionTarget(
+		Long sessionQuestionId
 	) {
 		validateAnswerSubmissionTarget(sessionQuestionId);
-		return AnswerSubmission.reserve(
-			questions.getCurrent(),
-			speechAnswer,
-			attemptNo
-		);
-	}
-
-	public void ensureCanReserveAnswerSubmission(Long sessionQuestionId) {
-		validateAnswerSubmissionTarget(sessionQuestionId);
+		return new AnswerSubmissionTarget(questions.getCurrent());
 	}
 
 	public void applyAnswerResult(Answer answer) {
@@ -116,7 +106,7 @@ public class LearningSession extends BaseEntity {
 			submission,
 			"답변 제출 예약은 null일 수 없습니다."
 		);
-		ensureCanReserveAnswerSubmission(submission.getSessionQuestion().getId());
+		validateAnswerSubmissionTarget(submission.getSessionQuestion().getId());
 	}
 
 	public void completeCurrentQuestion(boolean correct) {

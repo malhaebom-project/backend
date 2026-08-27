@@ -26,7 +26,7 @@ class AnswerSubmissionTest {
 		LearningSessionQuestion sessionQuestion = createSessionQuestion();
 		SpeechAnswer speechAnswer = completedSpeechAnswer(sessionQuestion);
 
-		AnswerSubmission submission = AnswerSubmission.reserve(
+		AnswerSubmission submission = reserve(
 			sessionQuestion,
 			speechAnswer,
 			1
@@ -49,7 +49,7 @@ class AnswerSubmissionTest {
 
 		assertThrows(
 			AnswerSubmissionReservationException.class,
-			() -> AnswerSubmission.reserve(sessionQuestion, processing, 1)
+			() -> reserve(sessionQuestion, processing, 1)
 		);
 	}
 
@@ -60,7 +60,7 @@ class AnswerSubmissionTest {
 
 		assertThrows(
 			AnswerSubmissionReservationException.class,
-			() -> AnswerSubmission.reserve(
+			() -> reserve(
 				currentQuestion,
 				completedSpeechAnswer(otherQuestion),
 				1
@@ -76,7 +76,7 @@ class AnswerSubmissionTest {
 
 		assertThrows(
 			LearningSessionAnswerSubmissionException.class,
-			() -> AnswerSubmission.reserve(
+			() -> reserve(
 				sessionQuestion,
 				speechAnswer,
 				1
@@ -90,7 +90,7 @@ class AnswerSubmissionTest {
 
 		assertThrows(
 			AnswerSubmissionReservationException.class,
-			() -> AnswerSubmission.reserve(
+			() -> reserve(
 				sessionQuestion,
 				completedSpeechAnswer(sessionQuestion),
 				0
@@ -104,7 +104,7 @@ class AnswerSubmissionTest {
 
 		AnswerSubmissionReservationException exception = assertThrows(
 			AnswerSubmissionReservationException.class,
-			() -> AnswerSubmission.reserve(
+			() -> reserve(
 				sessionQuestion,
 				completedSpeechAnswer(sessionQuestion),
 				3
@@ -120,7 +120,7 @@ class AnswerSubmissionTest {
 	@Test
 	void 오답의_첫_번째_시도는_현재_문제의_재시도로_반영한다() {
 		LearningSessionQuestion sessionQuestion = createSessionQuestion();
-		AnswerSubmission submission = AnswerSubmission.reserve(
+		AnswerSubmission submission = reserve(
 			sessionQuestion,
 			completedSpeechAnswer(sessionQuestion),
 			1
@@ -281,11 +281,21 @@ class AnswerSubmissionTest {
 
 	private AnswerSubmission createSubmission() {
 		LearningSessionQuestion sessionQuestion = createSessionQuestion();
-		return AnswerSubmission.reserve(
+		return reserve(
 			sessionQuestion,
 			completedSpeechAnswer(sessionQuestion),
 			1
 		);
+	}
+
+	private AnswerSubmission reserve(
+		LearningSessionQuestion sessionQuestion,
+		SpeechAnswer speechAnswer,
+		int attemptNo
+	) {
+		return sessionQuestion.getLearningSession()
+			.answerSubmissionTarget(sessionQuestion.getId())
+			.reserve(speechAnswer, attemptNo);
 	}
 
 	private SpeechAnswer completedSpeechAnswer(

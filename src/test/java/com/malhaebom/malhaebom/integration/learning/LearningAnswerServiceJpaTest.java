@@ -406,11 +406,9 @@ class LearningAnswerServiceJpaTest {
 		LearningSession session = saveSession();
 		LearningSessionQuestion question = session.getCurrentQuestion();
 		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(session);
-		AnswerSubmission submission = AnswerSubmission.reserve(
-			question,
-			speechAnswer,
-			1
-		);
+		AnswerSubmission submission = session
+			.answerSubmissionTarget(question.getId())
+			.reserve(speechAnswer, 1);
 		Instant expiredAt = Instant.now().minusSeconds(1);
 		submission.claim(
 			"215bf1ca-03dc-4a7a-af56-09ad0cc26a24",
