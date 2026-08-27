@@ -133,6 +133,22 @@ public class AnswerSubmission extends BaseEntity {
 
 	public void fail(String processingToken, String failureMessage) {
 		validateProcessingToken(processingToken);
+		markFailed(failureMessage);
+	}
+
+	public boolean failIfProcessingWithToken(
+		String processingToken,
+		String failureMessage
+	) {
+		if (!isProcessingWithToken(processingToken)) {
+			return false;
+		}
+
+		markFailed(failureMessage);
+		return true;
+	}
+
+	private void markFailed(String failureMessage) {
 		validateText(
 			failureMessage,
 			MAX_FAILURE_MESSAGE_LENGTH,

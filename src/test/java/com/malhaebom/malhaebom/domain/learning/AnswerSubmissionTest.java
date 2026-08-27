@@ -298,6 +298,22 @@ class AnswerSubmissionTest {
 			.reserve(speechAnswer, attemptNo);
 	}
 
+	@Test
+	void 이전_처리_토큰의_실패_콜백은_상태를_변경하지_않는다() {
+		AnswerSubmission submission = createSubmission();
+		submission.claim(PROCESSING_TOKEN, CLAIMED_AT, LEASE_EXPIRES_AT);
+
+		boolean failed = submission.failIfProcessingWithToken(
+			"3cbafaf0-fd5b-47aa-8d2d-18c7c2a47f0a",
+			"이전 작업의 실패 콜백입니다."
+		);
+
+		assertFalse(failed);
+		assertEquals(AnswerSubmissionStatus.PROCESSING, submission.getStatus());
+		assertEquals(PROCESSING_TOKEN, submission.getProcessingToken());
+		assertNull(submission.getFailureMessage());
+	}
+
 	private SpeechAnswer completedSpeechAnswer(
 		LearningSessionQuestion sessionQuestion
 	) {

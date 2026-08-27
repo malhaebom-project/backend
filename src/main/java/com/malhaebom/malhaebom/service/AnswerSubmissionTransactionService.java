@@ -136,12 +136,11 @@ public class AnswerSubmissionTransactionService {
 		AnswerSubmission submission = answerSubmissionRepository
 			.findForUpdateById(submissionId)
 			.orElse(null);
-		if (submission == null
-			|| !submission.isProcessingWithToken(processingToken)) {
+		if (submission == null) {
 			return;
 		}
 
-		submission.fail(
+		submission.failIfProcessingWithToken(
 			processingToken,
 			toFailureMessage(exception)
 		);
