@@ -6,13 +6,14 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletionException;
 
 import com.openai.errors.OpenAIIoException;
 import com.openai.errors.OpenAIServiceException;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.stereotype.Component;
+
+import com.malhaebom.malhaebom.global.concurrent.CompletionFailures;
 
 @Component
 public class MicrometerOpenAiAnswerAssessmentMetricsRecorder
@@ -85,7 +86,7 @@ public class MicrometerOpenAiAnswerAssessmentMetricsRecorder
 	}
 
 	private FailureReason classifyFailure(Throwable failure) {
-		Throwable cause = unwrap(failure);
+		Throwable cause = CompletionFailures.unwrap(failure);
 		if (cause instanceof CancellationException) {
 			return FailureReason.CANCELLED;
 		}
@@ -116,15 +117,6 @@ public class MicrometerOpenAiAnswerAssessmentMetricsRecorder
 				: FailureReason.IO_ERROR;
 		}
 		return FailureReason.UNKNOWN;
-	}
-
-	private Throwable unwrap(Throwable failure) {
-		Throwable current = failure;
-		while (current instanceof CompletionException
-			&& current.getCause() != null) {
-			current = current.getCause();
-		}
-		return current;
 	}
 
 	private boolean isTimeoutCause(Throwable failure) {

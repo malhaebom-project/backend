@@ -4,7 +4,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -21,6 +20,7 @@ import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerSubmissionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
+import com.malhaebom.malhaebom.global.concurrent.CompletionFailures;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
@@ -124,7 +124,7 @@ public class LearningAnswerService {
 		if (cancellationException != null) {
 			return CompletableFuture.failedFuture(cancellationException);
 		}
-		Throwable cause = unwrapCompletionException(exception);
+		Throwable cause = CompletionFailures.unwrap(exception);
 		if (cause instanceof TimeoutException) {
 			return timeout(processing, task);
 		}
@@ -140,17 +140,6 @@ public class LearningAnswerService {
 			cause,
 			ErrorCode.ANSWER_ASSESSMENT_FAILED
 		);
-	}
-
-	private Throwable unwrapCompletionException(
-		Throwable exception
-	) {
-		Throwable cause = exception;
-		while (cause instanceof CompletionException
-			&& cause.getCause() != null) {
-			cause = cause.getCause();
-		}
-		return cause;
 	}
 
 	private CompletionStage<AnswerAssessment> failAssessment(
