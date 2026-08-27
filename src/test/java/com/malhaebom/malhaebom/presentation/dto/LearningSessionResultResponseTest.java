@@ -2,12 +2,13 @@ package com.malhaebom.malhaebom.presentation.dto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.time.Duration;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
@@ -15,10 +16,10 @@ import com.malhaebom.malhaebom.domain.learning.LearningTopic;
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 
-class LearningSessionResponseTest {
+class LearningSessionResultResponseTest {
 
 	@Test
-	void 완료_응답에_정답률_학습시간_완료시각을_포함한다() {
+	void 완료_응답은_기록된_시작과_완료_시각으로_학습_시간을_계산한다() {
 		LearningSession session = LearningSession.create(
 			1L,
 			LearningTopic.ANIMAL,
@@ -28,19 +29,18 @@ class LearningSessionResponseTest {
 		session.completeCurrentQuestion(true);
 		session.completeCurrentQuestion(false);
 		session.completeCurrentQuestion(true);
+		LocalDateTime startedAt = LocalDateTime.of(2026, 8, 27, 1, 0);
+		LocalDateTime completedAt = startedAt.plusMinutes(5).plusSeconds(12);
+		ReflectionTestUtils.setField(session, "startedAt", startedAt);
+		ReflectionTestUtils.setField(session, "completedAt", completedAt);
 
-		LearningSessionResponse response = LearningSessionResponse.from(session);
+		LearningSessionResultResponse response =
+			LearningSessionResultResponse.from(session);
 
 		assertEquals(67, response.correctRate());
+		assertEquals(312, response.studySeconds());
 		assertEquals(
-			Duration.between(
-				session.getStartedAt(),
-				session.getCompletedAt()
-			).getSeconds(),
-			response.studySeconds()
-		);
-		assertEquals(
-			session.getCompletedAt().atOffset(ZoneOffset.UTC),
+			completedAt.atOffset(ZoneOffset.UTC),
 			response.completedAt()
 		);
 	}

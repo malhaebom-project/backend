@@ -4,12 +4,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class LearningSessionTest {
 
@@ -115,6 +119,45 @@ class LearningSessionTest {
 		assertEquals(2, session.getCorrectCount());
 		assertNotNull(session.getCompletedAt());
 		assertTrue(session.isCompleted());
+	}
+
+	@Test
+	void 완료된_세션은_기록된_시각으로_학습_시간을_계산한다() {
+		LearningSession session = createSession(createQuestions());
+		session.completeCurrentQuestion(true);
+		session.completeCurrentQuestion(false);
+		session.completeCurrentQuestion(true);
+		LocalDateTime startedAt = LocalDateTime.of(2026, 8, 27, 1, 0);
+		ReflectionTestUtils.setField(session, "startedAt", startedAt);
+		ReflectionTestUtils.setField(
+			session,
+			"completedAt",
+			startedAt.plusMinutes(3)
+		);
+
+		assertEquals(Duration.ofMinutes(3), session.getStudyDuration());
+	}
+
+	@Test
+	void 진행_중인_세션의_학습_시간은_계산할_수_없다() {
+		LearningSession session = createSession(createQuestions());
+
+		assertThrows(IllegalStateException.class, session::getStudyDuration);
+	}
+
+	@Test
+	void 완료_시각이_시작_시각보다_빠르면_학습_시간을_계산할_수_없다() {
+		LearningSession session = createSession(createQuestions());
+		session.completeCurrentQuestion(true);
+		session.completeCurrentQuestion(false);
+		session.completeCurrentQuestion(true);
+		ReflectionTestUtils.setField(
+			session,
+			"completedAt",
+			session.getStartedAt().minusSeconds(1)
+		);
+
+		assertThrows(IllegalStateException.class, session::getStudyDuration);
 	}
 
 	private LearningSession createSession(List<Question> questions) {

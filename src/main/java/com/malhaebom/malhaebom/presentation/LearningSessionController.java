@@ -14,6 +14,7 @@ import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.CreateLearningSessionRequest;
 import com.malhaebom.malhaebom.presentation.dto.CreateLearningSessionResponse;
 import com.malhaebom.malhaebom.presentation.dto.LearningSessionResponse;
+import com.malhaebom.malhaebom.presentation.dto.LearningSessionResultResponse;
 import com.malhaebom.malhaebom.presentation.dto.NextQuestionResponse;
 import com.malhaebom.malhaebom.service.LearningSessionService;
 import com.malhaebom.malhaebom.service.dto.LoginUser;
@@ -80,12 +81,12 @@ public class LearningSessionController {
 	}
 
 	@PostMapping("/{sessionId}/complete")
-	public ApiResponse<LearningSessionResponse> complete(
+	public ApiResponse<LearningSessionResultResponse> complete(
 		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId
 	) {
 		return ApiResponse.success(
-			LearningSessionResponse.from(
+			LearningSessionResultResponse.from(
 				learningSessionService.complete(loginUser.userId(), sessionId)
 			),
 			"학습을 완료했습니다."
