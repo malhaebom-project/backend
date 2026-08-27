@@ -16,14 +16,13 @@ import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import com.malhaebom.malhaebom.global.exception.ApiException;
-import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.ai.OpenAiAnswerAssessmentRateLimiter.AcquireResult;
 import com.malhaebom.malhaebom.infra.observability.AnswerAssessmentMetricsRecorder;
 import com.malhaebom.malhaebom.infra.observability.AnswerAssessmentMetricsRecorder.QueueWaitResult;
 import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
+import com.malhaebom.malhaebom.service.exception.AnswerAssessmentOverloadedException;
 
 @Component
 public class AnswerAssessmentRateLimitQueue {
@@ -465,8 +464,8 @@ public class AnswerAssessmentRateLimitQueue {
 		metrics.recordQueueWait(result, Duration.ofNanos(elapsed));
 	}
 
-	private ApiException overloadedException() {
-		return new ApiException(ErrorCode.ANSWER_ASSESSMENT_OVERLOADED);
+	private AnswerAssessmentOverloadedException overloadedException() {
+		return new AnswerAssessmentOverloadedException();
 	}
 
 	private IllegalStateException shutdownException() {

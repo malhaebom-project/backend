@@ -30,6 +30,7 @@ import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation.Completed
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation.Processing;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionTask;
+import com.malhaebom.malhaebom.service.exception.AnswerAssessmentOverloadedException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -65,17 +66,8 @@ public class LearningAnswerService {
 	private AnswerSubmissionTask assessAndComplete(
 		Processing processing
 	) {
-		AnswerAssessmentTask task;
-		try {
-			task = answerAssessmentService
-				.assessAsync(processing.assessmentInput());
-		} catch (RuntimeException exception) {
-			return new AnswerSubmissionTask(
-				failAssessment(processing, exception)
-					.thenApply(assessment -> complete(processing, assessment)),
-				() -> false
-			);
-		}
+		AnswerAssessmentTask task = answerAssessmentService
+			.assessAsync(processing.assessmentInput());
 
 		AtomicReference<ApiException> cancellation = new AtomicReference<>();
 		CompletionStage<AnswerSubmissionResult> result = withinDeadline(
@@ -136,7 +128,18 @@ public class LearningAnswerService {
 		if (cause instanceof TimeoutException) {
 			return timeout(processing, task);
 		}
-		return failAssessment(processing, cause);
+		if (cause instanceof AnswerAssessmentOverloadedException) {
+			return failAssessment(
+				processing,
+				cause,
+				ErrorCode.ANSWER_ASSESSMENT_OVERLOADED
+			);
+		}
+		return failAssessment(
+			processing,
+			cause,
+			ErrorCode.ANSWER_ASSESSMENT_FAILED
+		);
 	}
 
 	private Throwable unwrapCompletionException(
@@ -152,14 +155,12 @@ public class LearningAnswerService {
 
 	private CompletionStage<AnswerAssessment> failAssessment(
 		Processing processing,
-		Throwable exception
+		Throwable cause,
+		ErrorCode errorCode
 	) {
-		Throwable unwrapped = unwrapCompletionException(exception);
-		RuntimeException cause = unwrapped instanceof RuntimeException runtime
-			? runtime
-			: new RuntimeException(unwrapped);
+		ApiException exception = new ApiException(errorCode, cause);
 		fail(processing, cause);
-		return CompletableFuture.failedFuture(assessmentException(cause));
+		return CompletableFuture.failedFuture(exception);
 	}
 
 	private CompletionStage<AnswerAssessment> timeout(
@@ -203,15 +204,6 @@ public class LearningAnswerService {
 		return true;
 	}
 
-	private RuntimeException assessmentException(RuntimeException cause) {
-		if (cause instanceof ApiException apiException
-			&& apiException.getErrorCode()
-				== ErrorCode.ANSWER_ASSESSMENT_OVERLOADED) {
-			return apiException;
-		}
-		return new ApiException(ErrorCode.ANSWER_ASSESSMENT_FAILED, cause);
-	}
-
 	private AnswerSubmissionResult complete(
 		Processing processing,
 		AnswerAssessment assessment
@@ -241,7 +233,7 @@ public class LearningAnswerService {
 		return complete(processing, assessment);
 	}
 
-	private void fail(Processing processing, RuntimeException exception) {
+	private void fail(Processing processing, Throwable exception) {
 		submissionTransactionService.fail(
 			processing.submissionId(),
 			processing.processingToken(),

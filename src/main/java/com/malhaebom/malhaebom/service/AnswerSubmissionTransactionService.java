@@ -131,7 +131,7 @@ public class AnswerSubmissionTransactionService {
 	public void fail(
 		Long submissionId,
 		String processingToken,
-		RuntimeException exception
+		Throwable exception
 	) {
 		AnswerSubmission submission = answerSubmissionRepository
 			.findForUpdateById(submissionId)
@@ -378,7 +378,7 @@ public class AnswerSubmissionTransactionService {
 		}
 	}
 
-	private String toFailureMessage(RuntimeException exception) {
+	private String toFailureMessage(Throwable exception) {
 		String message = exception.getMessage();
 		if (message == null || message.isBlank()) {
 			message = exception.getClass().getSimpleName();
