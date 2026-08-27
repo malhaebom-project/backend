@@ -3,6 +3,7 @@ package com.malhaebom.malhaebom.infra.observability;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongSupplier;
 
 import io.micrometer.core.instrument.Gauge;
@@ -18,10 +19,13 @@ public class MicrometerProviderRateLimitMetricsRecorder
 		"malhaebom.ai.provider.rate.limit.requests";
 	private static final String AVAILABLE_METRIC =
 		"malhaebom.ai.provider.rate.limit.available";
+	private static final String CAPACITY_METRIC =
+		"malhaebom.ai.provider.rate.limit.capacity";
 
 	private final MeterRegistry meterRegistry;
 	private final List<LongSupplier> availableTokenSuppliers =
 		new ArrayList<>();
+	private final List<AtomicLong> capacities = new ArrayList<>();
 
 	public MicrometerProviderRateLimitMetricsRecorder(
 		MeterRegistry meterRegistry
@@ -30,6 +34,20 @@ public class MicrometerProviderRateLimitMetricsRecorder
 			meterRegistry,
 			"MeterRegistry는 null일 수 없습니다."
 		);
+	}
+
+	@Override
+	public synchronized void bindCapacity(
+		String provider,
+		String quota,
+		long capacity
+	) {
+		AtomicLong value = new AtomicLong(capacity);
+		capacities.add(value);
+		Gauge.builder(CAPACITY_METRIC, value, AtomicLong::get)
+			.tag("provider", Objects.requireNonNull(provider))
+			.tag("quota", Objects.requireNonNull(quota))
+			.register(meterRegistry);
 	}
 
 	@Override

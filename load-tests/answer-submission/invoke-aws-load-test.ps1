@@ -279,6 +279,7 @@ $assessmentMaxQueueWaitSeconds = [int](Config-OrDefault `
 $recoveryTimeoutSeconds = [int](Config-OrDefault `
     "RecoveryTimeoutSeconds" 300)
 $localManagementPort = [int](Config-OrDefault "LocalManagementPort" 19090)
+$localApiPort = [int](Config-OrDefault "LocalApiPort" 18080)
 $localPrometheusPort = [int](Config-OrDefault "LocalPrometheusPort" 19091)
 $localGrafanaPort = [int](Config-OrDefault "LocalGrafanaPort" 13000)
 $readinessTimeoutSeconds = [int](Config-OrDefault `
@@ -294,19 +295,20 @@ if ($recoveryTimeoutSeconds -lt 1 -or $readinessTimeoutSeconds -lt 1) {
     throw "Recovery and readiness timeouts must be greater than 0."
 }
 Assert-TcpPort "LocalManagementPort" $localManagementPort
+Assert-TcpPort "LocalApiPort" $localApiPort
 Assert-TcpPort "LocalPrometheusPort" $localPrometheusPort
 Assert-TcpPort "LocalGrafanaPort" $localGrafanaPort
 $localPorts = @(
+    $localApiPort,
     $localManagementPort,
     $localPrometheusPort,
     $localGrafanaPort
 )
-if (@($localPorts | Select-Object -Unique).Count -ne 3) {
-    throw "Local management, Prometheus and Grafana ports must be distinct."
+if (@($localPorts | Select-Object -Unique).Count -ne 4) {
+    throw "Local API, management, Prometheus and Grafana ports must be distinct."
 }
 
 $sshExecutable = Assert-Command "ssh"
-[void](Assert-Command "k6")
 [void](Assert-Command "docker")
 if (-not $IsWindows) {
     [void](Assert-Command "bash")
@@ -412,6 +414,7 @@ try {
     & $startLocalObservabilityScript `
         -SshHost $sshHost `
         -SshIdentityFile $sshIdentityFile `
+        -ApiPort $localApiPort `
         -ManagementPort $localManagementPort `
         -PrometheusPort $localPrometheusPort `
         -GrafanaPort $localGrafanaPort
@@ -460,6 +463,7 @@ try {
                 RecoveryTimeoutSeconds = $recoveryTimeoutSeconds
                 TestId = $batchRunId
                 Scenario = $scenarioName
+                RunK6InDocker = $true
                 DockerContainer = $dockerContainer
                 SshHost = $sshHost
                 SshIdentityFile = $sshIdentityFile

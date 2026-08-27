@@ -16,6 +16,7 @@ param(
     [string]$PrometheusRemoteWriteUrl = "",
     [string]$TestId = "",
     [string]$Scenario = "default",
+    [switch]$RunK6InDocker,
     [string]$DockerContainer = "",
     [string]$SshHost = "",
     [string]$SshIdentityFile = ""
@@ -27,7 +28,15 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
 }
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $k6Script = Join-Path $scriptRoot "answer-submission.js"
+$repositoryRoot = [System.IO.Path]::GetFullPath(
+    (Join-Path $scriptRoot "../..")
+)
+$observabilityComposeFile = Join-Path $repositoryRoot `
+    "docker-compose.observability.yml"
 $collectorScript = Join-Path $scriptRoot "collect-metrics.ps1"
+$stageSummaryScript = Join-Path $scriptRoot `
+    "build-stage-observability-summary.ps1"
+$stageSummaryPublisher = Join-Path $scriptRoot "publish-stage-summary.js"
 $powerShellExecutable = (Get-Process -Id $PID).Path
 $manifestPath = [System.IO.Path]::GetFullPath($Manifest)
 $resultRootPath = [System.IO.Path]::GetFullPath($ResultRoot)
@@ -108,11 +117,14 @@ foreach ($stage in $Stages) {
     $collectorStopFile = Join-Path $stageDirectory `
         ("metrics-collector-" + $PID + ".stop")
     $evaluationPath = Join-Path $stageDirectory "stage-evaluation.json"
+    $observabilitySummaryPath = Join-Path $stageDirectory `
+        "stage-observability-summary.json"
     foreach ($generatedFile in @(
         $summaryPath,
         $rawPath,
         $collectorStopFile,
         $evaluationPath,
+        $observabilitySummaryPath,
         (Join-Path $stageDirectory "k6-exit-code.txt")
     )) {
         if (Test-Path -LiteralPath $generatedFile) {
@@ -148,46 +160,99 @@ foreach ($stage in $Stages) {
     $baselineProbeP95 = $null
     $probeLimit = $null
     $probeLatencyPassed = $false
-    $recoveryStarted = [DateTimeOffset]::UtcNow
+    $recoveryStarted = $null
     $recoveryTimedOut = $false
     $collectorExitCode = $null
     $lastQueueSizeValue = $null
     $lastPendingValue = $null
     try {
+        $k6BaseUrl = if ($RunK6InDocker) {
+            "http://management-tunnel:18080"
+        } else {
+            $BaseUrl
+        }
+        $k6ManifestPath = if ($RunK6InDocker) {
+            "/run/manifest.json"
+        } else {
+            $manifestPath.Replace('\', '/')
+        }
+        $k6SummaryPath = if ($RunK6InDocker) {
+            "/run-results/summary.json"
+        } else {
+            $summaryPath.Replace('\', '/')
+        }
+        $k6RawPath = if ($RunK6InDocker) {
+            "/run-results/k6-raw.json"
+        } else {
+            $rawPath
+        }
+        $k6RemoteWriteUrl = if ($RunK6InDocker `
+            -and $PrometheusRemoteWriteUrl) {
+            "http://prometheus:9090/api/v1/write"
+        } else {
+            $PrometheusRemoteWriteUrl
+        }
         $k6Arguments = @(
             "run",
             "--quiet",
-            "-e", "BASE_URL=$BaseUrl",
-            "-e", ("MANIFEST=" + $manifestPath.Replace('\', '/')),
+            "-e", "BASE_URL=$k6BaseUrl",
+            "-e", "MANIFEST=$k6ManifestPath",
             "-e", "CONCURRENCY=$stage",
             "-e", "ASSESSMENT_QUEUE_CAPACITY=$AssessmentQueueCapacity",
             "-e", ("ASSESSMENT_MAX_QUEUE_WAIT_SECONDS=" `
                 + $AssessmentMaxQueueWaitSeconds),
             "-e", "CLIENT_MAX_RETRIES=$ClientMaxRetries",
             "-e", "SCENARIO_NAME=$Scenario",
-            "-e", ("SUMMARY_PATH=" + $summaryPath.Replace('\', '/')),
+            "-e", "SUMMARY_PATH=$k6SummaryPath",
             "--tag", "testid=$metricTestId",
             "--tag", "load_scenario=$Scenario",
             "--tag", "stage=$stage",
-            "--out", ("json=" + $rawPath)
+            "--out", ("json=" + $k6RawPath)
         )
         if ($PrometheusRemoteWriteUrl) {
             $k6Arguments += @("--out", "experimental-prometheus-rw")
         }
-        $k6Arguments += $k6Script
+        $k6Arguments += if ($RunK6InDocker) {
+            "/scripts/answer-submission.js"
+        } else {
+            $k6Script
+        }
 
         $previousRemoteWriteUrl = $env:K6_PROMETHEUS_RW_SERVER_URL
         $previousTrendStats = $env:K6_PROMETHEUS_RW_TREND_STATS
         $previousStaleMarkers = $env:K6_PROMETHEUS_RW_STALE_MARKERS
         try {
-            if ($PrometheusRemoteWriteUrl) {
+            if ($k6RemoteWriteUrl) {
                 $env:K6_PROMETHEUS_RW_SERVER_URL =
-                    $PrometheusRemoteWriteUrl
+                    $k6RemoteWriteUrl
                 $env:K6_PROMETHEUS_RW_TREND_STATS =
                     "p(95),p(99),avg,max"
                 $env:K6_PROMETHEUS_RW_STALE_MARKERS = "true"
             }
-            & k6 @k6Arguments
+            if ($RunK6InDocker) {
+                $dockerArguments = @(
+                    "compose",
+                    "-f", $observabilityComposeFile,
+                    "--profile", "runner",
+                    "run",
+                    "--rm",
+                    "--no-deps",
+                    "--volume", "${manifestPath}:/run/manifest.json:ro",
+                    "--volume", "${stageDirectory}:/run-results"
+                )
+                if ($k6RemoteWriteUrl) {
+                    $dockerArguments += @(
+                        "--env", "K6_PROMETHEUS_RW_SERVER_URL=$k6RemoteWriteUrl",
+                        "--env", "K6_PROMETHEUS_RW_TREND_STATS=p(95),p(99),avg,max",
+                        "--env", "K6_PROMETHEUS_RW_STALE_MARKERS=true"
+                    )
+                }
+                $dockerArguments += "k6"
+                $dockerArguments += $k6Arguments
+                & docker @dockerArguments
+            } else {
+                & k6 @k6Arguments
+            }
             $stageExitCode = $LASTEXITCODE
         } finally {
             $env:K6_PROMETHEUS_RW_SERVER_URL = $previousRemoteWriteUrl
@@ -213,6 +278,7 @@ foreach ($stage in $Stages) {
             $stageExitCode = 1
         }
 
+        $recoveryStarted = [DateTimeOffset]::UtcNow
         $idleStarted = $null
         while ($true) {
             $managementBase = $ManagementUrl.TrimEnd('/')
@@ -277,8 +343,69 @@ foreach ($stage in $Stages) {
             ([DateTimeOffset]::UtcNow - $recoveryStarted).TotalSeconds,
             1
         )
+        recoveryCompletedAt = [DateTimeOffset]::UtcNow.ToString("O")
     } | ConvertTo-Json | Set-Content -LiteralPath $evaluationPath `
         -Encoding utf8
+
+    & $powerShellExecutable -NoProfile -File $stageSummaryScript `
+        -StageDirectory $stageDirectory `
+        -OutputPath $observabilitySummaryPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to build observability summary for stage $stage."
+    }
+
+    if ($PrometheusRemoteWriteUrl) {
+        $publisherSummaryPath = if ($RunK6InDocker) {
+            "/run-results/stage-observability-summary.json"
+        } else {
+            $observabilitySummaryPath.Replace('\', '/')
+        }
+        $publisherArguments = @(
+            "run",
+            "--quiet",
+            "-e", "STAGE_SUMMARY=$publisherSummaryPath",
+            "--tag", "testid=$metricTestId",
+            "--tag", "load_scenario=$Scenario",
+            "--tag", "stage=$stage",
+            "--out", "experimental-prometheus-rw"
+        )
+        $publisherArguments += if ($RunK6InDocker) {
+            "/scripts/publish-stage-summary.js"
+        } else {
+            $stageSummaryPublisher
+        }
+
+        $previousRemoteWriteUrl = $env:K6_PROMETHEUS_RW_SERVER_URL
+        $previousStaleMarkers = $env:K6_PROMETHEUS_RW_STALE_MARKERS
+        try {
+            $env:K6_PROMETHEUS_RW_SERVER_URL = $k6RemoteWriteUrl
+            $env:K6_PROMETHEUS_RW_STALE_MARKERS = "true"
+            if ($RunK6InDocker) {
+                $dockerArguments = @(
+                    "compose",
+                    "-f", $observabilityComposeFile,
+                    "--profile", "runner",
+                    "run",
+                    "--rm",
+                    "--no-deps",
+                    "--volume", "${stageDirectory}:/run-results",
+                    "--env", "K6_PROMETHEUS_RW_SERVER_URL=$k6RemoteWriteUrl",
+                    "--env", "K6_PROMETHEUS_RW_STALE_MARKERS=true",
+                    "k6"
+                )
+                $dockerArguments += $publisherArguments
+                & docker @dockerArguments
+            } else {
+                & k6 @publisherArguments
+            }
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to publish observability summary for stage $stage."
+            }
+        } finally {
+            $env:K6_PROMETHEUS_RW_SERVER_URL = $previousRemoteWriteUrl
+            $env:K6_PROMETHEUS_RW_STALE_MARKERS = $previousStaleMarkers
+        }
+    }
 
     if ($stageExitCode -ne 0) {
         $failedStages += $stage

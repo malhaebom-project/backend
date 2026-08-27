@@ -1,6 +1,22 @@
 {
   "annotations": {
-    "list": []
+    "list": [
+      {
+        "builtIn": 0,
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "enable": true,
+        "expr": "increase(k6_loadtest_event_total{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}[$__interval]) > 0",
+        "hide": false,
+        "iconColor": "rgba(255, 153, 0, 1)",
+        "name": "Load-test events",
+        "showIn": 0,
+        "step": "1s",
+        "tagKeys": "event,stage,load_scenario",
+        "textFormat": "{{event}} · stage {{stage}} · {{load_scenario}}",
+        "titleFormat": "{{event}}",
+        "type": "dashboard"
+      }
+    ]
   },
   "description": "Correlates k6 answer-submission traffic with backend HTTP, OpenAI, JVM, Hikari, Tomcat, queue, and Bucket4j rate-limit metrics.",
   "editable": false,
@@ -198,8 +214,8 @@
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
-        { "editorMode": "code", "expr": "malhaebom_answer_assessment_queue_size", "legendFormat": "queue size", "range": true, "refId": "A" },
-        { "editorMode": "code", "expr": "malhaebom_answer_assessment_queue_capacity", "legendFormat": "capacity", "range": true, "refId": "B" }
+        { "editorMode": "code", "expr": "malhaebom_answer_assessment_queue_size and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "queue size", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "malhaebom_answer_assessment_queue_capacity and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "capacity", "range": true, "refId": "B" }
       ],
       "title": "OpenAI queue and capacity",
       "type": "timeseries"
@@ -222,10 +238,12 @@
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
-        { "editorMode": "code", "expr": "malhaebom_ai_provider_rate_limit_available{provider=\"openai\",quota=\"requests\"}", "legendFormat": "request tokens", "range": true, "refId": "A" },
-        { "editorMode": "code", "expr": "malhaebom_ai_provider_rate_limit_available{provider=\"openai\",quota=\"tokens\"}", "legendFormat": "estimated OpenAI tokens", "range": true, "refId": "B" }
+        { "editorMode": "code", "expr": "malhaebom_ai_provider_rate_limit_available{provider=\"openai\",quota=\"requests\"} and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "requests available", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "malhaebom_ai_provider_rate_limit_capacity{provider=\"openai\",quota=\"requests\"} and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "requests capacity", "range": true, "refId": "B" },
+        { "editorMode": "code", "expr": "malhaebom_ai_provider_rate_limit_available{provider=\"openai\",quota=\"tokens\"} and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "tokens available", "range": true, "refId": "C" },
+        { "editorMode": "code", "expr": "malhaebom_ai_provider_rate_limit_capacity{provider=\"openai\",quota=\"tokens\"} and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "tokens capacity", "range": true, "refId": "D" }
       ],
-      "title": "Bucket4j available capacity",
+      "title": "Bucket4j available / configured capacity",
       "type": "timeseries"
     },
     {
@@ -240,7 +258,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (result) (rate(malhaebom_ai_provider_rate_limit_requests_total{provider=\"openai\"}[$__rate_interval]))",
+          "expr": "sum by (result) (rate(malhaebom_ai_provider_rate_limit_requests_total{provider=\"openai\"}[$__rate_interval])) and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)",
           "legendFormat": "{{result}}/s",
           "range": true,
           "refId": "A"
@@ -259,10 +277,10 @@
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
-        { "editorMode": "code", "expr": "sum(rate(malhaebom_answer_assessment_accepted_total[$__rate_interval]))", "legendFormat": "accepted/s", "range": true, "refId": "A" },
-        { "editorMode": "code", "expr": "sum(rate(malhaebom_answer_assessment_completed_total[$__rate_interval]))", "legendFormat": "completed/s", "range": true, "refId": "B" },
-        { "editorMode": "code", "expr": "sum(rate(malhaebom_answer_assessment_failed_total[$__rate_interval]))", "legendFormat": "failed/s", "range": true, "refId": "C" },
-        { "editorMode": "code", "expr": "sum(rate(malhaebom_answer_assessment_rejected_total[$__rate_interval]))", "legendFormat": "rejected/s", "range": true, "refId": "D" }
+        { "editorMode": "code", "expr": "sum(rate(malhaebom_answer_assessment_accepted_total[$__rate_interval])) and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "accepted/s", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "sum(rate(malhaebom_answer_assessment_completed_total[$__rate_interval])) and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "completed/s", "range": true, "refId": "B" },
+        { "editorMode": "code", "expr": "sum(rate(malhaebom_answer_assessment_failed_total[$__rate_interval])) and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "failed/s", "range": true, "refId": "C" },
+        { "editorMode": "code", "expr": "sum(rate(malhaebom_answer_assessment_rejected_total[$__rate_interval])) and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "rejected/s", "range": true, "refId": "D" }
       ],
       "title": "Assessment outcomes per second",
       "type": "timeseries"
@@ -279,7 +297,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "malhaebom_answer_assessment_queue_wait_seconds_max",
+          "expr": "malhaebom_answer_assessment_queue_wait_seconds_max and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)",
           "legendFormat": "{{result}}",
           "range": true,
           "refId": "A"
@@ -300,7 +318,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (result) (rate(malhaebom_answer_submission_prepare_total[$__rate_interval]))",
+          "expr": "sum by (result) (rate(malhaebom_answer_submission_prepare_total[$__rate_interval])) and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)",
           "legendFormat": "{{result}}/s",
           "range": true,
           "refId": "A"
@@ -321,7 +339,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (type) (rate(malhaebom_openai_answer_assessment_tokens_total[$__rate_interval]))",
+          "expr": "sum by (type) (rate(malhaebom_openai_answer_assessment_tokens_total[$__rate_interval])) and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)",
           "legendFormat": "{{type}} tokens/s",
           "range": true,
           "refId": "A"
@@ -342,7 +360,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (reason) (rate(malhaebom_openai_answer_assessment_failures_total[$__rate_interval]))",
+          "expr": "sum by (reason) (rate(malhaebom_openai_answer_assessment_failures_total[$__rate_interval])) and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)",
           "legendFormat": "{{reason}}/s",
           "range": true,
           "refId": "A"
@@ -369,9 +387,9 @@
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
-        { "editorMode": "code", "expr": "hikaricp_connections_active", "legendFormat": "active", "range": true, "refId": "A" },
-        { "editorMode": "code", "expr": "hikaricp_connections_pending", "legendFormat": "pending", "range": true, "refId": "B" },
-        { "editorMode": "code", "expr": "hikaricp_connections_max", "legendFormat": "max", "range": true, "refId": "C" }
+        { "editorMode": "code", "expr": "hikaricp_connections_active and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "active", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "hikaricp_connections_pending and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "pending", "range": true, "refId": "B" },
+        { "editorMode": "code", "expr": "hikaricp_connections_max and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "max", "range": true, "refId": "C" }
       ],
       "title": "Hikari connections",
       "type": "timeseries"
@@ -386,9 +404,9 @@
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
-        { "editorMode": "code", "expr": "tomcat_threads_busy_threads", "legendFormat": "busy", "range": true, "refId": "A" },
-        { "editorMode": "code", "expr": "tomcat_threads_current_threads", "legendFormat": "current", "range": true, "refId": "B" },
-        { "editorMode": "code", "expr": "tomcat_threads_config_max_threads", "legendFormat": "max", "range": true, "refId": "C" }
+        { "editorMode": "code", "expr": "tomcat_threads_busy_threads and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "busy", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "tomcat_threads_current_threads and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "current", "range": true, "refId": "B" },
+        { "editorMode": "code", "expr": "tomcat_threads_config_max_threads and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "max", "range": true, "refId": "C" }
       ],
       "title": "Tomcat threads",
       "type": "timeseries"
@@ -405,7 +423,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (status) (rate(http_server_requests_seconds_count{uri!~\"/actuator.*\"}[$__rate_interval]))",
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count{uri!~\"/actuator.*\"}[$__rate_interval])) and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)",
           "legendFormat": "HTTP {{status}}",
           "range": true,
           "refId": "A"
@@ -426,14 +444,14 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (le, uri) (rate(http_server_requests_seconds_bucket{uri!~\"/actuator.*\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (le, uri) (rate(http_server_requests_seconds_bucket{uri!~\"/actuator.*\"}[$__rate_interval]))) and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)",
           "legendFormat": "p95 {{uri}}",
           "range": true,
           "refId": "A"
         },
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum by (le, uri) (rate(http_server_requests_seconds_bucket{uri!~\"/actuator.*\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (le, uri) (rate(http_server_requests_seconds_bucket{uri!~\"/actuator.*\"}[$__rate_interval]))) and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)",
           "legendFormat": "p99 {{uri}}",
           "range": true,
           "refId": "B"
@@ -454,7 +472,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (status) (rate(okhttp_requests_seconds_count[$__rate_interval]))",
+          "expr": "sum by (status) (rate(okhttp_requests_seconds_count[$__rate_interval])) and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)",
           "legendFormat": "OpenAI HTTP {{status}}",
           "range": true,
           "refId": "A"
@@ -475,14 +493,14 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(okhttp_requests_seconds_bucket[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(okhttp_requests_seconds_bucket[$__rate_interval]))) and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)",
           "legendFormat": "OpenAI HTTP p95",
           "range": true,
           "refId": "A"
         },
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(okhttp_requests_seconds_bucket[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(okhttp_requests_seconds_bucket[$__rate_interval]))) and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)",
           "legendFormat": "OpenAI HTTP p99",
           "range": true,
           "refId": "B"
@@ -503,7 +521,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "100 * sum(jvm_memory_used_bytes{area=\"heap\"}) / sum(jvm_memory_max_bytes{area=\"heap\"})",
+          "expr": "(100 * sum(jvm_memory_used_bytes{area=\"heap\"}) / sum(jvm_memory_max_bytes{area=\"heap\"})) and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)",
           "legendFormat": "heap used",
           "range": true,
           "refId": "A"
@@ -522,8 +540,8 @@
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
-        { "editorMode": "code", "expr": "process_cpu_usage * 100", "legendFormat": "process", "range": true, "refId": "A" },
-        { "editorMode": "code", "expr": "system_cpu_usage * 100", "legendFormat": "system", "range": true, "refId": "B" }
+        { "editorMode": "code", "expr": "process_cpu_usage * 100 and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "process", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "system_cpu_usage * 100 and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "system", "range": true, "refId": "B" }
       ],
       "title": "CPU usage",
       "type": "timeseries"
@@ -540,7 +558,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "100 * sum(rate(jvm_gc_pause_seconds_sum[$__rate_interval]))",
+          "expr": "100 * sum(rate(jvm_gc_pause_seconds_sum[$__rate_interval])) and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)",
           "legendFormat": "time paused",
           "range": true,
           "refId": "A"
@@ -565,11 +583,193 @@
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
-        { "editorMode": "code", "expr": "hikaricp_connections_acquire_seconds_max", "legendFormat": "acquire max", "range": true, "refId": "A" },
-        { "editorMode": "code", "expr": "sum(rate(hikaricp_connections_timeout_total[$__rate_interval]))", "legendFormat": "timeouts/s", "range": true, "refId": "B" }
+        { "editorMode": "code", "expr": "hikaricp_connections_acquire_seconds_max and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "acquire max", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "sum(rate(hikaricp_connections_timeout_total[$__rate_interval])) and on() (sum(k6_loadtest_stage_active{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}) > 0)", "legendFormat": "timeouts/s", "range": true, "refId": "B" }
       ],
       "title": "Hikari acquisition and timeouts",
       "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 88 },
+      "id": 28,
+      "panels": [],
+      "title": "Stage comparison and critical events",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "decimals": 1 },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "logical_requests" }, "properties": [{ "id": "displayName", "value": "요청" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "attempts" }, "properties": [{ "id": "displayName", "value": "HTTP 시도" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "attempts_per_request" }, "properties": [{ "id": "displayName", "value": "시도/요청" }] },
+          { "matcher": { "id": "byName", "options": "success_rate_percent" }, "properties": [{ "id": "displayName", "value": "성공률" }, { "id": "unit", "value": "percent" }] },
+          { "matcher": { "id": "byName", "options": "retry_attempts" }, "properties": [{ "id": "displayName", "value": "재시도" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "retry_recovered" }, "properties": [{ "id": "displayName", "value": "재시도 회복" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "final_overload" }, "properties": [{ "id": "displayName", "value": "최종 503" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "final_success_p95_ms" }, "properties": [{ "id": "displayName", "value": "성공 p95" }, { "id": "unit", "value": "ms" }] },
+          { "matcher": { "id": "byName", "options": "loaded_probe_p95_ms" }, "properties": [{ "id": "displayName", "value": "Probe p95" }, { "id": "unit", "value": "ms" }] }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 89 },
+      "id": 29,
+      "options": { "cellHeight": "sm", "footer": { "show": false }, "showHeader": true },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "max by (stage, metric) (max_over_time(k6_loadtest_stage_summary{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\",metric=~\"logical_requests|attempts|attempts_per_request|success_rate_percent|retry_attempts|retry_recovered|final_overload|final_success_p95_ms|loaded_probe_p95_ms\"}[$__range]))",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Stage result summary",
+      "transformations": [
+        { "id": "groupingToMatrix", "options": { "columnField": "metric", "rowField": "stage", "valueField": "Value" } }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "OpenAI 응답 usage 기준 단계별 실제 소비 토큰입니다. cached는 prompt의 부분집합이고 reasoning은 completion의 부분집합입니다.",
+      "fieldConfig": {
+        "defaults": { "decimals": 0 },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "prompt_tokens" }, "properties": [{ "id": "displayName", "value": "Prompt 토큰" }] },
+          { "matcher": { "id": "byName", "options": "completion_tokens" }, "properties": [{ "id": "displayName", "value": "Completion 토큰" }] },
+          { "matcher": { "id": "byName", "options": "total_tokens" }, "properties": [{ "id": "displayName", "value": "총 토큰" }] },
+          { "matcher": { "id": "byName", "options": "tokens_per_success" }, "properties": [{ "id": "displayName", "value": "성공당 토큰" }, { "id": "decimals", "value": 1 }] },
+          { "matcher": { "id": "byName", "options": "cached_tokens" }, "properties": [{ "id": "displayName", "value": "Cached 토큰" }] },
+          { "matcher": { "id": "byName", "options": "reasoning_tokens" }, "properties": [{ "id": "displayName", "value": "Reasoning 토큰" }] }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 99 },
+      "id": 33,
+      "options": { "cellHeight": "sm", "footer": { "show": false }, "showHeader": true },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "max by (stage, metric) (max_over_time(k6_loadtest_stage_summary{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\",metric=~\"prompt_tokens|completion_tokens|total_tokens|tokens_per_success|cached_tokens|reasoning_tokens\"}[$__range]))",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "OpenAI token usage summary",
+      "transformations": [
+        { "id": "groupingToMatrix", "options": { "columnField": "metric", "rowField": "stage", "valueField": "Value" } }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "decimals": 1 },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "queue_peak" }, "properties": [{ "id": "displayName", "value": "Queue 최대" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "queue_capacity" }, "properties": [{ "id": "displayName", "value": "Queue 용량" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "queue_wait_max_seconds" }, "properties": [{ "id": "displayName", "value": "Queue 대기 최대" }, { "id": "unit", "value": "s" }] },
+          { "matcher": { "id": "byName", "options": "request_available_min" }, "properties": [{ "id": "displayName", "value": "RPM 최저 잔량" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "request_capacity" }, "properties": [{ "id": "displayName", "value": "RPM 용량" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "token_available_min" }, "properties": [{ "id": "displayName", "value": "TPM 최저 잔량" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "token_capacity" }, "properties": [{ "id": "displayName", "value": "TPM 용량" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "rate_limit_rejected" }, "properties": [{ "id": "displayName", "value": "Limiter 거절" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "recovery_seconds" }, "properties": [{ "id": "displayName", "value": "복구" }, { "id": "unit", "value": "s" }] }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 107 },
+      "id": 30,
+      "options": { "cellHeight": "sm", "footer": { "show": false }, "showHeader": true },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "max by (stage, metric) (max_over_time(k6_loadtest_stage_summary{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\",metric=~\"queue_peak|queue_capacity|queue_wait_max_seconds|request_available_min|request_capacity|token_available_min|token_capacity|rate_limit_rejected|recovery_seconds\"}[$__range]))",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Protection and recovery summary",
+      "transformations": [
+        { "id": "groupingToMatrix", "options": { "columnField": "metric", "rowField": "stage", "valueField": "Value" } }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "decimals": 1 },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "cpu_peak_percent" }, "properties": [{ "id": "displayName", "value": "CPU 최대" }, { "id": "unit", "value": "percent" }] },
+          { "matcher": { "id": "byName", "options": "cpu_peak_offset_seconds" }, "properties": [{ "id": "displayName", "value": "Burst→CPU 피크" }, { "id": "unit", "value": "s" }] },
+          { "matcher": { "id": "byName", "options": "cpu_peak_request_available" }, "properties": [{ "id": "displayName", "value": "피크 RPM 잔량" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "cpu_peak_token_available" }, "properties": [{ "id": "displayName", "value": "피크 TPM 잔량" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "cpu_peak_queue_size" }, "properties": [{ "id": "displayName", "value": "피크 Queue" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "cpu_peak_tomcat_busy" }, "properties": [{ "id": "displayName", "value": "피크 Tomcat busy" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "cpu_peak_hikari_pending" }, "properties": [{ "id": "displayName", "value": "피크 Hikari pending" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "heap_peak_percent" }, "properties": [{ "id": "displayName", "value": "Heap 최대" }, { "id": "unit", "value": "percent" }] },
+          { "matcher": { "id": "byName", "options": "gc_pause_seconds" }, "properties": [{ "id": "displayName", "value": "GC pause" }, { "id": "unit", "value": "s" }] },
+          { "matcher": { "id": "byName", "options": "hikari_pending_peak" }, "properties": [{ "id": "displayName", "value": "Hikari pending 최대" }, { "id": "decimals", "value": 0 }] }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 117 },
+      "id": 31,
+      "options": { "cellHeight": "sm", "footer": { "show": false }, "showHeader": true },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "max by (stage, metric) (max_over_time(k6_loadtest_stage_summary{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\",metric=~\"cpu_peak_percent|cpu_peak_offset_seconds|cpu_peak_request_available|cpu_peak_token_available|cpu_peak_queue_size|cpu_peak_tomcat_busy|cpu_peak_hikari_pending|heap_peak_percent|gc_pause_seconds|hikari_pending_peak\"}[$__range]))",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Backend peak context",
+      "transformations": [
+        { "id": "groupingToMatrix", "options": { "columnField": "metric", "rowField": "stage", "valueField": "Value" } }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Burst 시작을 0초로 정렬한 단계별 핵심 이벤트 시각입니다. 음수는 burst 이전입니다.",
+      "fieldConfig": {
+        "defaults": { "decimals": 1, "unit": "s" },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "stage_start" }, "properties": [{ "id": "displayName", "value": "Stage 시작" }] },
+          { "matcher": { "id": "byName", "options": "loaded_probe_start" }, "properties": [{ "id": "displayName", "value": "Probe 시작" }] },
+          { "matcher": { "id": "byName", "options": "answer_burst_start" }, "properties": [{ "id": "displayName", "value": "Burst 시작" }] },
+          { "matcher": { "id": "byName", "options": "request_bucket_min" }, "properties": [{ "id": "displayName", "value": "RPM 최저" }] },
+          { "matcher": { "id": "byName", "options": "queue_peak" }, "properties": [{ "id": "displayName", "value": "Queue 최대" }] },
+          { "matcher": { "id": "byName", "options": "cpu_peak" }, "properties": [{ "id": "displayName", "value": "CPU 피크" }] },
+          { "matcher": { "id": "byName", "options": "stage_measurement_end" }, "properties": [{ "id": "displayName", "value": "측정 종료" }] },
+          { "matcher": { "id": "byName", "options": "recovery_complete" }, "properties": [{ "id": "displayName", "value": "복구 완료" }] }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 127 },
+      "id": 32,
+      "options": { "cellHeight": "sm", "footer": { "show": false }, "showHeader": true },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "max by (stage, event) (max_over_time(k6_loadtest_stage_event_offset_seconds{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\"}[$__range]))",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Critical event timeline (burst = 0s)",
+      "transformations": [
+        { "id": "groupingToMatrix", "options": { "columnField": "event", "rowField": "stage", "valueField": "Value" } }
+      ],
+      "type": "table"
     }
   ],
   "refresh": "5s",
@@ -632,6 +832,6 @@
   "timezone": "browser",
   "title": "Malhaebom OpenAI Load Test",
   "uid": "malhaebom-openai-loadtest",
-  "version": 5,
+  "version": 6,
   "weekStart": ""
 }

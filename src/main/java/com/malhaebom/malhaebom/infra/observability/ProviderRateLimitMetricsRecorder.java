@@ -6,6 +6,10 @@ public interface ProviderRateLimitMetricsRecorder {
 
 	ProviderRateLimitMetricsRecorder NOOP = new ProviderRateLimitMetricsRecorder() {
 		@Override
+		public void bindCapacity(String provider, String quota, long capacity) {
+		}
+
+		@Override
 		public void bindAvailable(
 			String provider,
 			String quota,
@@ -17,6 +21,8 @@ public interface ProviderRateLimitMetricsRecorder {
 		public void record(String provider, Result result) {
 		}
 	};
+
+	void bindCapacity(String provider, String quota, long capacity);
 
 	void bindAvailable(
 		String provider,

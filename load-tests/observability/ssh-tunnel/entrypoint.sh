@@ -13,6 +13,7 @@ exec ssh \
   -o ServerAliveCountMax=3 \
   -o StrictHostKeyChecking=accept-new \
   -o GatewayPorts=yes \
+  -L 0.0.0.0:18080:127.0.0.1:80 \
   -L 0.0.0.0:19090:127.0.0.1:9090 \
   -i /tmp/ec2-key \
   "${LOADTEST_SSH_HOST}"

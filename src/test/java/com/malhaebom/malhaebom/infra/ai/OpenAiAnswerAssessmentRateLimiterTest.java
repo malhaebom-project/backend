@@ -23,6 +23,8 @@ class OpenAiAnswerAssessmentRateLimiterTest {
 		assertTrue(fixture.limiter().tryAcquire().allowed());
 		assertTrue(fixture.limiter().tryAcquire().allowed());
 		assertFalse(fixture.limiter().tryAcquire().allowed());
+		assertEquals(2.0, capacity(fixture, "requests"));
+		assertEquals(6_000.0, capacity(fixture, "tokens"));
 		assertEquals(0.0, available(fixture, "requests"));
 		assertEquals(0.0, available(fixture, "tokens"));
 
@@ -61,6 +63,15 @@ class OpenAiAnswerAssessmentRateLimiterTest {
 	private double available(Fixture fixture, String quota) {
 		return fixture.registry()
 			.get("malhaebom.ai.provider.rate.limit.available")
+			.tag("provider", "openai")
+			.tag("quota", quota)
+			.gauge()
+			.value();
+	}
+
+	private double capacity(Fixture fixture, String quota) {
+		return fixture.registry()
+			.get("malhaebom.ai.provider.rate.limit.capacity")
 			.tag("provider", "openai")
 			.tag("quota", quota)
 			.gauge()

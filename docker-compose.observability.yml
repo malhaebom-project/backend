@@ -8,6 +8,7 @@ services:
     environment:
       LOADTEST_SSH_HOST: "${LOADTEST_SSH_HOST:-missing@invalid}"
     ports:
+      - "127.0.0.1:${LOADTEST_LOCAL_API_PORT:-18080}:18080"
       - "127.0.0.1:${LOADTEST_LOCAL_MANAGEMENT_PORT:-19090}:19090"
     volumes:
       - "${LOADTEST_SSH_IDENTITY_FILE:-./.private/load-tests/missing-key}:/run/source-key:ro"
@@ -45,6 +46,14 @@ services:
       - ./load-tests/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - prometheus
+
+  k6:
+    image: grafana/k6:2.2.0
+    profiles:
+      - runner
+    working_dir: /scripts
+    volumes:
+      - ./load-tests/answer-submission:/scripts:ro
 
 volumes:
   loadtest-prometheus-data:

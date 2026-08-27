@@ -26,7 +26,7 @@ FIFO queue 64건의 경계가 지켜지는지, 동시에 호출한 다른 API가
 | Overload          | bounded queue 용량을 넘었거나 queue 대기 제한을 넘은 상태. 둘 다 특정 오류 코드의 503으로 종료한다. HTTP만으로 원인을 구분할 수 없어 서버 queue 지표를 함께 본다. |
 | Timeout           | 정해진 시간 안에 응답을 받지 못해 호출자가 기다리기를 중단한 상태. 이 테스트에서는 예상 밖 실패로 분류한다.                                                          |
 | Run ID            | 한 번 생성한 fixture 집합을 식별하는 값. 다른 실행의 테스트 데이터를 구분하고 정확히 정리하는 데 사용한다.                                                       |
-| Manifest          | run-id와 단계별 `sessionId`, `sessionQuestionId`, `speechAnswerId`를 기록한 JSON 파일. k6 실행과 fixture cleanup이 같은 대상을 사용하도록 연결한다. |
+| Manifest          | run-id, 테스트 사용자 access token과 단계별 `sessionId`, `sessionQuestionId`, `speechAnswerId`를 기록한 로컬 JSON 파일. k6 실행과 fixture cleanup이 같은 대상을 사용하도록 연결하며 Git에 포함하지 않는다. |
 | Cleanup           | manifest에 기록된 테스트 데이터를 DB에서 삭제하는 작업. 테스트 성공·실패와 관계없이 다시 실행할 수 있다.                                                       |
 
 ### 동시성 및 서버 자원
@@ -205,17 +205,21 @@ probe 시나리오를 자동으로 연장한다.
 7. `run-stages.ps1`이 `max(baseline p95 × 2, 1초)`로 해당 단계의 probe p95
    허용값을 계산해 추가 판정한다.
 
-8. queue size와 Hikari pending이 10초 연속 0인지 확인한다. 해당
-   단계의 k6 실행 시작 시점부터 기본 300초 안에 복구되지 않으면 다음 단계로
+8. queue size와 Hikari pending이 10초 연속 0인지 확인한다. k6 종료 후
+   기본 300초 안에 복구되지 않으면 다음 단계로
    진행하지 않는다.
 
 9. 지표 수집기를 종료하고 `stage-evaluation.json`과 `k6-exit-code.txt`를
    기록한다.
 
-10. threshold가 실패했지만 자원이 복구됐다면 실패 단계를 기록하고 다음 단계도
+10. 1초 Actuator snapshot에서 CPU 피크 시점의 Bucket4j·queue·Tomcat·Hikari
+    상태와 단계별 결과를 계산해 `stage-observability-summary.json`에 기록한다.
+    Prometheus Remote Write를 사용 중이면 Grafana 요약표용 지표도 게시한다.
+
+11. threshold가 실패했지만 자원이 복구됐다면 실패 단계를 기록하고 다음 단계도
     실행한다. 자원 복구가 timeout되면 즉시 전체 실행을 중단한다.
 
-11. 네 단계를 모두 실행한 뒤 실패 단계가 하나라도 있으면
+12. 네 단계를 모두 실행한 뒤 실패 단계가 하나라도 있으면
     `run-stages.ps1`이 최종 실패를 반환한다.
 
 ### 답안 제출 VU 하나의 분류 순서
@@ -317,7 +321,7 @@ deadline을 연장하지 않는다.
 | JVM CPU·메모리·GC                            | 스레드·DB 병목과 별개로 JVM 계산량이나 GC 정지가 원인인지 확인하는 보조 지표                               |
 | 컨테이너 CPU·메모리                              | EC2 컨테이너 한도 또는 호스트 자원 부족 여부를 확인하는 보조 지표                                       |
 | OpenAI queue size                              | rate token을 기다리는 FIFO 대기 수. 설정값 64 이하여야 함                                  |
-| Bucket4j available requests / tokens           | OpenAI 요청·추정 토큰 bucket의 현재 잔여량. 0에 가까울수록 다음 refill 대기가 발생하기 쉬움                  |
+| Bucket4j capacity / available requests / tokens | 실행 중인 OpenAI 요청·추정 토큰 bucket의 설정 용량과 현재 잔여량. 잔여량이 0에 가까울수록 다음 refill 대기가 발생하기 쉬움 |
 | Bucket4j allowed / delayed / rejected           | 즉시 허용, rate token refill 대기, queue 수용 실패로 분류된 누적 결정 수                                 |
 | queue full / timeout / cancelled               | provider 호출 전 종료 원인을 구분하는 서버 누적 카운터. 단계별 첫·마지막 snapshot 차이로 집계함                  |
 | submission prepare result                      | 신규 처리, 완료 결과 재사용, 처리 중 중복 요청, 실패 재시도, 만료 lease 회수를 구분하는 멱등 처리 카운터              |
@@ -401,6 +405,7 @@ bounded queue는 짧은 burst의 사용자 체감 성공률을 높일 뿐 provid
 | `stage-{N}/summary.json`                           | k6 집계 지표와 threshold 결과                 |
 | `stage-{N}/k6-raw.json`                            | 요청별 k6 원시 시계열                          |
 | `stage-{N}/stage-evaluation.json`                  | probe 허용값, collector 종료 상태, 자원 회복 결과   |
+| `stage-{N}/stage-observability-summary.json`       | Grafana 단계 비교·CPU 피크 문맥·핵심 이벤트 요약    |
 | `stage-{N}/server-metrics/actuator-prometheus.txt` | 1초 간격 Actuator·Prometheus 전체 snapshot  |
 | `stage-{N}/server-metrics/docker-stats.jsonl`      | AWS 실행 시 컨테이너 CPU·메모리 snapshot         |
 | `stage-{N}/server-metrics/backend-container.log`   | AWS 실행 단계 동안의 백엔드 컨테이너 로그              |
@@ -413,7 +418,7 @@ bounded queue는 짧은 burst의 사용자 체감 성공률을 높일 뿐 provid
 
 * PowerShell 7 (`pwsh`). Windows와 macOS에서 같은 `.ps1`을 실행한다.
 * Java 21과 Gradle Wrapper
-* k6
+* 로컬 단독 실행 시 k6. AWS 자동화는 Compose의 고정 버전 k6 이미지를 사용한다.
 * Python 3
 * AWS 실행 시 EC2의 Docker Compose, 로컬 Docker Desktop 또는 Docker Engine,
   로컬 OpenSSH와 EC2 접속 키
@@ -427,8 +432,9 @@ bounded queue는 짧은 burst의 사용자 체감 성공률을 높일 뿐 provid
 ## 로컬 실행
 
 아래 명령은 프로젝트 루트의 서로 다른 PowerShell 7 (`pwsh`)에서 실행한다.
-PowerShell과 k6, Python은 로컬 Windows 또는 macOS에 설치하며 EC2에는 설치하지
-않는다. DB 파일 이름은 실행마다 새 값으로 바꿔 이전 결과와 격리한다.
+PowerShell과 Python은 로컬 Windows 또는 macOS에 설치하며 EC2에는 설치하지
+않는다. 로컬 단독 실행에서만 host k6가 필요하다. DB 파일 이름은 실행마다 새
+값으로 바꿔 이전 결과와 격리한다.
 
 기본값은 queue capacity 64, max queue wait 10초다. 다른 설정을 계측할 때는
 백엔드의 `ANSWER_ASSESSMENT_QUEUE_CAPACITY`, `ANSWER_ASSESSMENT_MAX_QUEUE_WAIT`와
@@ -621,8 +627,9 @@ EC2 loadtest WAS 전환(수동)
 
 #### 세부 수동 실행 및 비상 복구
 
-아래 PowerShell 스크립트와 k6는 로컬 Windows 또는 macOS에서 실행한다. EC2는
-Linux여도 되며 PowerShell이 필요하지 않다. 평상시 운영 Compose는 Actuator 관리
+아래 PowerShell 스크립트는 로컬 Windows 또는 macOS에서 실행하고 k6는 로컬
+Docker Compose 네트워크에서 실행한다. EC2는 Linux여도 되며 PowerShell이 필요하지
+않다. 평상시 운영 Compose는 Actuator 관리
 포트를 host에 공개하지 않는다. 부하 테스트를 시작하기 전에 EC2의 backend checkout
 루트에서 loadtest 시작 스크립트를 실행한다. 실행 권한 비트에 의존하지 않도록
 `bash`로 호출한다.
@@ -659,10 +666,17 @@ $sshKey = '<로컬 EC2 접속 키 경로>'
 ```
 
 로컬 Prometheus 컨테이너는 같은 Compose의 tunnel 컨테이너를 통해 EC2의
-`/actuator/prometheus`를 1초마다 수집한다. 로컬 k6는 로컬 Prometheus로 결과를
-Remote Write하고, Grafana는
+`/actuator/prometheus`를 1초마다 수집한다. k6 컨테이너는 host port proxy를
+거치지 않고 `management-tunnel:18080`으로 요청하며 `prometheus:9090`으로 결과를
+Remote Write한다. Grafana는
 <http://127.0.0.1:13000>에서 로그인 없이 읽기 전용으로 확인한다. 대시보드의
 `Test run`, `Scenario`, `Stage` 변수로 전체 실행, 시나리오와 동시성 단계를 선택한다.
+새로 실행한 테스트는 stage 활성 구간과 baseline·부하 probe·answer burst·측정 종료
+이벤트를 k6 지표로 기록한다. 따라서 `Stage`를 선택하면 OpenAI 보호 및 Backend
+시계열도 해당 단계 구간만 표시되고, 이벤트는 모든 시계열 패널의 세로 annotation으로
+표시된다. `Stage comparison and critical events` 행은 단계별 요청 결과, Bucket4j와
+queue 보호 상태, CPU 피크 당시의 서버 상태, burst 기준 핵심 이벤트 시각을 표로
+보여준다.
 `Backend resources` 행에서는 Actuator scrape 요청을 제외한 HTTP 상태별 RPS와
 경로별 p95·p99, 실제 OpenAI HTTP 시도 횟수와 p95·p99, JVM heap·CPU·GC pause,
 Hikari connection 획득 지연과 timeout을 함께 확인할 수 있다. OpenAI HTTP 시도
@@ -674,6 +688,10 @@ cached·reasoning 토큰을 구분한다. `OpenAI failures by reason`은 rate li
 timeout, 인증·권한, 4xx·5xx, I/O, 취소, refusal, 빈 응답, 잘못된 구조화 응답을
 구분한다. queue full과 queue timeout은 provider 호출 전 실패이므로 이 패널에는
 포함되지 않는다. 지표 정의와 해석은 `docs/answer-assessment-metrics.md`를 참고한다.
+`OpenAI token usage summary`는 각 stage 측정 구간의 prompt·completion·total·
+cached·reasoning 토큰 증가량과 최종 성공 요청당 평균 total 토큰을 비교한다.
+`cached`는 prompt에, `reasoning`은 completion에 이미 포함되므로 total에 다시
+합산하지 않는다.
 
 `SPRING_PROFILES_ACTIVE=prod`와 운영 datasource 설정으로 fixture를 만든 뒤 같은
 manifest를 k6에 전달한다. fixture 생성·정리는 반드시 동일한 DB를 사용해야 한다.
@@ -696,17 +714,18 @@ $stages = @(10, 100, 200, 300)
   "-PloadTestManifest=$manifest"
 ```
 
-같은 PowerShell에서 생성된 manifest와 결과 경로를 사용해 k6를 실행한다.
+같은 PowerShell에서 생성된 manifest와 결과 경로를 사용해 Docker k6를 실행한다.
 
 ```powershell
 $sshKey = '<로컬 EC2 접속 키 경로>'
 ./load-tests/answer-submission/run-stages.ps1 `
-  -BaseUrl http://3.35.11.125 `
+  -BaseUrl http://127.0.0.1:18080 `
   -ManagementUrl http://127.0.0.1:19090 `
   -PrometheusRemoteWriteUrl http://127.0.0.1:19091/api/v1/write `
   -Manifest $manifest `
   -ResultRoot $resultRoot `
   -Stages $stages `
+  -RunK6InDocker `
   -DockerContainer backend-was-1 `
   -SshHost ubuntu@3.35.11.125 `
   -SshIdentityFile $sshKey `
@@ -741,6 +760,9 @@ raw 정상 503은 OpenAI 호출 전에 거절되므로 그 자체는 provider �
 Actuator snapshot은 그대로 생성된다. 자동 실행의 k6 지표에는 전체 실행을 나타내는
 `testid`, 설정 항목 이름인 `load_scenario`, 동시성인 `stage` 태그가 추가된다. Grafana의
 `Test run`, `Scenario`, `Stage` 변수로 세 축을 각각 선택할 수 있다.
+단계 종료 후 계산한 요약 지표도 같은 세 태그로 Remote Write하므로 여러 stage를
+선택해 한 표에서 비교할 수 있다. 이 요약표와 stage 범위 필터는 이벤트·요약 지표를
+기록하도록 변경된 버전으로 새로 실행한 테스트부터 적용된다.
 
 부하 테스트와 fixture cleanup을 마치면 EC2에서 운영 Compose만 사용해 서비스를
 재생성한다. `--remove-orphans`가 EC2의 이전 관측 컨테이너가 남아 있다면 제거하고

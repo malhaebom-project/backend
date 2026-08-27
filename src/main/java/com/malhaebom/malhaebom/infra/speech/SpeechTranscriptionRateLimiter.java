@@ -48,6 +48,7 @@ public class SpeechTranscriptionRateLimiter {
 			.addLimit(bandwidth)
 			.withCustomTimePrecision(Objects.requireNonNull(timeMeter))
 			.build();
+		metrics.bindCapacity(PROVIDER, "requests", capacity);
 		metrics.bindAvailable(
 			PROVIDER,
 			"requests",

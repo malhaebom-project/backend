@@ -31,6 +31,7 @@
     AssessmentMaxQueueWaitSeconds = 10
     RecoveryTimeoutSeconds = 300
 
+    LocalApiPort = 18080
     LocalManagementPort = 19090
     LocalPrometheusPort = 19091
     LocalGrafanaPort = 13000
