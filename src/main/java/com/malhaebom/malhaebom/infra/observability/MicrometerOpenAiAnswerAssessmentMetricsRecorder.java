@@ -7,10 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
-import com.openai.errors.OpenAIInvalidDataException;
 import com.openai.errors.OpenAIIoException;
 import com.openai.errors.OpenAIServiceException;
 import io.micrometer.core.instrument.Counter;
@@ -92,9 +89,6 @@ public class MicrometerOpenAiAnswerAssessmentMetricsRecorder
 		if (cause instanceof CancellationException) {
 			return FailureReason.CANCELLED;
 		}
-		if (isTimeout(cause)) {
-			return FailureReason.TIMEOUT;
-		}
 		if (cause instanceof OpenAIServiceException serviceException) {
 			int status = serviceException.statusCode();
 			if (status == 429) {
@@ -116,36 +110,26 @@ public class MicrometerOpenAiAnswerAssessmentMetricsRecorder
 				return FailureReason.SERVER_ERROR;
 			}
 		}
-		if (cause instanceof OpenAIIoException) {
-			return FailureReason.IO_ERROR;
-		}
-		if (cause instanceof OpenAIInvalidDataException) {
-			return FailureReason.INVALID_RESPONSE;
+		if (cause instanceof OpenAIIoException ioException) {
+			return isTimeoutCause(ioException.getCause())
+				? FailureReason.TIMEOUT
+				: FailureReason.IO_ERROR;
 		}
 		return FailureReason.UNKNOWN;
 	}
 
 	private Throwable unwrap(Throwable failure) {
 		Throwable current = failure;
-		while ((current instanceof CompletionException
-			|| current instanceof ExecutionException)
+		while (current instanceof CompletionException
 			&& current.getCause() != null) {
 			current = current.getCause();
 		}
 		return current;
 	}
 
-	private boolean isTimeout(Throwable failure) {
-		Throwable current = failure;
-		while (current != null) {
-			if (current instanceof TimeoutException
-				|| current instanceof SocketTimeoutException
-				|| current instanceof HttpTimeoutException) {
-				return true;
-			}
-			current = current.getCause();
-		}
-		return false;
+	private boolean isTimeoutCause(Throwable failure) {
+		return failure instanceof SocketTimeoutException
+			|| failure instanceof HttpTimeoutException;
 	}
 
 	private enum TokenType {
