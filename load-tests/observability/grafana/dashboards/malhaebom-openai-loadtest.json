@@ -634,6 +634,39 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "OpenAI 응답 usage 기준 단계별 실제 소비 토큰입니다. cached는 prompt의 부분집합이고 reasoning은 completion의 부분집합입니다.",
+      "fieldConfig": {
+        "defaults": { "decimals": 0 },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "prompt_tokens" }, "properties": [{ "id": "displayName", "value": "Prompt 토큰" }] },
+          { "matcher": { "id": "byName", "options": "completion_tokens" }, "properties": [{ "id": "displayName", "value": "Completion 토큰" }] },
+          { "matcher": { "id": "byName", "options": "total_tokens" }, "properties": [{ "id": "displayName", "value": "총 토큰" }] },
+          { "matcher": { "id": "byName", "options": "tokens_per_success" }, "properties": [{ "id": "displayName", "value": "성공당 토큰" }, { "id": "decimals", "value": 1 }] },
+          { "matcher": { "id": "byName", "options": "cached_tokens" }, "properties": [{ "id": "displayName", "value": "Cached 토큰" }] },
+          { "matcher": { "id": "byName", "options": "reasoning_tokens" }, "properties": [{ "id": "displayName", "value": "Reasoning 토큰" }] }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 99 },
+      "id": 33,
+      "options": { "cellHeight": "sm", "footer": { "show": false }, "showHeader": true },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "max by (stage, metric) (max_over_time(k6_loadtest_stage_summary{testid=~\"$testid\",load_scenario=~\"$scenario\",stage=~\"$stage\",metric=~\"prompt_tokens|completion_tokens|total_tokens|tokens_per_success|cached_tokens|reasoning_tokens\"}[$__range]))",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "OpenAI token usage summary",
+      "transformations": [
+        { "id": "groupingToMatrix", "options": { "columnField": "metric", "rowField": "stage", "valueField": "Value" } }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": { "decimals": 1 },
         "overrides": [
@@ -648,7 +681,7 @@
           { "matcher": { "id": "byName", "options": "recovery_seconds" }, "properties": [{ "id": "displayName", "value": "복구" }, { "id": "unit", "value": "s" }] }
         ]
       },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 99 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 107 },
       "id": 30,
       "options": { "cellHeight": "sm", "footer": { "show": false }, "showHeader": true },
       "targets": [
@@ -684,7 +717,7 @@
           { "matcher": { "id": "byName", "options": "hikari_pending_peak" }, "properties": [{ "id": "displayName", "value": "Hikari pending 최대" }, { "id": "decimals", "value": 0 }] }
         ]
       },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 109 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 117 },
       "id": 31,
       "options": { "cellHeight": "sm", "footer": { "show": false }, "showHeader": true },
       "targets": [
@@ -719,7 +752,7 @@
           { "matcher": { "id": "byName", "options": "recovery_complete" }, "properties": [{ "id": "displayName", "value": "복구 완료" }] }
         ]
       },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 119 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 127 },
       "id": 32,
       "options": { "cellHeight": "sm", "footer": { "show": false }, "showHeader": true },
       "targets": [

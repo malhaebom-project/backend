@@ -688,6 +688,10 @@ cached·reasoning 토큰을 구분한다. `OpenAI failures by reason`은 rate li
 timeout, 인증·권한, 4xx·5xx, I/O, 취소, refusal, 빈 응답, 잘못된 구조화 응답을
 구분한다. queue full과 queue timeout은 provider 호출 전 실패이므로 이 패널에는
 포함되지 않는다. 지표 정의와 해석은 `docs/answer-assessment-metrics.md`를 참고한다.
+`OpenAI token usage summary`는 각 stage 측정 구간의 prompt·completion·total·
+cached·reasoning 토큰 증가량과 최종 성공 요청당 평균 total 토큰을 비교한다.
+`cached`는 prompt에, `reasoning`은 completion에 이미 포함되므로 total에 다시
+합산하지 않는다.
 
 `SPRING_PROFILES_ACTIVE=prod`와 운영 datasource 설정으로 fixture를 만든 뒤 같은
 manifest를 k6에 전달한다. fixture 생성·정리는 반드시 동일한 DB를 사용해야 한다.

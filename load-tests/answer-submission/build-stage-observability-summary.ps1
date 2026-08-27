@@ -32,6 +32,11 @@ function New-Snapshot([DateTimeOffset]$timestamp) {
         RequestCapacity = 0.0
         TokenCapacity = 0.0
         RateLimitRejected = 0.0
+        PromptTokens = 0.0
+        CompletionTokens = 0.0
+        TotalTokens = 0.0
+        CachedTokens = 0.0
+        ReasoningTokens = 0.0
         TomcatBusy = 0.0
         TomcatMax = 0.0
         HikariPending = 0.0
@@ -98,6 +103,16 @@ function Read-Snapshots([string]$path) {
             $current.TokenCapacity = [double]$Matches[1]
         } elseif ($line -match '^malhaebom_ai_provider_rate_limit_requests_total\{.*provider="openai".*result="rejected".*\}\s+([-+0-9.eE]+)$') {
             $current.RateLimitRejected = [double]$Matches[1]
+        } elseif ($line -match '^malhaebom_openai_answer_assessment_tokens_total\{.*type="(prompt|completion|total|cached|reasoning)".*\}\s+([-+0-9.eE]+)$') {
+            $tokenType = $Matches[1]
+            $tokenValue = [double]$Matches[2]
+            switch ($tokenType) {
+                "prompt" { $current.PromptTokens = $tokenValue }
+                "completion" { $current.CompletionTokens = $tokenValue }
+                "total" { $current.TotalTokens = $tokenValue }
+                "cached" { $current.CachedTokens = $tokenValue }
+                "reasoning" { $current.ReasoningTokens = $tokenValue }
+            }
         } elseif ($line -match '^tomcat_threads_busy_threads\{.*name="http-nio-8080".*\}\s+([-+0-9.eE]+)$') {
             $current.TomcatBusy = [double]$Matches[1]
         } elseif ($line -match '^tomcat_threads_config_max_threads\{.*name="http-nio-8080".*\}\s+([-+0-9.eE]+)$') {
@@ -220,6 +235,7 @@ $attempts = Metric-Value $summary "answer_attempts" "count"
 $success = Metric-Value $summary "answer_success" "count"
 $retryAttempts = Metric-Value $summary "answer_retry_attempts" "count"
 $retryRecovered = Metric-Value $summary "answer_retry_recovered" "count"
+$totalTokens = Counter-Delta $measurementSnapshots "TotalTokens"
 $requestCapacity = Maximum $measurementSnapshots "RequestCapacity"
 $tokenCapacity = Maximum $measurementSnapshots "TokenCapacity"
 $queueCapacity = Maximum $measurementSnapshots "QueueCapacity"
@@ -244,6 +260,15 @@ $summaryValues = [ordered]@{
         "answer_final_success_duration" "p(95)"
     loaded_probe_p95_ms = Metric-Value $summary `
         "probe_duration" "p(95)"
+    prompt_tokens = Counter-Delta $measurementSnapshots "PromptTokens"
+    completion_tokens = Counter-Delta $measurementSnapshots `
+        "CompletionTokens"
+    total_tokens = $totalTokens
+    tokens_per_success = if ($success -gt 0) {
+        $totalTokens / $success
+    } else { 0.0 }
+    cached_tokens = Counter-Delta $measurementSnapshots "CachedTokens"
+    reasoning_tokens = Counter-Delta $measurementSnapshots "ReasoningTokens"
     cpu_peak_percent = [double]$cpuPeak.ProcessCpuPercent
     cpu_peak_offset_seconds = Event-Offset $cpuPeak $burstAt
     cpu_peak_request_available = [double]$cpuPeak.AvailableRequests
