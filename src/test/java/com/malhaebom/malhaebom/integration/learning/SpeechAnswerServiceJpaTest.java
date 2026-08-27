@@ -110,17 +110,18 @@ class SpeechAnswerServiceJpaTest {
 	}
 
 	@Test
-	void 예상하지_못한_STT_오류는_안전한_실패_정보만_저장한다() {
+	void 예상하지_못한_비동기_STT_오류는_원본을_유지하고_안전한_실패_정보만_저장한다() {
 		RuntimeException providerException = new RuntimeException(
 			"secret bucket/key and provider response"
 		);
 		transcriber.willThrow(providerException);
 
-		assertApiException(
-			ErrorCode.STT_PROCESSING_FAILED,
+		RuntimeException thrown = assertThrows(
+			RuntimeException.class,
 			this::upload
 		);
 
+		assertSame(providerException, thrown);
 		assertFailed(ErrorCode.STT_PROCESSING_FAILED.getMessage());
 	}
 

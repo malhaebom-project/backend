@@ -3,10 +3,8 @@ package com.malhaebom.malhaebom.service;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -344,12 +342,11 @@ public class SpeechAnswerService implements SmartLifecycle {
 		String provider,
 		RuntimeException exception
 	) {
-		ApiException failure = toApiException(exception);
 		try {
 			stateService.fail(
 				startResult.speechAnswer().getId(),
 				startResult.processingToken(),
-				failure.getErrorCode().getMessage(),
+				ErrorCode.STT_PROCESSING_FAILED.getMessage(),
 				provider
 			);
 		} catch (RuntimeException stateFailure) {
@@ -374,7 +371,7 @@ public class SpeechAnswerService implements SmartLifecycle {
 				speechAnswerId,
 				processingToken,
 				provider,
-				toApiException(exception),
+				exception,
 				result
 			);
 			return;
@@ -398,7 +395,7 @@ public class SpeechAnswerService implements SmartLifecycle {
 				speechAnswerId,
 				processingToken,
 				provider,
-				toApiException(failure),
+				failure,
 				result
 			);
 		}
@@ -438,14 +435,14 @@ public class SpeechAnswerService implements SmartLifecycle {
 		Long speechAnswerId,
 		String processingToken,
 		String provider,
-		ApiException failure,
+		Throwable failure,
 		CompletableFuture<SpeechAnswerResult> result
 	) {
 		try {
 			stateService.fail(
 				speechAnswerId,
 				processingToken,
-				failure.getErrorCode().getMessage(),
+				errorCode(failure).getMessage(),
 				provider
 			);
 		} catch (RuntimeException stateFailure) {
@@ -462,36 +459,21 @@ public class SpeechAnswerService implements SmartLifecycle {
 		}
 	}
 
-	private ApiException toApiException(Throwable exception) {
-		Throwable cause = unwrapCompletionException(exception);
-		if (cause instanceof ApiException apiException) {
-			return apiException;
-		}
-		return new ApiException(ErrorCode.STT_PROCESSING_FAILED, cause);
-	}
-
-	private Throwable unwrapCompletionException(Throwable exception) {
-		Throwable cause = exception;
-		while ((cause instanceof CompletionException
-			|| cause instanceof ExecutionException)
-			&& cause.getCause() != null) {
-			cause = cause.getCause();
-		}
-		return cause;
-	}
-
 	private void logFailure(long startedAt, Throwable exception) {
-		Throwable cause = unwrapCompletionException(exception);
-		ErrorCode errorCode = cause instanceof ApiException apiException
-			? apiException.getErrorCode()
-			: ErrorCode.STT_PROCESSING_FAILED;
 		log.warn(
 			"event=stt_failed error_code={} duration_ms={} active={} limit={}",
-			errorCode,
+			errorCode(exception),
 			elapsedMillis(startedAt),
 			concurrencyLimiter.activeRequests(),
 			concurrencyLimiter.maxConcurrentRequests()
 		);
+	}
+
+	private ErrorCode errorCode(Throwable failure) {
+		if (failure instanceof ApiException apiException) {
+			return apiException.getErrorCode();
+		}
+		return ErrorCode.STT_PROCESSING_FAILED;
 	}
 
 	private long elapsedMillis(long startedAt) {
