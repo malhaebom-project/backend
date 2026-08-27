@@ -237,28 +237,45 @@ public class AnswerSubmission extends BaseEntity {
 
 		if (!sessionQuestion.getLearningSession().isInProgress()
 			|| sessionQuestion.isCompleted()) {
-			throw new IllegalStateException("진행 중인 문제만 제출을 예약할 수 있습니다.");
+			throw new AnswerSubmissionReservationException(
+				AnswerSubmissionReservationException.Reason.SESSION_NOT_IN_PROGRESS,
+				"진행 중인 문제만 제출을 예약할 수 있습니다."
+			);
 		}
 
 		LearningSessionQuestion currentQuestion = sessionQuestion
 			.getLearningSession()
 			.getCurrentQuestion();
 		if (!isSameQuestion(sessionQuestion, currentQuestion)) {
-			throw new IllegalStateException("현재 문제만 제출을 예약할 수 있습니다.");
+			throw new AnswerSubmissionReservationException(
+				AnswerSubmissionReservationException.Reason.CURRENT_QUESTION_MISMATCH,
+				"현재 문제만 제출을 예약할 수 있습니다."
+			);
 		}
 
 		if (speechAnswer == null) {
 			throw new IllegalArgumentException("음성 답변은 null일 수 없습니다.");
 		}
 
-		if (!speechAnswer.isUsableFor(sessionQuestion)) {
-			throw new IllegalArgumentException(
-				"현재 문제에 사용할 수 있는 완료된 음성 답변이 아닙니다."
+		if (!speechAnswer.isCompleted()) {
+			throw new AnswerSubmissionReservationException(
+				AnswerSubmissionReservationException.Reason.SPEECH_ANSWER_NOT_COMPLETED,
+				"처리가 완료되지 않은 음성 답변입니다."
 			);
 		}
 
-		if (attemptNo < 1) {
-			throw new IllegalArgumentException("답변 시도 번호는 1 이상이어야 합니다.");
+		if (!speechAnswer.isUsableFor(sessionQuestion)) {
+			throw new AnswerSubmissionReservationException(
+				AnswerSubmissionReservationException.Reason.CURRENT_QUESTION_MISMATCH,
+				"현재 문제에 사용할 수 있는 음성 답변이 아닙니다."
+			);
+		}
+
+		if (!AnswerAttemptPolicy.isAllowed(attemptNo)) {
+			throw new AnswerSubmissionReservationException(
+				AnswerSubmissionReservationException.Reason.ATTEMPT_NOT_ALLOWED,
+				"답변 가능 횟수를 초과했습니다."
+			);
 		}
 	}
 

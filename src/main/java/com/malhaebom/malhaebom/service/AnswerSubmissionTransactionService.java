@@ -11,9 +11,9 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.malhaebom.malhaebom.domain.learning.Answer;
-import com.malhaebom.malhaebom.domain.learning.AnswerAttemptPolicy;
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmission;
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionProcessingException;
+import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionReservationException;
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionStatus;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
@@ -79,18 +79,19 @@ public class AnswerSubmissionTransactionService {
 			);
 		}
 
-		validateInProgress(session);
-		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
-		validateCurrentQuestion(currentQuestion, sessionQuestionId);
+		ensureCanReserve(session, sessionQuestionId);
 		SpeechAnswer speechAnswer = getSpeechAnswer(speechAnswerId);
-		validateSpeechAnswer(speechAnswer, currentQuestion);
 		validateSpeechAnswerNotUsed(speechAnswerId);
-		validateNoConflictingSubmission(currentQuestion.getId());
+		validateNoConflictingSubmission(sessionQuestionId);
 
-		int attemptNo = getNextAttemptNo(currentQuestion.getId());
-		validateAttemptCount(attemptNo);
+		int attemptNo = getNextAttemptNo(sessionQuestionId);
 		AnswerSubmission submission = answerSubmissionRepository.save(
-			AnswerSubmission.reserve(currentQuestion, speechAnswer, attemptNo)
+			reserveSubmission(
+				session,
+				sessionQuestionId,
+				speechAnswer,
+				attemptNo
+			)
 		);
 		AnswerSubmissionPreparation preparation = claim(
 			submission,
@@ -114,23 +115,12 @@ public class AnswerSubmissionTransactionService {
 		);
 		AnswerSubmission submission = getSubmissionForUpdate(submissionId);
 		validateDeadline(deadline);
-		validateInProgress(session);
-		validateCurrentQuestion(
-			session.getCurrentQuestion(),
-			submission.getSessionQuestion().getId()
-		);
-
 		Answer answer = answerRepository.save(completeSubmission(
 			submission,
 			processingToken,
 			assessment
 		));
-		boolean canRetry = AnswerAttemptPolicy.canRetry(answer);
-		if (canRetry) {
-			session.recordWrongAnswerAttempt();
-		} else {
-			session.completeCurrentQuestion(answer.isCorrect());
-		}
+		applyAnswerResult(session, answer);
 		validateDeadline(deadline);
 		return AnswerSubmissionResult.from(answer);
 	}
@@ -177,11 +167,7 @@ public class AnswerSubmissionTransactionService {
 			throw new ApiException(ErrorCode.ANSWER_SUBMISSION_PROCESSING);
 		}
 
-		validateInProgress(session);
-		validateCurrentQuestion(
-			session.getCurrentQuestion(),
-			submission.getSessionQuestion().getId()
-		);
+		ensureCanProcess(session, submission);
 		boolean retryingFailed =
 			submission.getStatus() == AnswerSubmissionStatus.FAILED;
 		if (retryingFailed) {
@@ -247,15 +233,6 @@ public class AnswerSubmissionTransactionService {
 		}
 	}
 
-	private void validateAttemptCount(int attemptNo) {
-		if (!AnswerAttemptPolicy.isAllowed(attemptNo)) {
-			throw new ApiException(
-				ErrorCode.INVALID_REQUEST,
-				"답변 가능 횟수를 초과했습니다."
-			);
-		}
-	}
-
 	private LearningSession getSessionForUpdate(Long sessionId) {
 		return learningSessionRepository.findForUpdateById(sessionId)
 			.orElseThrow(() -> new ApiException(
@@ -296,36 +273,76 @@ public class AnswerSubmissionTransactionService {
 		}
 	}
 
-	private void validateInProgress(LearningSession session) {
-		if (!session.isInProgress()) {
-			throw new ApiException(
-				ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS
+	private AnswerSubmission reserveSubmission(
+		LearningSession session,
+		Long sessionQuestionId,
+		SpeechAnswer speechAnswer,
+		int attemptNo
+	) {
+		try {
+			return session.reserveAnswerSubmission(
+				sessionQuestionId,
+				speechAnswer,
+				attemptNo
 			);
+		} catch (AnswerSubmissionReservationException exception) {
+			throw toApiException(exception);
 		}
 	}
 
-	private void validateCurrentQuestion(
-		LearningSessionQuestion currentQuestion,
+	private void ensureCanReserve(
+		LearningSession session,
 		Long sessionQuestionId
 	) {
-		if (!Objects.equals(currentQuestion.getId(), sessionQuestionId)) {
-			throw new ApiException(ErrorCode.CURRENT_QUESTION_MISMATCH);
+		try {
+			session.ensureCanReserveAnswerSubmission(sessionQuestionId);
+		} catch (AnswerSubmissionReservationException exception) {
+			throw toApiException(exception);
 		}
 	}
 
-	private void validateSpeechAnswer(
-		SpeechAnswer speechAnswer,
-		LearningSessionQuestion currentQuestion
+	private void ensureCanProcess(
+		LearningSession session,
+		AnswerSubmission submission
 	) {
-		if (!speechAnswer.isCompleted()) {
-			throw new ApiException(
-				ErrorCode.INVALID_REQUEST,
-				"처리가 완료되지 않은 음성 답변입니다."
+		try {
+			session.ensureCanProcess(submission);
+		} catch (AnswerSubmissionReservationException exception) {
+			throw toApiException(exception);
+		}
+	}
+
+	private void applyAnswerResult(LearningSession session, Answer answer) {
+		try {
+			session.applyAnswerResult(answer);
+		} catch (AnswerSubmissionReservationException exception) {
+			throw toApiException(exception);
+		}
+	}
+
+	private ApiException toApiException(
+		AnswerSubmissionReservationException exception
+	) {
+		return switch (exception.getReason()) {
+			case SESSION_NOT_IN_PROGRESS -> new ApiException(
+				ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS,
+				exception
 			);
-		}
-		if (!speechAnswer.isUsableFor(currentQuestion)) {
-			throw new ApiException(ErrorCode.CURRENT_QUESTION_MISMATCH);
-		}
+			case CURRENT_QUESTION_MISMATCH -> new ApiException(
+				ErrorCode.CURRENT_QUESTION_MISMATCH,
+				exception
+			);
+			case SPEECH_ANSWER_NOT_COMPLETED -> new ApiException(
+				ErrorCode.INVALID_REQUEST,
+				"처리가 완료되지 않은 음성 답변입니다.",
+				exception
+			);
+			case ATTEMPT_NOT_ALLOWED -> new ApiException(
+				ErrorCode.INVALID_REQUEST,
+				"답변 가능 횟수를 초과했습니다.",
+				exception
+			);
+		};
 	}
 
 	private Answer completeSubmission(

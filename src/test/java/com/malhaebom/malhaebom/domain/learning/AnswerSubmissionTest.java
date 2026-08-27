@@ -48,7 +48,7 @@ class AnswerSubmissionTest {
 		);
 
 		assertThrows(
-			IllegalArgumentException.class,
+			AnswerSubmissionReservationException.class,
 			() -> AnswerSubmission.reserve(sessionQuestion, processing, 1)
 		);
 	}
@@ -59,7 +59,7 @@ class AnswerSubmissionTest {
 		LearningSessionQuestion otherQuestion = createSessionQuestion();
 
 		assertThrows(
-			IllegalArgumentException.class,
+			AnswerSubmissionReservationException.class,
 			() -> AnswerSubmission.reserve(
 				currentQuestion,
 				completedSpeechAnswer(otherQuestion),
@@ -89,13 +89,53 @@ class AnswerSubmissionTest {
 		LearningSessionQuestion sessionQuestion = createSessionQuestion();
 
 		assertThrows(
-			IllegalArgumentException.class,
+			AnswerSubmissionReservationException.class,
 			() -> AnswerSubmission.reserve(
 				sessionQuestion,
 				completedSpeechAnswer(sessionQuestion),
 				0
 			)
 		);
+	}
+
+	@Test
+	void 최대_답변_시도_횟수를_초과하면_예약할_수_없다() {
+		LearningSessionQuestion sessionQuestion = createSessionQuestion();
+
+		AnswerSubmissionReservationException exception = assertThrows(
+			AnswerSubmissionReservationException.class,
+			() -> AnswerSubmission.reserve(
+				sessionQuestion,
+				completedSpeechAnswer(sessionQuestion),
+				3
+			)
+		);
+
+		assertEquals(
+			AnswerSubmissionReservationException.Reason.ATTEMPT_NOT_ALLOWED,
+			exception.getReason()
+		);
+	}
+
+	@Test
+	void 오답의_첫_번째_시도는_현재_문제의_재시도로_반영한다() {
+		LearningSessionQuestion sessionQuestion = createSessionQuestion();
+		AnswerSubmission submission = AnswerSubmission.reserve(
+			sessionQuestion,
+			completedSpeechAnswer(sessionQuestion),
+			1
+		);
+		submission.claim(PROCESSING_TOKEN, CLAIMED_AT, LEASE_EXPIRES_AT);
+		Answer answer = submission.complete(
+			PROCESSING_TOKEN,
+			AnswerEvaluation.from(AnswerResult.INCORRECT),
+			"다시 시도해 보세요."
+		);
+
+		sessionQuestion.getLearningSession().applyAnswerResult(answer);
+
+		assertFalse(sessionQuestion.isCompleted());
+		assertEquals(1, sessionQuestion.getWrongAnswerCount());
 	}
 
 	@Test
