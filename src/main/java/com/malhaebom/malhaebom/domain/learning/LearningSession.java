@@ -1,5 +1,6 @@
 package com.malhaebom.malhaebom.domain.learning;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -129,6 +130,21 @@ public class LearningSession extends BaseEntity {
 
 	public boolean isInProgress() {
 		return status == LearningSessionStatus.IN_PROGRESS;
+	}
+
+	public Duration getStudyDuration() {
+		if (!isCompleted() || completedAt == null) {
+			throw new IllegalStateException(
+				"완료된 학습 세션만 학습 시간을 계산할 수 있습니다."
+			);
+		}
+		if (completedAt.isBefore(startedAt)) {
+			throw new IllegalStateException(
+				"학습 완료 시각은 시작 시각보다 빠를 수 없습니다."
+			);
+		}
+
+		return Duration.between(startedAt, completedAt);
 	}
 
 	public void complete() {

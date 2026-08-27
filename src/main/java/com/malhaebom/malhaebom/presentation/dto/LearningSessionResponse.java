@@ -1,7 +1,5 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
@@ -14,58 +12,17 @@ public record LearningSessionResponse(
 	int currentQuestionIndex,
 	int questionCount,
 	int correctCount,
-	int correctRate,
-	long studySeconds,
-	OffsetDateTime startedAt,
-	OffsetDateTime completedAt
+	OffsetDateTime startedAt
 ) {
 
 	public static LearningSessionResponse from(LearningSession session) {
-		int questionCount = session.getQuestionCount();
-		int correctCount = session.getCorrectCount();
-
 		return new LearningSessionResponse(
 			session.getId(),
 			session.getStatus(),
 			session.getCurrentQuestionIndex(),
-			questionCount,
-			correctCount,
-			calculateCorrectRate(correctCount, questionCount),
-			calculateStudySeconds(
-				session.getStartedAt(),
-				session.getCompletedAt()
-			),
-			toUtcOffset(session.getStartedAt()),
-			toUtcOffset(session.getCompletedAt())
+			session.getQuestionCount(),
+			session.getCorrectCount(),
+			session.getStartedAt().atOffset(ZoneOffset.UTC)
 		);
-	}
-
-	private static int calculateCorrectRate(
-		int correctCount,
-		int questionCount
-	) {
-		if (questionCount == 0) {
-			return 0;
-		}
-
-		return (int)Math.round(correctCount * 100.0 / questionCount);
-	}
-
-	private static long calculateStudySeconds(
-		LocalDateTime startedAt,
-		LocalDateTime completedAt
-	) {
-		LocalDateTime endAt = completedAt == null
-			? LocalDateTime.now(ZoneOffset.UTC)
-			: completedAt;
-
-		return Math.max(
-			0L,
-			Duration.between(startedAt, endAt).getSeconds()
-		);
-	}
-
-	private static OffsetDateTime toUtcOffset(LocalDateTime dateTime) {
-		return dateTime == null ? null : dateTime.atOffset(ZoneOffset.UTC);
 	}
 }
