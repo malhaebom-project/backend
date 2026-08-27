@@ -34,6 +34,7 @@ import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimite
 import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter.Permit;
 import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionRateLimiter;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerRequest;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
@@ -104,60 +105,44 @@ public class SpeechAnswerService implements SmartLifecycle {
 	}
 
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
-	public SpeechAnswerTask uploadAsync(
-		Long userId,
-		Long sessionId,
-		Long sessionQuestionId,
-		String requestKey,
-		SpeechAudio audio
-	) {
-		Objects.requireNonNull(audio, "음성 파일은 null일 수 없습니다.");
+	public SpeechAnswerTask uploadAsync(SpeechAnswerRequest request) {
+		Objects.requireNonNull(request, "음성 답변 요청은 null일 수 없습니다.");
 		Lock lifecycleReadLock = lifecycleLock.readLock();
 		lifecycleReadLock.lock();
 		try {
 			validateAcceptingRequests();
 			return uploadWhileRunning(
-				userId,
-				sessionId,
-				sessionQuestionId,
-				requestKey,
-				audio
+				request
 			);
 		} finally {
 			lifecycleReadLock.unlock();
 		}
 	}
 
-	private SpeechAnswerTask uploadWhileRunning(
-		Long userId,
-		Long sessionId,
-		Long sessionQuestionId,
-		String requestKey,
-		SpeechAudio audio
-	) {
+	private SpeechAnswerTask uploadWhileRunning(SpeechAnswerRequest request) {
 		long startedAt = System.nanoTime();
-		ReentrantLock requestLock = requestLock(requestKey);
+		ReentrantLock requestLock = requestLock(request.requestKey());
 		requestLock.lock();
 		try {
 			SpeechAnswerStartResult startResult = stateService.start(
-				userId,
-				sessionId,
-				sessionQuestionId,
-				requestKey
+				request.userId(),
+				request.sessionId(),
+				request.sessionQuestionId(),
+				request.requestKey()
 			);
 			if (startResult.isCompleted()) {
 				return completed(startResult.speechAnswer(), startedAt);
 			}
 			if (startResult.isProcessing()) {
-				return join(startResult, requestKey);
+				return join(startResult, request.requestKey());
 			}
 
 			SpeechAnswerTask sharedTask = startClaimed(
 				startResult,
-				audio,
+				request.audio(),
 				startedAt
 			);
-			return register(requestKey, startResult, sharedTask);
+			return register(request.requestKey(), startResult, sharedTask);
 		} finally {
 			requestLock.unlock();
 		}
@@ -516,7 +501,7 @@ public class SpeechAnswerService implements SmartLifecycle {
 	}
 
 	private ReentrantLock requestLock(String requestKey) {
-		int hash = requestKey == null ? 0 : requestKey.hashCode();
+		int hash = requestKey.hashCode();
 		return requestLocks[(hash & Integer.MAX_VALUE) % requestLocks.length];
 	}
 

@@ -48,6 +48,7 @@ import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerRequest;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
@@ -112,11 +113,14 @@ class SpeechAnswerTransactionBoundaryJpaTest {
 		);
 		Long sessionQuestionId = session.getCurrentQuestion().getId();
 
-		SpeechAnswerTask task = speechAnswerService.uploadAsync(LearningJpaTestFixture.USER_ID,
-			session.getId(),
-			sessionQuestionId,
-			REQUEST_KEY,
-			AUDIO
+		SpeechAnswerTask task = speechAnswerService.uploadAsync(
+			new SpeechAnswerRequest(
+				LearningJpaTestFixture.USER_ID,
+				session.getId(),
+				sessionQuestionId,
+				REQUEST_KEY,
+				AUDIO
+			)
 		);
 
 		assertFalse(task.result().toCompletableFuture().isDone());
