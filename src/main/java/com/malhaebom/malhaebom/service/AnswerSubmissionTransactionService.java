@@ -16,6 +16,7 @@ import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionProcessingExcepti
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionReservationException;
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionStatus;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
+import com.malhaebom.malhaebom.domain.learning.LearningSessionAnswerSubmissionException;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
@@ -287,6 +288,8 @@ public class AnswerSubmissionTransactionService {
 			);
 		} catch (AnswerSubmissionReservationException exception) {
 			throw toApiException(exception);
+		} catch (LearningSessionAnswerSubmissionException exception) {
+			throw toApiException(exception);
 		}
 	}
 
@@ -296,7 +299,7 @@ public class AnswerSubmissionTransactionService {
 	) {
 		try {
 			session.ensureCanReserveAnswerSubmission(sessionQuestionId);
-		} catch (AnswerSubmissionReservationException exception) {
+		} catch (LearningSessionAnswerSubmissionException exception) {
 			throw toApiException(exception);
 		}
 	}
@@ -307,7 +310,7 @@ public class AnswerSubmissionTransactionService {
 	) {
 		try {
 			session.ensureCanProcess(submission);
-		} catch (AnswerSubmissionReservationException exception) {
+		} catch (LearningSessionAnswerSubmissionException exception) {
 			throw toApiException(exception);
 		}
 	}
@@ -315,7 +318,7 @@ public class AnswerSubmissionTransactionService {
 	private void applyAnswerResult(LearningSession session, Answer answer) {
 		try {
 			session.applyAnswerResult(answer);
-		} catch (AnswerSubmissionReservationException exception) {
+		} catch (LearningSessionAnswerSubmissionException exception) {
 			throw toApiException(exception);
 		}
 	}
@@ -324,11 +327,7 @@ public class AnswerSubmissionTransactionService {
 		AnswerSubmissionReservationException exception
 	) {
 		return switch (exception.getReason()) {
-			case SESSION_NOT_IN_PROGRESS -> new ApiException(
-				ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS,
-				exception
-			);
-			case CURRENT_QUESTION_MISMATCH -> new ApiException(
+			case SPEECH_ANSWER_QUESTION_MISMATCH -> new ApiException(
 				ErrorCode.CURRENT_QUESTION_MISMATCH,
 				exception
 			);
@@ -340,6 +339,21 @@ public class AnswerSubmissionTransactionService {
 			case ATTEMPT_NOT_ALLOWED -> new ApiException(
 				ErrorCode.INVALID_REQUEST,
 				"답변 가능 횟수를 초과했습니다.",
+				exception
+			);
+		};
+	}
+
+	private ApiException toApiException(
+		LearningSessionAnswerSubmissionException exception
+	) {
+		return switch (exception.getReason()) {
+			case SESSION_NOT_IN_PROGRESS -> new ApiException(
+				ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS,
+				exception
+			);
+			case CURRENT_QUESTION_MISMATCH -> new ApiException(
+				ErrorCode.CURRENT_QUESTION_MISMATCH,
 				exception
 			);
 		};

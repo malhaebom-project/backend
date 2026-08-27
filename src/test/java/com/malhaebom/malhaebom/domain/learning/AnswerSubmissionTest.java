@@ -75,7 +75,7 @@ class AnswerSubmissionTest {
 		sessionQuestion.getLearningSession().completeCurrentQuestion(true);
 
 		assertThrows(
-			IllegalStateException.class,
+			LearningSessionAnswerSubmissionException.class,
 			() -> AnswerSubmission.reserve(
 				sessionQuestion,
 				speechAnswer,

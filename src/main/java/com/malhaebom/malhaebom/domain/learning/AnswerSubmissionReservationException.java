@@ -13,9 +13,8 @@ public class AnswerSubmissionReservationException extends IllegalStateException 
 	}
 
 	public enum Reason {
-		SESSION_NOT_IN_PROGRESS,
-		CURRENT_QUESTION_MISMATCH,
 		SPEECH_ANSWER_NOT_COMPLETED,
+		SPEECH_ANSWER_QUESTION_MISMATCH,
 		ATTEMPT_NOT_ALLOWED
 	}
 }

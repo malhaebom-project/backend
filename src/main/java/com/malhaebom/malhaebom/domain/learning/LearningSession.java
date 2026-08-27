@@ -206,15 +206,15 @@ public class LearningSession extends BaseEntity {
 
 	private void validateAnswerSubmissionTarget(Long sessionQuestionId) {
 		if (!isInProgress()) {
-			throw new AnswerSubmissionReservationException(
-				AnswerSubmissionReservationException.Reason.SESSION_NOT_IN_PROGRESS,
+			throw new LearningSessionAnswerSubmissionException(
+				LearningSessionAnswerSubmissionException.Reason.SESSION_NOT_IN_PROGRESS,
 				"진행 중인 학습 세션이 아닙니다."
 			);
 		}
 
 		if (!Objects.equals(questions.getCurrent().getId(), sessionQuestionId)) {
-			throw new AnswerSubmissionReservationException(
-				AnswerSubmissionReservationException.Reason.CURRENT_QUESTION_MISMATCH,
+			throw new LearningSessionAnswerSubmissionException(
+				LearningSessionAnswerSubmissionException.Reason.CURRENT_QUESTION_MISMATCH,
 				"현재 문제가 아닙니다."
 			);
 		}

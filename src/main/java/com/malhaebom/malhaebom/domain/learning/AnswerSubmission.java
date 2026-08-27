@@ -237,8 +237,8 @@ public class AnswerSubmission extends BaseEntity {
 
 		if (!sessionQuestion.getLearningSession().isInProgress()
 			|| sessionQuestion.isCompleted()) {
-			throw new AnswerSubmissionReservationException(
-				AnswerSubmissionReservationException.Reason.SESSION_NOT_IN_PROGRESS,
+			throw new LearningSessionAnswerSubmissionException(
+				LearningSessionAnswerSubmissionException.Reason.SESSION_NOT_IN_PROGRESS,
 				"진행 중인 문제만 제출을 예약할 수 있습니다."
 			);
 		}
@@ -247,8 +247,8 @@ public class AnswerSubmission extends BaseEntity {
 			.getLearningSession()
 			.getCurrentQuestion();
 		if (!isSameQuestion(sessionQuestion, currentQuestion)) {
-			throw new AnswerSubmissionReservationException(
-				AnswerSubmissionReservationException.Reason.CURRENT_QUESTION_MISMATCH,
+			throw new LearningSessionAnswerSubmissionException(
+				LearningSessionAnswerSubmissionException.Reason.CURRENT_QUESTION_MISMATCH,
 				"현재 문제만 제출을 예약할 수 있습니다."
 			);
 		}
@@ -266,7 +266,7 @@ public class AnswerSubmission extends BaseEntity {
 
 		if (!speechAnswer.isUsableFor(sessionQuestion)) {
 			throw new AnswerSubmissionReservationException(
-				AnswerSubmissionReservationException.Reason.CURRENT_QUESTION_MISMATCH,
+				AnswerSubmissionReservationException.Reason.SPEECH_ANSWER_QUESTION_MISMATCH,
 				"현재 문제에 사용할 수 있는 음성 답변이 아닙니다."
 			);
 		}
