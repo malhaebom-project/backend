@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.malhaebom.malhaebom.domain.learning.Answer;
 import com.malhaebom.malhaebom.domain.learning.AnswerAttemptPolicy;
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmission;
+import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionProcessingException;
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionStatus;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
@@ -112,7 +113,6 @@ public class AnswerSubmissionTransactionService {
 			found.getSessionQuestion().getLearningSession().getId()
 		);
 		AnswerSubmission submission = getSubmissionForUpdate(submissionId);
-		validateProcessingToken(submission, processingToken);
 		validateDeadline(deadline);
 		validateInProgress(session);
 		validateCurrentQuestion(
@@ -120,10 +120,10 @@ public class AnswerSubmissionTransactionService {
 			submission.getSessionQuestion().getId()
 		);
 
-		Answer answer = answerRepository.save(submission.complete(
+		Answer answer = answerRepository.save(completeSubmission(
+			submission,
 			processingToken,
-			assessment.toEvaluation(),
-			assessment.feedbackText()
+			assessment
 		));
 		boolean canRetry = AnswerAttemptPolicy.canRetry(answer);
 		if (canRetry) {
@@ -328,14 +328,22 @@ public class AnswerSubmissionTransactionService {
 		}
 	}
 
-	private void validateProcessingToken(
+	private Answer completeSubmission(
 		AnswerSubmission submission,
-		String processingToken
+		String processingToken,
+		AnswerAssessment assessment
 	) {
-		if (!submission.isProcessingWithToken(processingToken)) {
+		try {
+			return submission.complete(
+				processingToken,
+				assessment.toEvaluation(),
+				assessment.feedbackText()
+			);
+		} catch (AnswerSubmissionProcessingException exception) {
 			throw new ApiException(
 				ErrorCode.ANSWER_SUBMISSION_PROCESSING,
-				"답변 제출 처리 권한이 만료되었습니다."
+				"답변 제출 처리 권한이 만료되었습니다.",
+				exception
 			);
 		}
 	}

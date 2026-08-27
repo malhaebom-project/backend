@@ -214,11 +214,15 @@ public class AnswerSubmission extends BaseEntity {
 		);
 
 		if (status != AnswerSubmissionStatus.PROCESSING) {
-			throw new IllegalStateException("처리 중인 답변 제출 예약이 아닙니다.");
+			throw new AnswerSubmissionProcessingException(
+				"처리 중인 답변 제출 예약이 아닙니다."
+			);
 		}
 
 		if (!Objects.equals(this.processingToken, processingToken)) {
-			throw new IllegalStateException("답변 제출 예약의 처리 토큰이 일치하지 않습니다.");
+			throw new AnswerSubmissionProcessingException(
+				"답변 제출 예약의 처리 토큰이 일치하지 않습니다."
+			);
 		}
 	}
 

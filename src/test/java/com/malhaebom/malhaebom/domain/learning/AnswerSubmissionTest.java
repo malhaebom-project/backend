@@ -181,7 +181,7 @@ class AnswerSubmissionTest {
 		);
 
 		assertThrows(
-			IllegalStateException.class,
+			AnswerSubmissionProcessingException.class,
 			() -> submission.complete(
 				PROCESSING_TOKEN,
 				AnswerEvaluation.from(AnswerResult.CORRECT),
