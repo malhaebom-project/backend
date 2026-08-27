@@ -54,6 +54,7 @@ import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
+import com.malhaebom.malhaebom.service.exception.AnswerAssessmentOverloadedException;
 import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 import com.malhaebom.malhaebom.service.policy.AnswerSubmissionPolicyProperties;
 
@@ -352,7 +353,7 @@ class LearningAnswerServiceJpaTest {
 		LearningSessionQuestion question = session.getCurrentQuestion();
 		SpeechAnswer speechAnswer = saveCompletedSpeechAnswer(session);
 		assessmentGenerator.willThrow(
-			new ApiException(ErrorCode.ANSWER_ASSESSMENT_OVERLOADED)
+			new AnswerAssessmentOverloadedException()
 		);
 
 		assertApiException(

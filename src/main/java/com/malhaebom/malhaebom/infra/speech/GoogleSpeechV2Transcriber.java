@@ -74,13 +74,6 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 			return SpeechTranscriptionTask.failed(
 				mapGoogleException(exception)
 			);
-		} catch (RuntimeException exception) {
-			return SpeechTranscriptionTask.failed(
-				new ApiException(
-					ErrorCode.STT_PROCESSING_FAILED,
-					exception
-				)
-			);
 		}
 
 		CompletableFuture<SpeechTranscriptionResult> result =
@@ -123,9 +116,6 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 	private RuntimeException mapFailure(Throwable exception) {
 		if (exception instanceof com.google.api.gax.rpc.ApiException cause) {
 			return mapGoogleException(cause);
-		}
-		if (exception instanceof RuntimeException cause) {
-			return new ApiException(ErrorCode.STT_PROCESSING_FAILED, cause);
 		}
 		return new ApiException(ErrorCode.STT_PROCESSING_FAILED, exception);
 	}

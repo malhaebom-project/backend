@@ -24,12 +24,11 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import org.junit.jupiter.api.Test;
 
-import com.malhaebom.malhaebom.global.exception.ApiException;
-import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerAssessmentMetricsRecorder;
 import com.malhaebom.malhaebom.infra.observability.MicrometerProviderRateLimitMetricsRecorder;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
+import com.malhaebom.malhaebom.service.exception.AnswerAssessmentOverloadedException;
 
 class AnswerAssessmentRateLimitQueueTest {
 
@@ -274,10 +273,10 @@ class AnswerAssessmentRateLimitQueueTest {
 	}
 
 	private void assertOverloaded(AnswerAssessmentTask task) {
-		ApiException exception = assertInstanceOf(
-			ApiException.class, completionFailure(task));
-		assertEquals(ErrorCode.ANSWER_ASSESSMENT_OVERLOADED,
-			exception.getErrorCode());
+		assertInstanceOf(
+			AnswerAssessmentOverloadedException.class,
+			completionFailure(task)
+		);
 	}
 
 	private Throwable completionFailure(AnswerAssessmentTask task) {

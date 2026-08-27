@@ -2,6 +2,7 @@ package com.malhaebom.malhaebom.integration.learning;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
@@ -200,15 +201,15 @@ class SpeechAnswerConcurrencyJpaTest {
 			))
 			.toList();
 
-		assertTrue(transcriber.fail(
-			0,
-			new RuntimeException("provider secret response")
-		));
-		ApiException failure = assertThrows(
-			ApiException.class,
+		RuntimeException providerFailure = new RuntimeException(
+			"provider secret response"
+		);
+		assertTrue(transcriber.fail(0, providerFailure));
+		RuntimeException failure = assertThrows(
+			RuntimeException.class,
 			() -> await(active.getFirst())
 		);
-		assertEquals(ErrorCode.STT_PROCESSING_FAILED, failure.getErrorCode());
+		assertSame(providerFailure, failure);
 
 		SpeechAnswerTask accepted = upload(
 			session,

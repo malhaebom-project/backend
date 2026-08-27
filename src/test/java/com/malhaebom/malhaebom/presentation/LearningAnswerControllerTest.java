@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -140,9 +141,9 @@ class LearningAnswerControllerTest {
 			.andExpect(request().asyncStarted())
 			.andReturn();
 
-		submission.completeExceptionally(
+		submission.completeExceptionally(new CompletionException(
 			new ApiException(ErrorCode.ANSWER_ASSESSMENT_OVERLOADED)
-		);
+		));
 
 		mockMvc.perform(asyncDispatch(pending))
 			.andExpect(status().isServiceUnavailable())

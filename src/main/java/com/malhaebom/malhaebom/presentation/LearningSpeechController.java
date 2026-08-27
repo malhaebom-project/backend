@@ -2,7 +2,6 @@ package com.malhaebom.malhaebom.presentation;
 
 import java.io.IOException;
 import java.util.Locale;
-import java.util.concurrent.CompletionException;
 
 import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
@@ -67,7 +66,7 @@ public class LearningSpeechController {
 
 		task.result().whenComplete((result, exception) -> {
 			if (exception != null) {
-				response.setErrorResult(unwrapCompletionException(exception));
+				response.setErrorResult(exception);
 				return;
 			}
 			response.setResult(ApiResponse.success(
@@ -83,15 +82,6 @@ public class LearningSpeechController {
 		});
 		response.onError(ignored -> task.cancel());
 		return response;
-	}
-
-	private Throwable unwrapCompletionException(Throwable exception) {
-		Throwable cause = exception;
-		while (cause instanceof CompletionException
-			&& cause.getCause() != null) {
-			cause = cause.getCause();
-		}
-		return cause;
 	}
 
 	private SpeechAudio toSpeechAudio(MultipartFile audio) {
