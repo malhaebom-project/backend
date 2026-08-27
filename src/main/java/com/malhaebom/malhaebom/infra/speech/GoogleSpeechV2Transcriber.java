@@ -117,9 +117,6 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 		if (exception instanceof com.google.api.gax.rpc.ApiException cause) {
 			return mapGoogleException(cause);
 		}
-		if (exception instanceof RuntimeException cause) {
-			return new ApiException(ErrorCode.STT_PROCESSING_FAILED, cause);
-		}
 		return new ApiException(ErrorCode.STT_PROCESSING_FAILED, exception);
 	}
 
