@@ -148,15 +148,22 @@ class AnswerSubmissionTest {
 	}
 
 	@Test
-	void 처리_토큰이_일치하면_예약을_완료한다() {
+	void 처리_토큰이_일치하면_답변을_생성하고_예약을_완료한다() {
 		AnswerSubmission submission = createSubmission();
 		submission.claim(PROCESSING_TOKEN, CLAIMED_AT, LEASE_EXPIRES_AT);
-		Answer answer = createAnswer(submission);
 
-		submission.complete(PROCESSING_TOKEN, answer);
+		Answer answer = submission.complete(
+			PROCESSING_TOKEN,
+			AnswerEvaluation.from(AnswerResult.CORRECT),
+			"현재진행형을 정확하게 사용했어요!"
+		);
 
 		assertEquals(AnswerSubmissionStatus.COMPLETED, submission.getStatus());
 		assertSame(answer, submission.getAnswer());
+		assertSame(submission.getSessionQuestion(), answer.getSessionQuestion());
+		assertSame(submission.getSpeechAnswer(), answer.getSpeechAnswer());
+		assertEquals(submission.getAttemptNo(), answer.getAttemptNo());
+		assertEquals(AnswerResult.CORRECT, answer.getResult());
 		assertNull(submission.getProcessingToken());
 		assertNull(submission.getLeaseExpiresAt());
 		assertNull(submission.getFailureMessage());
@@ -177,7 +184,8 @@ class AnswerSubmissionTest {
 			IllegalStateException.class,
 			() -> submission.complete(
 				PROCESSING_TOKEN,
-				createAnswer(submission)
+				AnswerEvaluation.from(AnswerResult.CORRECT),
+				"현재진행형을 정확하게 사용했어요!"
 			)
 		);
 	}
@@ -237,16 +245,6 @@ class AnswerSubmissionTest {
 			sessionQuestion,
 			completedSpeechAnswer(sessionQuestion),
 			1
-		);
-	}
-
-	private Answer createAnswer(AnswerSubmission submission) {
-		return Answer.create(
-			submission.getSessionQuestion(),
-			submission.getSpeechAnswer(),
-			submission.getAttemptNo(),
-			AnswerEvaluation.from(AnswerResult.CORRECT),
-			"현재진행형을 정확하게 사용했어요!"
 		);
 	}
 

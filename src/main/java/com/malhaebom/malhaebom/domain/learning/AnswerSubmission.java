@@ -111,15 +111,24 @@ public class AnswerSubmission extends BaseEntity {
 		failureMessage = null;
 	}
 
-	public void complete(String processingToken, Answer answer) {
+	public Answer complete(
+		String processingToken,
+		AnswerEvaluation evaluation,
+		String feedbackText
+	) {
 		validateProcessingToken(processingToken);
-		validateCompletedAnswer(answer);
+		Answer completedAnswer = Answer.create(
+			this,
+			evaluation,
+			feedbackText
+		);
 
 		status = AnswerSubmissionStatus.COMPLETED;
-		this.answer = answer;
+		answer = completedAnswer;
 		this.processingToken = null;
 		leaseExpiresAt = null;
 		failureMessage = null;
+		return completedAnswer;
 	}
 
 	public void fail(String processingToken, String failureMessage) {
@@ -213,20 +222,6 @@ public class AnswerSubmission extends BaseEntity {
 		}
 	}
 
-	private void validateCompletedAnswer(Answer answer) {
-		if (answer == null) {
-			throw new IllegalArgumentException("완료 답변은 null일 수 없습니다.");
-		}
-
-		if (!isSameQuestion(answer.getSessionQuestion(), sessionQuestion)
-			|| !isSameSpeechAnswer(answer.getSpeechAnswer(), speechAnswer)
-			|| answer.getAttemptNo() != attemptNo) {
-			throw new IllegalArgumentException(
-				"예약된 제출과 일치하는 답변만 완료 처리할 수 있습니다."
-			);
-		}
-	}
-
 	private static void validateReservation(
 		LearningSessionQuestion sessionQuestion,
 		SpeechAnswer speechAnswer,
@@ -273,20 +268,6 @@ public class AnswerSubmission extends BaseEntity {
 
 		return first.getId() != null
 			&& second.getId() != null
-			&& Objects.equals(first.getId(), second.getId());
-	}
-
-	private static boolean isSameSpeechAnswer(
-		SpeechAnswer first,
-		SpeechAnswer second
-	) {
-		if (first == second) {
-			return true;
-		}
-
-		return first != null
-			&& second != null
-			&& first.getId() != null
 			&& Objects.equals(first.getId(), second.getId());
 	}
 

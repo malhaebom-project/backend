@@ -120,8 +120,8 @@ public class AnswerSubmissionTransactionService {
 			submission.getSessionQuestion().getId()
 		);
 
-		Answer answer = answerRepository.save(Answer.create(
-			submission,
+		Answer answer = answerRepository.save(submission.complete(
+			processingToken,
 			assessment.toEvaluation(),
 			assessment.feedbackText()
 		));
@@ -132,8 +132,6 @@ public class AnswerSubmissionTransactionService {
 			session.completeCurrentQuestion(answer.isCorrect());
 		}
 		validateDeadline(deadline);
-		submission.complete(processingToken, answer);
-
 		return AnswerSubmissionResult.from(answer);
 	}
 
