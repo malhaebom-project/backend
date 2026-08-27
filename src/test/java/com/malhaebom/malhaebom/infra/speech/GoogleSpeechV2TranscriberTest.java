@@ -2,6 +2,7 @@ package com.malhaebom.malhaebom.infra.speech;
 
 import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -258,6 +259,19 @@ class GoogleSpeechV2TranscriberTest {
 			ErrorCode.STT_PROCESSING_FAILED,
 			() -> transcribe(AUDIO, List.of())
 		);
+	}
+
+	@Test
+	void 예상하지_않은_동기_오류는_STT_처리_실패로_감추지_않는다() {
+		IllegalStateException failure = new IllegalStateException(
+			"invalid client state"
+		);
+		when(recognizeCallable.futureCall(any(RecognizeRequest.class)))
+			.thenThrow(failure);
+
+		assertThatThrownBy(
+			() -> transcriber.transcribeAsync(AUDIO, List.of())
+		).isSameAs(failure);
 	}
 
 	private SpeechTranscriptionResult transcribe(

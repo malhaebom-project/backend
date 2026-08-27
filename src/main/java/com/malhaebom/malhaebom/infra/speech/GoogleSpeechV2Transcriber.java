@@ -74,13 +74,6 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 			return SpeechTranscriptionTask.failed(
 				mapGoogleException(exception)
 			);
-		} catch (RuntimeException exception) {
-			return SpeechTranscriptionTask.failed(
-				new ApiException(
-					ErrorCode.STT_PROCESSING_FAILED,
-					exception
-				)
-			);
 		}
 
 		CompletableFuture<SpeechTranscriptionResult> result =
