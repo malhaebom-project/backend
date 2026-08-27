@@ -221,6 +221,7 @@ foreach ($stage in $Stages) {
         $previousRemoteWriteUrl = $env:K6_PROMETHEUS_RW_SERVER_URL
         $previousTrendStats = $env:K6_PROMETHEUS_RW_TREND_STATS
         $previousStaleMarkers = $env:K6_PROMETHEUS_RW_STALE_MARKERS
+        $previousPushInterval = $env:K6_PROMETHEUS_RW_PUSH_INTERVAL
         try {
             if ($k6RemoteWriteUrl) {
                 $env:K6_PROMETHEUS_RW_SERVER_URL =
@@ -228,6 +229,7 @@ foreach ($stage in $Stages) {
                 $env:K6_PROMETHEUS_RW_TREND_STATS =
                     "p(95),p(99),avg,max"
                 $env:K6_PROMETHEUS_RW_STALE_MARKERS = "true"
+                $env:K6_PROMETHEUS_RW_PUSH_INTERVAL = "1s"
             }
             if ($RunK6InDocker) {
                 $dockerArguments = @(
@@ -244,7 +246,8 @@ foreach ($stage in $Stages) {
                     $dockerArguments += @(
                         "--env", "K6_PROMETHEUS_RW_SERVER_URL=$k6RemoteWriteUrl",
                         "--env", "K6_PROMETHEUS_RW_TREND_STATS=p(95),p(99),avg,max",
-                        "--env", "K6_PROMETHEUS_RW_STALE_MARKERS=true"
+                        "--env", "K6_PROMETHEUS_RW_STALE_MARKERS=true",
+                        "--env", "K6_PROMETHEUS_RW_PUSH_INTERVAL=1s"
                     )
                 }
                 $dockerArguments += "k6"
@@ -258,6 +261,7 @@ foreach ($stage in $Stages) {
             $env:K6_PROMETHEUS_RW_SERVER_URL = $previousRemoteWriteUrl
             $env:K6_PROMETHEUS_RW_TREND_STATS = $previousTrendStats
             $env:K6_PROMETHEUS_RW_STALE_MARKERS = $previousStaleMarkers
+            $env:K6_PROMETHEUS_RW_PUSH_INTERVAL = $previousPushInterval
         }
 
         if (Test-Path -LiteralPath $summaryPath) {
@@ -377,9 +381,11 @@ foreach ($stage in $Stages) {
 
         $previousRemoteWriteUrl = $env:K6_PROMETHEUS_RW_SERVER_URL
         $previousStaleMarkers = $env:K6_PROMETHEUS_RW_STALE_MARKERS
+        $previousPushInterval = $env:K6_PROMETHEUS_RW_PUSH_INTERVAL
         try {
             $env:K6_PROMETHEUS_RW_SERVER_URL = $k6RemoteWriteUrl
             $env:K6_PROMETHEUS_RW_STALE_MARKERS = "true"
+            $env:K6_PROMETHEUS_RW_PUSH_INTERVAL = "1s"
             if ($RunK6InDocker) {
                 $dockerArguments = @(
                     "compose",
@@ -391,6 +397,7 @@ foreach ($stage in $Stages) {
                     "--volume", "${stageDirectory}:/run-results",
                     "--env", "K6_PROMETHEUS_RW_SERVER_URL=$k6RemoteWriteUrl",
                     "--env", "K6_PROMETHEUS_RW_STALE_MARKERS=true",
+                    "--env", "K6_PROMETHEUS_RW_PUSH_INTERVAL=1s",
                     "k6"
                 )
                 $dockerArguments += $publisherArguments
@@ -404,6 +411,7 @@ foreach ($stage in $Stages) {
         } finally {
             $env:K6_PROMETHEUS_RW_SERVER_URL = $previousRemoteWriteUrl
             $env:K6_PROMETHEUS_RW_STALE_MARKERS = $previousStaleMarkers
+            $env:K6_PROMETHEUS_RW_PUSH_INTERVAL = $previousPushInterval
         }
     }
 

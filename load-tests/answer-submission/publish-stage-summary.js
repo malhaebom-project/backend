@@ -24,7 +24,8 @@ export const options = {
 
 export default function publish() {
   loadtestEvent.add(0, { event: 'recovery_complete' });
-  sleep(0.1);
+  // Flush the baseline and increment separately so Prometheus can detect it.
+  sleep(1.1);
   loadtestEvent.add(1, { event: 'recovery_complete' });
   Object.entries(document.summary).forEach(([metric, value]) => {
     if (Number.isFinite(Number(value))) {
@@ -36,5 +37,6 @@ export default function publish() {
       stageEventOffset.add(Number(value), { event });
     }
   });
-  sleep(1);
+  // Keep the process alive until the increment and summary gauges are flushed.
+  sleep(1.1);
 }

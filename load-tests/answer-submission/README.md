@@ -674,7 +674,11 @@ Remote Write한다. Grafana는
 새로 실행한 테스트는 stage 활성 구간과 baseline·부하 probe·answer burst·측정 종료
 이벤트를 k6 지표로 기록한다. 따라서 `Stage`를 선택하면 OpenAI 보호 및 Backend
 시계열도 해당 단계 구간만 표시되고, 이벤트는 모든 시계열 패널의 세로 annotation으로
-표시된다. `Stage comparison and critical events` 행은 단계별 요청 결과, Bucket4j와
+표시된다. 이벤트 Counter는 1초 Remote Write 주기로 0과 1을 각각 전송하고,
+annotation은 고정 3초 구간의 마지막 증가를 2초 간격으로 감지하므로 화면 폭이나
+조회 시간에 따른 `$__interval` 변화의 영향을 받지 않는다. 부하 probe 시작 시각은
+근접한 answer burst 선과 겹치지 않도록 annotation에서 제외하고 이벤트 요약표에만
+유지한다. `Stage comparison and critical events` 행은 단계별 요청 결과, Bucket4j와
 queue 보호 상태, CPU 피크 당시의 서버 상태, burst 기준 핵심 이벤트 시각을 표로
 보여준다.
 `Backend resources` 행에서는 Actuator scrape 요청을 제외한 HTTP 상태별 RPS와
