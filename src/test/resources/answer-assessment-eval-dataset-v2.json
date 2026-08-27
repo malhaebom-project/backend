@@ -1,0 +1,1206 @@
+{
+  "datasetVersion": "1.0.0",
+  "snapshotDate": "2026-08-26",
+  "source": {
+    "type": "SUPABASE",
+    "projectName": "Malhaebom",
+    "questionTable": "public.questions",
+    "acceptedAnswerTable": "public.question_accepted_answers",
+    "selectionSeed": "answer-assessment-eval-v2",
+    "selectionRule": "active questions ranked by md5(question_id || ':answer-assessment-eval-v2') within difficulty, questionType, and topic; rank 1 selected"
+  },
+  "reviewStatus": "HUMAN_APPROVED",
+  "containsSubmittedUserAnswers": false,
+  "questions": [
+    {
+      "questionId": 29,
+      "difficulty": "EASY",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "ANIMAL",
+      "questionText": "What name do you want to give this puppy?",
+      "questionTextKo": "이 강아지에게 어떤 이름을 지어 주고 싶나요?",
+      "gradingContext": "The picture shows a puppy with four example name labels: Coco, Max, Happy, and Lucky.",
+      "modelAnswer": "I want to name it Coco.",
+      "acceptedAnswers": [
+        "I want to name it Happy",
+        "I want to name it Lucky",
+        "I want to name it Max",
+        "Its name is Coco"
+      ],
+      "cases": [
+        {
+          "caseId": "q29-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I want to name it Happy",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "허용 답안에 포함된 자연스러운 이름 선택이다."
+        },
+        {
+          "caseId": "q29-partial-unstable-expression",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "Coco puppy name Coco",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "Coco라는 이름 의도는 전달되지만 문장 구조가 크게 불안정하다."
+        },
+        {
+          "caseId": "q29-incorrect-no-name",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "The puppy is sleeping.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "강아지와 관련된 문장이지만 요구한 이름을 답하지 않았다."
+        }
+      ]
+    },
+    {
+      "questionId": 89,
+      "difficulty": "EASY",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "DAILY_LIFE",
+      "questionText": "What do you like in your classroom?",
+      "questionTextKo": "교실에서 무엇을 좋아하나요?",
+      "gradingContext": "The picture shows classroom things a child might like, including books on a bookshelf, a desk, colorful pictures, and a teacher.",
+      "modelAnswer": "I like the books.",
+      "acceptedAnswers": [
+        "I like my desk",
+        "I like my teacher",
+        "I like the books",
+        "I like the pictures"
+      ],
+      "cases": [
+        {
+          "caseId": "q89-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I like my desk",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "교실에서 좋아하는 대상을 적절히 답했다."
+        },
+        {
+          "caseId": "q89-partial-unstable-order",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "I books like in classroom",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "책을 좋아한다는 의미는 전달되지만 어순과 표현이 불안정하다."
+        },
+        {
+          "caseId": "q89-incorrect-no-preference",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "The classroom has a door.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "교실에 관한 문장이지만 좋아하는 대상을 말하지 않았다."
+        }
+      ]
+    },
+    {
+      "questionId": 51,
+      "difficulty": "EASY",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "FOOD",
+      "questionText": "What fruit do you like?",
+      "questionTextKo": "어떤 과일을 좋아하나요?",
+      "gradingContext": "The picture shows four fruit choices: an apple, a banana, an orange, and a strawberry.",
+      "modelAnswer": "I like apples.",
+      "acceptedAnswers": [
+        "I like apples",
+        "I like bananas",
+        "I like oranges",
+        "I like strawberries"
+      ],
+      "cases": [
+        {
+          "caseId": "q51-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I like bananas",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "허용 가능한 과일 선호를 자연스럽게 답했다."
+        },
+        {
+          "caseId": "q51-partial-unstable-order",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "I apples like fruit",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "사과를 좋아한다는 의미는 전달되지만 문장 구조가 불안정하다."
+        },
+        {
+          "caseId": "q51-incorrect-no-preference",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "Fruit is healthy.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "과일에 관한 문장이지만 어떤 과일을 좋아하는지 답하지 않았다."
+        },
+        {
+          "caseId": "q51-incorrect-hard-surface-overlap",
+          "answerKind": "SYNTHETIC_HARD_INCORRECT",
+          "answerText": "Apples are red, and bananas are yellow.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "질문에 나온 과일을 자연스럽게 말하지만 어떤 과일을 좋아하는지는 답하지 않았다."
+        }
+      ]
+    },
+    {
+      "questionId": 11,
+      "difficulty": "EASY",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "ANIMAL",
+      "questionText": "What is the cat doing?",
+      "questionTextKo": "고양이는 무엇을 하고 있나요?",
+      "gradingContext": "The picture shows an orange cat lying curled up on a cushion with its eyes closed. The cat is sleeping.",
+      "modelAnswer": "The cat is sleeping.",
+      "acceptedAnswers": [
+        "It is sleeping",
+        "Sleeping",
+        "The cat sleeps"
+      ],
+      "cases": [
+        {
+          "caseId": "q11-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "Sleeping",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "EASY에서는 행동을 정확히 말한 한 단어 답변도 충분하다."
+        },
+        {
+          "caseId": "q11-partial-contradictory-action",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "The cat sleeping and running.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "동일 대상에 대해 sleeping과 running이라는 양립 불가능한 핵심 행동을 함께 진술했다."
+        },
+        {
+          "caseId": "q11-incorrect-wrong-action",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "The cat is eating.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "그림의 행동과 다른 행동을 답했다."
+        },
+        {
+          "caseId": "q11-incorrect-hard-opposite-state",
+          "answerKind": "SYNTHETIC_HARD_INCORRECT",
+          "answerText": "The cat is awake on the cushion.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "그림의 고양이와 쿠션을 언급하지만 sleeping과 반대되는 상태를 답했다."
+        }
+      ]
+    },
+    {
+      "questionId": 72,
+      "difficulty": "EASY",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "DAILY_LIFE",
+      "questionText": "What is the girl doing?",
+      "questionTextKo": "여자아이는 무엇을 하고 있나요?",
+      "gradingContext": "The picture shows a girl sitting in a chair and looking at an open book. She is reading a book.",
+      "modelAnswer": "She is reading a book.",
+      "acceptedAnswers": [
+        "Reading a book",
+        "She reads a book",
+        "The girl is reading a book"
+      ],
+      "cases": [
+        {
+          "caseId": "q72-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "Reading a book",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "EASY에서 행동을 정확히 전달하는 짧은 구는 정답이다."
+        },
+        {
+          "caseId": "q72-partial-contradictory-action",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "The girl reading and sleeping.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "동일 대상에 대해 reading과 sleeping이라는 양립 불가능한 핵심 행동을 함께 진술했다."
+        },
+        {
+          "caseId": "q72-incorrect-wrong-action",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "She is drawing a picture.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "그림의 행동과 다른 행동을 답했다."
+        }
+      ]
+    },
+    {
+      "questionId": 46,
+      "difficulty": "EASY",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "FOOD",
+      "questionText": "What is in the sandwich?",
+      "questionTextKo": "샌드위치 안에는 무엇이 있나요?",
+      "gradingContext": "The picture shows a sandwich cut into two halves. A slice of yellow cheese is visible inside the sandwich.",
+      "modelAnswer": "There is cheese in the sandwich.",
+      "acceptedAnswers": [
+        "Cheese",
+        "Cheese is in the sandwich",
+        "It has cheese",
+        "The sandwich has cheese"
+      ],
+      "cases": [
+        {
+          "caseId": "q46-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "Cheese",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "질문이 요구한 샌드위치 속 재료를 정확히 답했다."
+        },
+        {
+          "caseId": "q46-partial-extra-false-filling",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "There is cheese and chocolate in the sandwich.",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "cheese는 맞지만 그림에 없는 chocolate을 추가했다."
+        },
+        {
+          "caseId": "q46-incorrect-wrong-filling",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "There is ice cream in the sandwich.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "그림에서 확인되는 치즈 대신 잘못된 재료를 답했다."
+        }
+      ]
+    },
+    {
+      "questionId": 9,
+      "difficulty": "EASY",
+      "questionType": "SHORT_ANSWER",
+      "topic": "ANIMAL",
+      "questionText": "What animal is this?",
+      "questionTextKo": "이 동물은 무엇일까요?",
+      "gradingContext": "The picture shows a yellow duck standing by itself.",
+      "modelAnswer": "It is a duck.",
+      "acceptedAnswers": [
+        "a duck",
+        "duck",
+        "duckling",
+        "It is a duckling",
+        "It's a duck"
+      ],
+      "cases": [
+        {
+          "caseId": "q9-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "duckling",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "허용 답안에 포함된 자연스러운 동물 명칭이다."
+        },
+        {
+          "caseId": "q9-partial-ambiguous-animal",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "It is a duck and a chicken.",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "duck은 맞지만 chicken을 함께 말해 답이 모호하다."
+        },
+        {
+          "caseId": "q9-incorrect-wrong-animal",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "It is a cat.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "그림의 동물과 다른 동물을 답했다."
+        }
+      ]
+    },
+    {
+      "questionId": 67,
+      "difficulty": "EASY",
+      "questionType": "SHORT_ANSWER",
+      "topic": "DAILY_LIFE",
+      "questionText": "What is this?",
+      "questionTextKo": "이것은 무엇일까요?",
+      "gradingContext": "The picture shows a colorful umbrella.",
+      "modelAnswer": "It is an umbrella.",
+      "acceptedAnswers": [
+        "an umbrella",
+        "It's an umbrella",
+        "umbrella"
+      ],
+      "cases": [
+        {
+          "caseId": "q67-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "umbrella",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "EASY에서 사물을 정확히 말한 한 단어 답변은 정답이다."
+        },
+        {
+          "caseId": "q67-partial-ambiguous-object",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "It is an umbrella and a hat.",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "umbrella는 맞지만 hat을 함께 말해 식별이 모호하다."
+        },
+        {
+          "caseId": "q67-incorrect-wrong-object",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "It is a book.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "그림의 사물과 다른 사물을 답했다."
+        },
+        {
+          "caseId": "q67-incorrect-hard-related-object",
+          "answerKind": "SYNTHETIC_HARD_INCORRECT",
+          "answerText": "It is a raincoat.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "비와 관련된 사물이지만 그림에 나온 umbrella와는 다른 물건이다."
+        }
+      ]
+    },
+    {
+      "questionId": 38,
+      "difficulty": "EASY",
+      "questionType": "SHORT_ANSWER",
+      "topic": "FOOD",
+      "questionText": "What food is this?",
+      "questionTextKo": "이 음식은 무엇일까요?",
+      "gradingContext": "The picture shows a round pizza.",
+      "modelAnswer": "It is pizza.",
+      "acceptedAnswers": [
+        "a pizza",
+        "It is a pizza",
+        "It's pizza",
+        "pizza"
+      ],
+      "cases": [
+        {
+          "caseId": "q38-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "a pizza",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "그림의 음식을 정확히 식별한 허용 답안이다."
+        },
+        {
+          "caseId": "q38-partial-ambiguous-food",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "It is pizza and soup.",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "pizza는 맞지만 soup을 함께 말해 식별이 모호하다."
+        },
+        {
+          "caseId": "q38-incorrect-wrong-food",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "It is an apple.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "그림의 음식과 다른 음식을 답했다."
+        }
+      ]
+    },
+    {
+      "questionId": 227,
+      "difficulty": "HARD",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "ANIMAL",
+      "questionText": "Which of these animals would be the hardest to keep as a pet, and why?",
+      "questionTextKo": "이 동물들 중 반려동물로 키우기 가장 어려운 동물은 무엇이고, 왜 그런가요?",
+      "gradingContext": "The picture shows several wild animals such as a whale, shark, crocodile, and panda. More than one answer can be reasonable if the learner gives a sensible reason.",
+      "modelAnswer": "I think the whale would be the hardest pet because it needs a huge ocean space.",
+      "acceptedAnswers": [
+        "A crocodile would be difficult because it is a large wild animal.",
+        "The shark would be hard to keep because it needs a very large tank."
+      ],
+      "cases": [
+        {
+          "caseId": "q227-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "The shark would be hard to keep because it needs a very large tank.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "동물 선택과 타당한 이유를 모두 제시했다."
+        },
+        {
+          "caseId": "q227-partial-missing-reason",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "The shark would be the hardest pet.",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "어려운 동물은 선택했지만 요구된 이유를 빠뜨렸다."
+        },
+        {
+          "caseId": "q227-incorrect-no-choice-or-reason",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "The panda is black and white.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "동물에 관한 사실만 말하고 가장 어려운 동물과 이유를 답하지 않았다."
+        }
+      ]
+    },
+    {
+      "questionId": 284,
+      "difficulty": "HARD",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "DAILY_LIFE",
+      "questionText": "What kind of moment would you like to photograph with this camera, and why?",
+      "questionTextKo": "이 카메라로 어떤 순간을 사진으로 남기고 싶고, 왜 그런가요?",
+      "gradingContext": "The picture shows a camera as a prompt for talking about photographs and memories. Any appropriate moment to photograph is acceptable if the learner gives a relevant reason.",
+      "modelAnswer": "I would photograph a family trip because I want to remember the day later.",
+      "acceptedAnswers": [
+        "I would photograph a beautiful place so I can look at it again.",
+        "I would take a picture of my friends because I want to remember our time together."
+      ],
+      "cases": [
+        {
+          "caseId": "q284-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I would photograph a beautiful place so I can look at it again.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "찍고 싶은 순간과 그 이유를 모두 적절히 답했다."
+        },
+        {
+          "caseId": "q284-partial-missing-reason",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "I would photograph a family trip.",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "찍고 싶은 순간은 말했지만 요구된 이유를 빠뜨렸다."
+        },
+        {
+          "caseId": "q284-incorrect-no-moment-or-reason",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "The camera takes pictures.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "카메라의 기능만 말하고 찍고 싶은 순간과 이유를 답하지 않았다."
+        },
+        {
+          "caseId": "q284-incorrect-hard-keyword-overlap",
+          "answerKind": "SYNTHETIC_HARD_INCORRECT",
+          "answerText": "A family trip is fun, and the camera is black.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "가족 여행과 카메라를 언급하지만 찍고 싶은 순간과 그 이유를 답하지 않았다."
+        }
+      ]
+    },
+    {
+      "questionId": 257,
+      "difficulty": "HARD",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "FOOD",
+      "questionText": "A friend is visiting. Which food would you serve, and how would you make it easy to share?",
+      "questionTextKo": "친구가 놀러 왔어요. 어떤 음식을 주고, 어떻게 나눠 먹기 쉽게 만들겠나요?",
+      "gradingContext": "The picture shows several shareable food choices such as a donut, grapes, popcorn, and a hot dog. Multiple answers are acceptable if the sharing plan makes sense.",
+      "modelAnswer": "I would serve a donut and cut it in half so we could share it.",
+      "acceptedAnswers": [
+        "I would make a hot dog for each person.",
+        "I would serve grapes and put them in two small bowls."
+      ],
+      "cases": [
+        {
+          "caseId": "q257-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I would serve grapes and put them in two small bowls.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "음식 선택과 나누는 방법을 모두 적절히 설명했다."
+        },
+        {
+          "caseId": "q257-partial-missing-sharing-plan",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "I would serve grapes.",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "음식은 선택했지만 나눠 먹기 쉽게 만드는 방법을 빠뜨렸다."
+        },
+        {
+          "caseId": "q257-incorrect-no-food-or-plan",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "My friend is visiting tomorrow.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "상황만 반복하고 음식 선택과 공유 방법을 답하지 않았다."
+        }
+      ]
+    },
+    {
+      "questionId": 213,
+      "difficulty": "HARD",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "ANIMAL",
+      "questionText": "How are the two kangaroos different in the picture?",
+      "questionTextKo": "그림 속 두 캥거루는 어떻게 다른가요?",
+      "gradingContext": "Two kangaroos are standing together. One is a large adult kangaroo, and the other is a much smaller young kangaroo.",
+      "modelAnswer": "One kangaroo is much larger, and the other is a small baby kangaroo.",
+      "acceptedAnswers": [
+        "One is large and the other is small.",
+        "The adult kangaroo is bigger than the baby."
+      ],
+      "cases": [
+        {
+          "caseId": "q213-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "The adult kangaroo is bigger than the baby.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "두 캥거루의 크기 차이를 비교 문장으로 정확히 설명했다."
+        },
+        {
+          "caseId": "q213-partial-one-sided-description",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "One kangaroo is large.",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "큰 캥거루만 설명하고 두 대상의 차이를 완전히 비교하지 않았다."
+        },
+        {
+          "caseId": "q213-incorrect-same-size",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "Both kangaroos are the same size.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "그림의 크기 차이와 반대로 답했다."
+        }
+      ]
+    },
+    {
+      "questionId": 279,
+      "difficulty": "HARD",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "DAILY_LIFE",
+      "questionText": "What is the washing machine doing, and what is waiting beside it?",
+      "questionTextKo": "세탁기는 무엇을 하고 있고, 옆에는 무엇이 기다리고 있나요?",
+      "gradingContext": "A front-loading washing machine is running with clothes visible inside. A laundry basket containing more clothes is sitting beside the machine.",
+      "modelAnswer": "The washing machine is washing clothes, and a basket of laundry is beside it.",
+      "acceptedAnswers": [
+        "Clothes are being washed while more laundry waits in a basket.",
+        "The machine is running, and a laundry basket is next to it."
+      ],
+      "cases": [
+        {
+          "caseId": "q279-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "Clothes are being washed while more laundry waits in a basket.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "세탁기의 동작과 옆의 세탁 바구니를 모두 설명했다."
+        },
+        {
+          "caseId": "q279-partial-missing-basket",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "The washing machine is washing clothes.",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "세탁기의 동작은 맞지만 옆에서 기다리는 바구니를 빠뜨렸다."
+        },
+        {
+          "caseId": "q279-incorrect-wrong-state-and-object",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "The washing machine is off, and there is a chair beside it.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "세탁기의 상태와 옆의 물체를 모두 잘못 답했다."
+        }
+      ]
+    },
+    {
+      "questionId": 243,
+      "difficulty": "HARD",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "FOOD",
+      "questionText": "What is happening to the chocolate, and what is causing it?",
+      "questionTextKo": "초콜릿에 무슨 일이 생기고 있고, 무엇 때문에 그런가요?",
+      "gradingContext": "A chocolate bar is lying on a plate outdoors in bright sunlight. Part of the chocolate is visibly melting and becoming soft.",
+      "modelAnswer": "The chocolate is melting because it is in the warm sun.",
+      "acceptedAnswers": [
+        "It is melting because the sun is hot.",
+        "The chocolate is getting soft in the sunlight."
+      ],
+      "cases": [
+        {
+          "caseId": "q243-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It is melting because the sun is hot.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "초콜릿의 변화와 원인을 모두 정확히 설명했다."
+        },
+        {
+          "caseId": "q243-partial-missing-cause",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "The chocolate is melting.",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "초콜릿의 변화는 맞지만 원인을 빠뜨렸다."
+        },
+        {
+          "caseId": "q243-incorrect-wrong-change-and-cause",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "The chocolate is freezing because of the snow.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "그림의 변화와 원인을 모두 반대로 답했다."
+        },
+        {
+          "caseId": "q243-incorrect-hard-plausible-form",
+          "answerKind": "SYNTHETIC_HARD_INCORRECT",
+          "answerText": "The chocolate is getting hard because it is in the sun.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "그림의 대상과 원인을 언급하지만 초콜릿의 실제 변화와 반대로 답했다."
+        }
+      ]
+    },
+    {
+      "questionId": 207,
+      "difficulty": "HARD",
+      "questionType": "SHORT_ANSWER",
+      "topic": "ANIMAL",
+      "questionText": "Which sea animal has a tall fin on its back and a pointed body?",
+      "questionTextKo": "등에 큰 지느러미가 있고 몸이 뾰족한 바다 동물은 무엇인가요?",
+      "gradingContext": "The picture shows a gray shark with a pointed nose, a tall dorsal fin, side fins, and a powerful tail. The animal is a shark.",
+      "modelAnswer": "The animal is a shark.",
+      "acceptedAnswers": [
+        "It is a shark.",
+        "It's a shark.",
+        "The picture shows a shark."
+      ],
+      "cases": [
+        {
+          "caseId": "q207-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "The picture shows a shark.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "HARD에 적합한 완전한 문장으로 동물을 정확히 식별했다."
+        },
+        {
+          "caseId": "q207-partial-ambiguous-animal",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "It is a shark and a dolphin.",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "shark는 맞지만 dolphin을 함께 말해 식별이 모호하다."
+        },
+        {
+          "caseId": "q207-incorrect-wrong-animal",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "It is a whale.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "문제의 특징에 맞지 않는 동물을 답했다."
+        },
+        {
+          "caseId": "q207-incorrect-hard-related-sea-animal",
+          "answerKind": "SYNTHETIC_HARD_INCORRECT",
+          "answerText": "The animal is a dolphin.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "바다 동물이라는 범주는 맞지만 문제의 특징과 그림은 shark를 가리킨다."
+        }
+      ]
+    },
+    {
+      "questionId": 265,
+      "difficulty": "HARD",
+      "questionType": "SHORT_ANSWER",
+      "topic": "DAILY_LIFE",
+      "questionText": "Which device lets you listen to sound through speakers over your ears?",
+      "questionTextKo": "귀에 쓰는 스피커로 소리를 들을 수 있게 해 주는 기기는 무엇인가요?",
+      "gradingContext": "The picture shows purple over-ear headphones with two padded ear cups and a headband. The device is headphones.",
+      "modelAnswer": "The device is headphones.",
+      "acceptedAnswers": [
+        "The picture shows headphones.",
+        "These are headphones.",
+        "They are headphones."
+      ],
+      "cases": [
+        {
+          "caseId": "q265-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "These are headphones.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "HARD에 적합한 문장으로 기기를 정확히 식별했다."
+        },
+        {
+          "caseId": "q265-partial-ambiguous-device",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "They are headphones and a radio.",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "headphones는 맞지만 radio를 함께 말해 식별이 모호하다."
+        },
+        {
+          "caseId": "q265-incorrect-wrong-device",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "It is a television.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "문제의 기기와 다른 기기를 답했다."
+        }
+      ]
+    },
+    {
+      "questionId": 238,
+      "difficulty": "HARD",
+      "questionType": "SHORT_ANSWER",
+      "topic": "FOOD",
+      "questionText": "Which snack is made of many small white popped pieces?",
+      "questionTextKo": "작고 하얗게 튀겨진 조각이 많이 모인 간식은 무엇인가요?",
+      "gradingContext": "The picture shows a striped tub filled with many small white popped corn pieces. The snack is popcorn.",
+      "modelAnswer": "The snack is popcorn.",
+      "acceptedAnswers": [
+        "It is popcorn.",
+        "The picture shows popcorn.",
+        "This is popcorn."
+      ],
+      "cases": [
+        {
+          "caseId": "q238-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "The picture shows popcorn.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "HARD에 적합한 문장으로 간식을 정확히 식별했다."
+        },
+        {
+          "caseId": "q238-partial-ambiguous-snack",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "It is popcorn and rice.",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "popcorn은 맞지만 rice를 함께 말해 식별이 모호하다."
+        },
+        {
+          "caseId": "q238-incorrect-wrong-snack",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "It is chocolate.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "문제의 간식과 다른 음식을 답했다."
+        }
+      ]
+    },
+    {
+      "questionId": 117,
+      "difficulty": "NORMAL",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "ANIMAL",
+      "questionText": "What would you do if you found a lost puppy?",
+      "questionTextKo": "길을 잃은 강아지를 발견하면 어떻게 하겠나요?",
+      "gradingContext": "The picture shows a small puppy alone with a worried or lost appearance, and a child noticing it. The image is a prompt for explaining a safe way to help the puppy.",
+      "modelAnswer": "I would ask an adult for help.",
+      "acceptedAnswers": [
+        "I would call an animal shelter",
+        "I would give the puppy some water",
+        "I would help the puppy find its owner",
+        "I would tell a police officer"
+      ],
+      "cases": [
+        {
+          "caseId": "q117-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I would help the puppy find its owner",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "길 잃은 강아지를 돕는 안전하고 구체적인 행동이다."
+        },
+        {
+          "caseId": "q117-partial-vague-help",
+          "answerKind": "SYNTHETIC_CORRECT",
+          "answerText": "I would help the puppy.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "질문이 구체적인 방법을 명시적으로 요구하지 않으므로 강아지를 돕겠다는 직접적이고 자연스러운 답을 정답으로 인정한다."
+        },
+        {
+          "caseId": "q117-incorrect-unsafe-action",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "I would leave the puppy in the road.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "길 잃은 강아지를 안전하게 돕는 상황에 맞지 않는 행동이다."
+        },
+        {
+          "caseId": "q117-incorrect-hard-wrong-help",
+          "answerKind": "SYNTHETIC_HARD_INCORRECT",
+          "answerText": "I would keep the puppy and not look for its owner.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "강아지를 돕는 문장처럼 보이지만 잃어버린 주인을 찾는 안전한 대처와 맞지 않는다."
+        }
+      ]
+    },
+    {
+      "questionId": 178,
+      "difficulty": "NORMAL",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "DAILY_LIFE",
+      "questionText": "How can you cross a busy street safely?",
+      "questionTextKo": "차가 많은 길을 어떻게 안전하게 건널 수 있나요?",
+      "gradingContext": "The picture shows a busy road with a marked crosswalk and traffic light. Safe crossing includes using the crosswalk, waiting for a safe signal, and checking traffic in both directions.",
+      "modelAnswer": "I should use the crosswalk, wait for the green light, and look both ways.",
+      "acceptedAnswers": [
+        "I can cross with an adult at the crosswalk",
+        "I need to look left and right before I cross",
+        "I should follow the traffic lights",
+        "I should stop and look for cars before crossing"
+      ],
+      "cases": [
+        {
+          "caseId": "q178-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I should stop and look for cars before crossing",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "혼잡한 길을 안전하게 건너는 적절한 방법을 문장으로 답했다."
+        },
+        {
+          "caseId": "q178-partial-one-safety-step",
+          "answerKind": "SYNTHETIC_CORRECT",
+          "answerText": "I would use the crosswalk.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "질문이 여러 안전 행동을 모두 요구하지 않고 허용 답안도 한 가지 안전 행동을 인정하므로 정답으로 처리한다."
+        },
+        {
+          "caseId": "q178-incorrect-unsafe-crossing",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "I would run between the cars.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "질문이 요구한 안전한 횡단과 반대되는 위험한 행동이다."
+        }
+      ]
+    },
+    {
+      "questionId": 143,
+      "difficulty": "NORMAL",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "FOOD",
+      "questionText": "How do you make a simple sandwich?",
+      "questionTextKo": "간단한 샌드위치를 어떻게 만드나요?",
+      "gradingContext": "The picture shows a simple sandwich-making sequence: bread is prepared, fillings such as vegetables and cheese are added, and the sandwich is closed or cut. Equivalent sensible step orders are valid.",
+      "modelAnswer": "First, put cheese and vegetables between two slices of bread.",
+      "acceptedAnswers": [
+        "First add vegetables to the bread Then put another slice on top",
+        "First get two slices of bread Then add cheese",
+        "I put cheese between two pieces of bread",
+        "Put ham and cheese on the bread and close the sandwich"
+      ],
+      "cases": [
+        {
+          "caseId": "q143-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "Put ham and cheese on the bread and close the sandwich",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "재료를 올리고 샌드위치를 완성하는 합리적인 방법을 설명했다."
+        },
+        {
+          "caseId": "q143-partial-only-first-step",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "First, get two slices of bread.",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "올바른 첫 단계만 말하고 샌드위치를 만드는 핵심 과정을 빠뜨렸다."
+        },
+        {
+          "caseId": "q143-incorrect-nonsensical-method",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "Put the sandwich in a washing machine.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "샌드위치를 만드는 방법으로 성립하지 않는 행동이다."
+        }
+      ]
+    },
+    {
+      "questionId": 105,
+      "difficulty": "NORMAL",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "ANIMAL",
+      "questionText": "Where is the baby kangaroo?",
+      "questionTextKo": "아기 캥거루는 어디에 있나요?",
+      "gradingContext": "A baby kangaroo is sitting inside its mother's pouch, with its head and upper body visible.",
+      "modelAnswer": "The baby kangaroo is inside its mother's pouch.",
+      "acceptedAnswers": [
+        "Inside the pouch",
+        "It is in its mother's pouch",
+        "It is inside the pouch",
+        "The baby is in the pouch"
+      ],
+      "cases": [
+        {
+          "caseId": "q105-correct-accepted-sentence",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "The baby is in the pouch",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "NORMAL에 맞는 문장으로 아기 캥거루의 위치를 정확히 답했다."
+        },
+        {
+          "caseId": "q105-partial-imprecise-location",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "The baby is near the pouch.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "위치를 묻는 문제에서 핵심 위치 관계인 inside를 near로 잘못 진술했다."
+        },
+        {
+          "caseId": "q105-incorrect-wrong-location",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "The baby is under a tree.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "그림과 다른 위치를 답했다."
+        }
+      ]
+    },
+    {
+      "questionId": 169,
+      "difficulty": "NORMAL",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "DAILY_LIFE",
+      "questionText": "How is the boy sorting the recycling?",
+      "questionTextKo": "남자아이는 재활용품을 어떻게 분류하고 있나요?",
+      "gradingContext": "A boy is sorting recyclable materials such as paper, cans, and bottles into separate labeled or clearly different bins.",
+      "modelAnswer": "He is putting paper, cans, and bottles into different bins.",
+      "acceptedAnswers": [
+        "He is sorting the recycling by material",
+        "He puts bottles in the bottle bin",
+        "He separates paper cans and bottles",
+        "The boy sorts each material into a different bin"
+      ],
+      "cases": [
+        {
+          "caseId": "q169-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "The boy sorts each material into a different bin",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "재료별로 다른 통에 분류하는 방법을 정확히 설명했다."
+        },
+        {
+          "caseId": "q169-partial-one-material",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "He is putting bottles in a bin.",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "병을 통에 넣는 일부 행동만 말하고 재료별 분류를 충분히 설명하지 않았다."
+        },
+        {
+          "caseId": "q169-incorrect-no-sorting",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "He is throwing all the recycling into one trash bin.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "재료별로 나누는 그림과 반대로 모두 한 통에 넣는다고 답했다."
+        },
+        {
+          "caseId": "q169-incorrect-hard-keyword-reversal",
+          "answerKind": "SYNTHETIC_HARD_INCORRECT",
+          "answerText": "He is putting paper, cans, and bottles into the same bin.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "그림의 재료를 모두 언급하지만 separate bins와 반대로 같은 통에 넣는다고 답했다."
+        }
+      ]
+    },
+    {
+      "questionId": 137,
+      "difficulty": "NORMAL",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "FOOD",
+      "questionText": "Why is the ice cream melting?",
+      "questionTextKo": "아이스크림은 왜 녹고 있나요?",
+      "gradingContext": "An ice cream cone is outside in bright sunlight. The ice cream is visibly melting because it is warm in the sun.",
+      "modelAnswer": "It is melting because it is warm and sunny.",
+      "acceptedAnswers": [
+        "Because it is hot outside",
+        "Because the weather is warm",
+        "It is melting in the sun",
+        "The sun is making it melt"
+      ],
+      "cases": [
+        {
+          "caseId": "q137-correct-accepted",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "The sun is making it melt",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "아이스크림이 녹는 원인을 문장으로 정확히 답했다."
+        },
+        {
+          "caseId": "q137-partial-vague-context",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "It is melting outside.",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "상황은 일부 맞지만 왜 녹는지 원인을 분명히 답하지 않았다."
+        },
+        {
+          "caseId": "q137-incorrect-wrong-cause",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "It is melting because it is in a freezer.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "그림과 상식에 맞지 않는 원인을 답했다."
+        }
+      ]
+    },
+    {
+      "questionId": 99,
+      "difficulty": "NORMAL",
+      "questionType": "SHORT_ANSWER",
+      "topic": "ANIMAL",
+      "questionText": "What small animal has a bushy tail and collects nuts?",
+      "questionTextKo": "풍성한 꼬리가 있고 견과류를 모으는 작은 동물은 무엇인가요?",
+      "gradingContext": "The picture shows a small squirrel with a bushy tail collecting acorns. The animal is a squirrel.",
+      "modelAnswer": "It is a squirrel.",
+      "acceptedAnswers": [
+        "a squirrel",
+        "It's a squirrel",
+        "squirrel",
+        "The animal is a squirrel"
+      ],
+      "cases": [
+        {
+          "caseId": "q99-correct-accepted-sentence",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "The animal is a squirrel",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "NORMAL에 맞는 문장으로 동물을 정확히 식별했다."
+        },
+        {
+          "caseId": "q99-partial-ambiguous-animal",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "It is a squirrel and a rabbit.",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "squirrel은 맞지만 rabbit을 함께 말해 식별이 모호하다."
+        },
+        {
+          "caseId": "q99-incorrect-wrong-animal",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "It is an elephant.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "문제의 특징과 다른 동물을 답했다."
+        }
+      ]
+    },
+    {
+      "questionId": 159,
+      "difficulty": "NORMAL",
+      "questionType": "SHORT_ANSWER",
+      "topic": "DAILY_LIFE",
+      "questionText": "What light tells cars when to stop or go?",
+      "questionTextKo": "자동차에게 멈추거나 가야 할 때를 알려 주는 불빛은 무엇인가요?",
+      "gradingContext": "The picture shows a traffic light with red, yellow, and green lights controlling when cars stop or go. The object is a traffic light.",
+      "modelAnswer": "It is a traffic light.",
+      "acceptedAnswers": [
+        "a traffic light",
+        "a traffic signal",
+        "It's a traffic light",
+        "traffic light",
+        "traffic signal"
+      ],
+      "cases": [
+        {
+          "caseId": "q159-correct-accepted-sentence",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It's a traffic light",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "NORMAL에 맞는 문장으로 사물을 정확히 식별했다."
+        },
+        {
+          "caseId": "q159-partial-ambiguous-object",
+          "answerKind": "SYNTHETIC_PARTIAL",
+          "answerText": "It is a traffic light and a street lamp.",
+          "expectedResult": "PARTIALLY_CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "traffic light는 맞지만 street lamp를 함께 말해 식별이 모호하다."
+        },
+        {
+          "caseId": "q159-incorrect-wrong-object",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "It is a flashlight.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "문제의 기능과 다른 사물을 답했다."
+        }
+      ]
+    },
+    {
+      "questionId": 125,
+      "difficulty": "NORMAL",
+      "questionType": "SHORT_ANSWER",
+      "topic": "FOOD",
+      "questionText": "What flat breakfast food can you eat with syrup?",
+      "questionTextKo": "시럽을 뿌려 먹는 납작한 아침 음식은 무엇인가요?",
+      "gradingContext": "The picture shows a stack of flat pancakes served with syrup. The food is pancakes.",
+      "modelAnswer": "They are pancakes.",
+      "acceptedAnswers": [
+        "a pancake",
+        "It's a pancake",
+        "pancakes",
+        "They are pancakes"
+      ],
+      "cases": [
+        {
+          "caseId": "q125-correct-accepted-sentence",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "They are pancakes",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "NORMAL에 맞는 문장으로 음식을 정확히 식별했다."
+        },
+        {
+          "caseId": "q125-partial-ambiguous-food",
+          "answerKind": "SYNTHETIC_CORRECT",
+          "answerText": "They are pancakes and waffles.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "pancakes와 waffles 모두 질문의 일반적 조건에 부합하므로 정답으로 인정한다."
+        },
+        {
+          "caseId": "q125-incorrect-wrong-food",
+          "answerKind": "SYNTHETIC_INCORRECT",
+          "answerText": "They are noodles.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "문제의 특징과 다른 음식을 답했다."
+        },
+        {
+          "caseId": "q125-incorrect-hard-similar-food",
+          "answerKind": "SYNTHETIC_HARD_INCORRECT",
+          "answerText": "They are waffles.",
+          "expectedResult": "INCORRECT",
+          "criticalFalsePositive": true,
+          "rationaleKo": "시럽과 함께 먹는 비슷한 아침 음식이지만 그림과 정답은 pancakes이다."
+        }
+      ]
+    }
+  ]
+}

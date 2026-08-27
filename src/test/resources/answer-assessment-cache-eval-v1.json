@@ -1,0 +1,2171 @@
+{
+  "datasetVersion": "cache-hit-eval-v1",
+  "generatedAt": "2026-08-26",
+  "source": "Supabase active questions excluding answer-assessment-eval-v1 question IDs",
+  "selectionSeed": "cache-hit-eval-20260826",
+  "purpose": "Prompt cache measurement with 90 unique question and answer combinations",
+  "reviewStatus": "HUMAN_APPROVED",
+  "containsSubmittedUserAnswers": false,
+  "questions": [
+    {
+      "questionId": 245,
+      "difficulty": "HARD",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "FOOD",
+      "questionText": "Where are the French fries, and what is beside them?",
+      "questionTextKo": "감자튀김은 어디에 있고, 옆에는 무엇이 있나요?",
+      "gradingContext": "A red carton of French fries is on a table. Two small bowls of dipping sauce are placed next to the fries.",
+      "modelAnswer": "The French fries are in a carton, and two dipping sauces are beside them.",
+      "imageUrl": "/question-images/hard/food/picture-description/fries-and-dips.webp",
+      "acceptedAnswers": [
+        "The fries are in a red box with sauces next to them."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q245-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "The fries are in a red box with sauces next to them.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 132,
+      "difficulty": "NORMAL",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "FOOD",
+      "questionText": "What is the boy doing before he makes the salad?",
+      "questionTextKo": "남자아이는 샐러드를 만들기 전에 무엇을 하고 있나요?",
+      "gradingContext": "A boy is washing fresh vegetables with water before using them to make a salad.",
+      "modelAnswer": "He is washing the vegetables before making the salad.",
+      "imageUrl": "/question-images/normal/food/picture-description/boy-washing-vegetables.webp",
+      "acceptedAnswers": [
+        "He is cleaning the vegetables"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q132-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "He is cleaning the vegetables",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 251,
+      "difficulty": "HARD",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "FOOD",
+      "questionText": "Choose two foods for breakfast and explain why they would work well together.",
+      "questionTextKo": "아침 식사로 음식 두 가지를 고르고, 왜 잘 어울리는지 설명해 보세요.",
+      "gradingContext": "The picture shows several breakfast or simple food choices including cereal, grapes, cheese, and bacon. Many combinations are acceptable with a sensible reason.",
+      "modelAnswer": "I would choose cereal and grapes because cereal is filling and grapes add fruit.",
+      "imageUrl": "/question-images/hard/food/open-speaking/breakfast-plan.webp",
+      "acceptedAnswers": [
+        "I would choose cereal and grapes for a simple breakfast."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q251-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I would choose cereal and grapes for a simple breakfast.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 75,
+      "difficulty": "EASY",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "DAILY_LIFE",
+      "questionText": "What is the mother doing?",
+      "questionTextKo": "엄마는 무엇을 하고 있나요?",
+      "gradingContext": "The picture shows a mother preparing food in a kitchen and stirring or cooking food. She is cooking dinner.",
+      "modelAnswer": "She is cooking dinner.",
+      "imageUrl": "/question-images/easy/daily-life/picture-description/mother-cooking.webp",
+      "acceptedAnswers": [
+        "Cooking dinner"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q75-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "Cooking dinner",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 236,
+      "difficulty": "HARD",
+      "questionType": "SHORT_ANSWER",
+      "topic": "FOOD",
+      "questionText": "Which fruit grows in a bunch and is shown as many purple pieces together?",
+      "questionTextKo": "송이로 자라고 보라색 알이 여러 개 모여 있는 과일은 무엇인가요?",
+      "gradingContext": "The picture shows a bunch of round purple grapes attached to stems with a green leaf. The fruit is grapes.",
+      "modelAnswer": "The fruit is grapes.",
+      "imageUrl": "/question-images/hard/food/short-answer/grapes.webp",
+      "acceptedAnswers": [
+        "The picture shows grapes."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q236-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "The picture shows grapes.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 161,
+      "difficulty": "NORMAL",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "DAILY_LIFE",
+      "questionText": "What does the girl do after she gets dressed?",
+      "questionTextKo": "여자아이는 옷을 입은 뒤 무엇을 하나요?",
+      "gradingContext": "The picture shows a morning routine in sequence: the girl gets dressed and then eats breakfast. Breakfast is the next activity after getting dressed.",
+      "modelAnswer": "After she gets dressed, she eats breakfast.",
+      "imageUrl": "/question-images/normal/daily-life/picture-description/morning-routine-sequence.webp",
+      "acceptedAnswers": [
+        "She eats breakfast next"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q161-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "She eats breakfast next",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 28,
+      "difficulty": "EASY",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "ANIMAL",
+      "questionText": "What animal do you want to draw?",
+      "questionTextKo": "어떤 동물을 그리고 싶나요?",
+      "gradingContext": "The picture shows four animal choices to draw: a rabbit, a cat, a dog, and a lion.",
+      "modelAnswer": "I want to draw a rabbit.",
+      "imageUrl": "/question-images/easy/animal/open-speaking/draw-animal-choices.webp",
+      "acceptedAnswers": [
+        "A rabbit"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q28-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "A rabbit",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 92,
+      "difficulty": "NORMAL",
+      "questionType": "SHORT_ANSWER",
+      "topic": "ANIMAL",
+      "questionText": "What animal has a very long neck?",
+      "questionTextKo": "목이 아주 긴 동물은 무엇인가요?",
+      "gradingContext": "The picture shows a giraffe with a very long neck. The animal is a giraffe.",
+      "modelAnswer": "It is a giraffe.",
+      "imageUrl": "/question-images/normal/animal/short-answer/giraffe.webp",
+      "acceptedAnswers": [
+        "a giraffe"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q92-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "a giraffe",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 263,
+      "difficulty": "HARD",
+      "questionType": "SHORT_ANSWER",
+      "topic": "DAILY_LIFE",
+      "questionText": "Which object shows dates arranged by days, weeks, and months?",
+      "questionTextKo": "날짜를 일, 주, 월 단위로 보여 주는 물건은 무엇인가요?",
+      "gradingContext": "The picture shows a desk calendar with a grid for dates and rings at the top. The object is a calendar.",
+      "modelAnswer": "The object is a calendar.",
+      "imageUrl": "/question-images/hard/daily-life/short-answer/calendar.webp",
+      "acceptedAnswers": [
+        "It is a calendar."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q263-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It is a calendar.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 256,
+      "difficulty": "HARD",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "FOOD",
+      "questionText": "Explain how you would make a simple bowl of cereal in two or three steps.",
+      "questionTextKo": "간단한 시리얼 한 그릇을 만드는 방법을 두세 단계로 설명해 보세요.",
+      "gradingContext": "The picture shows a simple cereal-making sequence: an empty bowl, cereal being added, and milk being poured into the bowl. Equivalent sensible orders are acceptable.",
+      "modelAnswer": "First, I put cereal in a bowl. Then, I pour milk over it.",
+      "imageUrl": "/question-images/hard/food/open-speaking/make-cereal-steps.webp",
+      "acceptedAnswers": [
+        "First I get a bowl, then I add cereal and milk."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q256-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "First I get a bowl, then I add cereal and milk.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 13,
+      "difficulty": "EASY",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "ANIMAL",
+      "questionText": "Where is the rabbit?",
+      "questionTextKo": "토끼는 어디에 있나요?",
+      "gradingContext": "The picture shows a rabbit directly underneath a table, between the table legs.",
+      "modelAnswer": "The rabbit is under the table.",
+      "imageUrl": "/question-images/easy/animal/picture-description/rabbit-under-table.webp",
+      "acceptedAnswers": [
+        "It is under the table"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q13-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It is under the table",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 142,
+      "difficulty": "NORMAL",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "FOOD",
+      "questionText": "What would you put in a healthy lunch box?",
+      "questionTextKo": "건강한 도시락에 무엇을 넣고 싶나요?",
+      "gradingContext": "The picture shows an open lunch box with examples of healthy foods such as fruit, vegetables, a sandwich or rice, and water. Other reasonable healthy lunch choices are valid.",
+      "modelAnswer": "I would put rice, chicken, vegetables, and fruit in it.",
+      "imageUrl": "/question-images/normal/food/open-speaking/plan-healthy-lunch-box.webp",
+      "acceptedAnswers": [
+        "I want fruit salad and chicken in my lunch box"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q142-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I want fruit salad and chicken in my lunch box",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 45,
+      "difficulty": "EASY",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "FOOD",
+      "questionText": "Where is the egg?",
+      "questionTextKo": "달걀은 어디에 있나요?",
+      "gradingContext": "The picture shows a cooked egg resting on top of a white plate.",
+      "modelAnswer": "The egg is on the plate.",
+      "imageUrl": "/question-images/easy/food/picture-description/egg-on-plate.webp",
+      "acceptedAnswers": [
+        "It is on the plate"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q45-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It is on the plate",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 244,
+      "difficulty": "HARD",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "FOOD",
+      "questionText": "How has the donut been prepared for two children to share it?",
+      "questionTextKo": "도넛을 두 아이가 나눠 먹을 수 있도록 어떻게 준비했나요?",
+      "gradingContext": "One donut has been cut into two similar halves on a plate. Two children are sitting on opposite sides of the plate, ready to share it.",
+      "modelAnswer": "The donut has been cut into two halves so the children can share it.",
+      "imageUrl": "/question-images/hard/food/picture-description/sharing-donut.webp",
+      "acceptedAnswers": [
+        "It was cut in half for the two children."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q244-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It was cut in half for the two children.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 217,
+      "difficulty": "HARD",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "ANIMAL",
+      "questionText": "Where is the shark, and what is it doing?",
+      "questionTextKo": "상어는 어디에 있고, 무엇을 하고 있나요?",
+      "gradingContext": "A shark is shown underwater in blue sea water. Its body is horizontal as if it is swimming through the water.",
+      "modelAnswer": "The shark is swimming underwater in the sea.",
+      "imageUrl": "/question-images/hard/animal/picture-description/shark-below-fish.webp",
+      "acceptedAnswers": [
+        "It is swimming underwater."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q217-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It is swimming underwater.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 6,
+      "difficulty": "EASY",
+      "questionType": "SHORT_ANSWER",
+      "topic": "ANIMAL",
+      "questionText": "What animal is this?",
+      "questionTextKo": "이 동물은 무엇일까요?",
+      "gradingContext": "The picture shows a monkey sitting by itself.",
+      "modelAnswer": "It is a monkey.",
+      "imageUrl": "/question-images/easy/animal/short-answer/monkey.webp",
+      "acceptedAnswers": [
+        "a monkey"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q6-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "a monkey",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 250,
+      "difficulty": "HARD",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "FOOD",
+      "questionText": "Which snack would you choose for a healthier break, and why?",
+      "questionTextKo": "더 건강한 쉬는 시간 간식으로 무엇을 고르고, 왜 그런가요?",
+      "gradingContext": "The picture shows grapes, a donut, French fries, and a salad as snack or food options. Grapes or salad are the clearest healthier choices, but the learner should explain the choice.",
+      "modelAnswer": "I would choose grapes because they are fruit and are less sugary than the donut.",
+      "imageUrl": "/question-images/hard/food/open-speaking/healthier-snack-choice.webp",
+      "acceptedAnswers": [
+        "I would choose grapes because they are fresh fruit."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q250-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I would choose grapes because they are fresh fruit.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 170,
+      "difficulty": "NORMAL",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "DAILY_LIFE",
+      "questionText": "What is the doctor checking?",
+      "questionTextKo": "의사는 무엇을 확인하고 있나요?",
+      "gradingContext": "A doctor is using a thermometer to check a child's temperature for a possible fever.",
+      "modelAnswer": "The doctor is checking the child's temperature.",
+      "imageUrl": "/question-images/normal/daily-life/picture-description/doctor-checking-temperature.webp",
+      "acceptedAnswers": [
+        "The child's temperature"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q170-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "The child's temperature",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 262,
+      "difficulty": "HARD",
+      "questionType": "SHORT_ANSWER",
+      "topic": "DAILY_LIFE",
+      "questionText": "Which tool helps you work with numbers and calculations?",
+      "questionTextKo": "숫자 계산을 도와주는 도구는 무엇인가요?",
+      "gradingContext": "The picture shows a calculator with a number display and many number and operation buttons. The object is a calculator.",
+      "modelAnswer": "The object is a calculator.",
+      "imageUrl": "/question-images/hard/daily-life/short-answer/calculator.webp",
+      "acceptedAnswers": [
+        "It is a calculator."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q262-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It is a calculator.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 120,
+      "difficulty": "NORMAL",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "ANIMAL",
+      "questionText": "Describe your favorite animal with two details.",
+      "questionTextKo": "가장 좋아하는 동물을 두 가지 특징과 함께 설명해 보세요.",
+      "gradingContext": "The picture shows several different animals as examples and highlights visible details such as ears, fur, stripes, size, or body shape. The learner's favorite animal does not need to be one of the pictured animals.",
+      "modelAnswer": "My favorite animal is the rabbit. It has long ears and soft fur.",
+      "imageUrl": "/question-images/normal/animal/open-speaking/describe-favorite-animal.webp",
+      "acceptedAnswers": [
+        "I like dogs because they are friendly and playful"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q120-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I like dogs because they are friendly and playful",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 130,
+      "difficulty": "NORMAL",
+      "questionType": "SHORT_ANSWER",
+      "topic": "FOOD",
+      "questionText": "What creamy food is often eaten with fruit?",
+      "questionTextKo": "과일과 함께 자주 먹는 부드러운 음식은 무엇인가요?",
+      "gradingContext": "The picture shows creamy yogurt in a cup with fruit beside or on top of it. The food is yogurt.",
+      "modelAnswer": "It is yogurt.",
+      "imageUrl": "/question-images/normal/food/short-answer/yogurt.webp",
+      "acceptedAnswers": [
+        "a cup of yogurt"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q130-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "a cup of yogurt",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 203,
+      "difficulty": "HARD",
+      "questionType": "SHORT_ANSWER",
+      "topic": "ANIMAL",
+      "questionText": "Which animal stands on strong back legs and has a long tail?",
+      "questionTextKo": "튼튼한 뒷다리로 서고 긴 꼬리가 있는 동물은 무엇인가요?",
+      "gradingContext": "The picture shows a kangaroo standing upright with very large hind legs, small front paws, and a long strong tail. The animal is a kangaroo.",
+      "modelAnswer": "The animal is a kangaroo.",
+      "imageUrl": "/question-images/hard/animal/short-answer/kangaroo.webp",
+      "acceptedAnswers": [
+        "It is a kangaroo."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q203-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It is a kangaroo.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 91,
+      "difficulty": "NORMAL",
+      "questionType": "SHORT_ANSWER",
+      "topic": "ANIMAL",
+      "questionText": "What animal has orange fur and black stripes?",
+      "questionTextKo": "주황색 털과 검은 줄무늬가 있는 동물은 무엇인가요?",
+      "gradingContext": "The picture shows a tiger with orange fur and clear black stripes. The animal is a tiger.",
+      "modelAnswer": "It is a tiger.",
+      "imageUrl": "/question-images/normal/animal/short-answer/tiger.webp",
+      "acceptedAnswers": [
+        "a tiger"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q91-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "a tiger",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 147,
+      "difficulty": "NORMAL",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "FOOD",
+      "questionText": "What food and drink would you bring to a picnic?",
+      "questionTextKo": "소풍에 어떤 음식과 음료를 가져가고 싶나요?",
+      "gradingContext": "The picture shows a picnic basket or blanket with example foods and drinks such as sandwiches, fruit, snacks, juice, and water. Other reasonable picnic choices are valid.",
+      "modelAnswer": "I would bring sandwiches, fruit, and water.",
+      "imageUrl": "/question-images/normal/food/open-speaking/plan-picnic-food.webp",
+      "acceptedAnswers": [
+        "I want to bring sandwiches and lemonade"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q147-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I want to bring sandwiches and lemonade",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 22,
+      "difficulty": "EASY",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "ANIMAL",
+      "questionText": "What pet do you want?",
+      "questionTextKo": "어떤 반려동물을 키우고 싶나요?",
+      "gradingContext": "The picture shows four common pet choices: a dog, a cat, a rabbit, and a bird.",
+      "modelAnswer": "I want a dog.",
+      "imageUrl": "/question-images/easy/animal/open-speaking/pet-choices.webp",
+      "acceptedAnswers": [
+        "A dog"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q22-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "A dog",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 70,
+      "difficulty": "EASY",
+      "questionType": "SHORT_ANSWER",
+      "topic": "DAILY_LIFE",
+      "questionText": "What is this?",
+      "questionTextKo": "이것은 무엇일까요?",
+      "gradingContext": "The picture shows a colorful ball.",
+      "modelAnswer": "It is a ball.",
+      "imageUrl": "/question-images/easy/daily-life/short-answer/ball.webp",
+      "acceptedAnswers": [
+        "a ball"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q70-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "a ball",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 156,
+      "difficulty": "NORMAL",
+      "questionType": "SHORT_ANSWER",
+      "topic": "DAILY_LIFE",
+      "questionText": "What shows the days, weeks, and months of a year?",
+      "questionTextKo": "한 해의 날짜, 주, 월을 보여 주는 것은 무엇인가요?",
+      "gradingContext": "The picture shows a calendar with days arranged into weeks and months. The object is a calendar.",
+      "modelAnswer": "It is a calendar.",
+      "imageUrl": "/question-images/normal/daily-life/short-answer/calendar.webp",
+      "acceptedAnswers": [
+        "a calendar"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q156-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "a calendar",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 88,
+      "difficulty": "EASY",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "DAILY_LIFE",
+      "questionText": "What do you do with your friend?",
+      "questionTextKo": "친구와 무엇을 하나요?",
+      "gradingContext": "The picture shows friends doing activities together, including playing with a ball, talking, reading together, and sharing or playing with toys.",
+      "modelAnswer": "I play with my friend.",
+      "imageUrl": "/question-images/easy/daily-life/open-speaking/with-friend.webp",
+      "acceptedAnswers": [
+        "I play with my friend"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q88-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I play with my friend",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 44,
+      "difficulty": "EASY",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "FOOD",
+      "questionText": "Is the pizza round?",
+      "questionTextKo": "피자는 둥근 모양인가요?",
+      "gradingContext": "The picture shows a circular pizza. The pizza is round.",
+      "modelAnswer": "Yes, it is round.",
+      "imageUrl": "/question-images/easy/food/picture-description/round-pizza.webp",
+      "acceptedAnswers": [
+        "It is round"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q44-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It is round",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 112,
+      "difficulty": "NORMAL",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "ANIMAL",
+      "questionText": "Which animal would make a good pet, and why?",
+      "questionTextKo": "어떤 동물이 좋은 반려동물이 될까요? 이유도 말해 보세요.",
+      "gradingContext": "The picture presents several possible pets, such as a dog, cat, rabbit, and fish. The image is only a prompt for discussing which animal could be a good pet.",
+      "modelAnswer": "A dog would make a good pet because it is friendly.",
+      "imageUrl": "/question-images/normal/animal/open-speaking/good-pet-choices.webp",
+      "acceptedAnswers": [
+        "A cat would be a good pet because it is quiet"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q112-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "A cat would be a good pet because it is quiet",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 274,
+      "difficulty": "HARD",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "DAILY_LIFE",
+      "questionText": "What is the child doing with the camera, and who is in front of it?",
+      "questionTextKo": "아이는 카메라로 무엇을 하고 있고, 앞에는 누가 있나요?",
+      "gradingContext": "A child is holding a camera and pointing it toward several smiling family members who are standing together and posing.",
+      "modelAnswer": "The child is taking a photo of the family with the camera.",
+      "imageUrl": "/question-images/hard/daily-life/picture-description/camera-family-photo.webp",
+      "acceptedAnswers": [
+        "A family is posing while the child takes a photo."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q274-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "A family is posing while the child takes a photo.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 81,
+      "difficulty": "EASY",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "DAILY_LIFE",
+      "questionText": "What do you do in the morning?",
+      "questionTextKo": "아침에 무엇을 하나요?",
+      "gradingContext": "The picture shows several morning activities: brushing teeth, washing the face, eating breakfast, and getting dressed.",
+      "modelAnswer": "I brush my teeth.",
+      "imageUrl": "/question-images/easy/daily-life/open-speaking/morning-routine.webp",
+      "acceptedAnswers": [
+        "I brush my teeth"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q81-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I brush my teeth",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 48,
+      "difficulty": "EASY",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "FOOD",
+      "questionText": "What is the boy eating?",
+      "questionTextKo": "남자아이는 무엇을 먹고 있나요?",
+      "gradingContext": "The picture shows a boy holding and eating an ice cream cone.",
+      "modelAnswer": "He is eating ice cream.",
+      "imageUrl": "/question-images/easy/food/picture-description/boy-eating-ice-cream.webp",
+      "acceptedAnswers": [
+        "He eats ice cream"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q48-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "He eats ice cream",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 258,
+      "difficulty": "HARD",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "FOOD",
+      "questionText": "After exercising, which food in the picture would you choose, and why?",
+      "questionTextKo": "운동한 뒤 그림 속 음식 중 무엇을 고르고, 왜 그런가요?",
+      "gradingContext": "The picture shows grapes, salad, fries, and chocolate as choices after exercise. Grapes or salad are sensible light choices, but a learner may justify another choice.",
+      "modelAnswer": "I would choose grapes because they are fresh and easy to eat after exercise.",
+      "imageUrl": "/question-images/hard/food/open-speaking/after-exercise-food.webp",
+      "acceptedAnswers": [
+        "I would choose a salad because it has vegetables."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q258-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I would choose a salad because it has vegetables.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 96,
+      "difficulty": "NORMAL",
+      "questionType": "SHORT_ANSWER",
+      "topic": "ANIMAL",
+      "questionText": "What bird has big eyes and is awake at night?",
+      "questionTextKo": "눈이 크고 밤에 깨어 있는 새는 무엇인가요?",
+      "gradingContext": "The picture shows an owl with large eyes awake at night. The bird is an owl.",
+      "modelAnswer": "It is an owl.",
+      "imageUrl": "/question-images/normal/animal/short-answer/owl.webp",
+      "acceptedAnswers": [
+        "an owl"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q96-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "an owl",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 180,
+      "difficulty": "NORMAL",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "DAILY_LIFE",
+      "questionText": "What is one goal you have for this week?",
+      "questionTextKo": "이번 주에 이루고 싶은 목표 한 가지는 무엇인가요?",
+      "gradingContext": "The picture shows examples of weekly goals, such as reading a book, practicing English, exercising, helping at home, or finishing homework. The learner may state any realistic personal goal for the week.",
+      "modelAnswer": "My goal is to read one book this week.",
+      "imageUrl": "/question-images/normal/daily-life/open-speaking/weekly-goal.webp",
+      "acceptedAnswers": [
+        "I want to finish all my homework on time"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q180-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I want to finish all my homework on time",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 118,
+      "difficulty": "NORMAL",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "ANIMAL",
+      "questionText": "Which animal home looks the most interesting? Why?",
+      "questionTextKo": "어떤 동물의 집이 가장 흥미로워 보이나요? 이유도 말해 보세요.",
+      "gradingContext": "The picture shows several animal homes, such as a bird nest in a tree, a beehive, and an underground rabbit burrow. The learner may choose any shown home and give a reason.",
+      "modelAnswer": "The bird's nest looks interesting because it is high in a tree.",
+      "imageUrl": "/question-images/normal/animal/open-speaking/animal-homes.webp",
+      "acceptedAnswers": [
+        "I like the nest because it is in a tree"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q118-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I like the nest because it is in a tree",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 36,
+      "difficulty": "EASY",
+      "questionType": "SHORT_ANSWER",
+      "topic": "FOOD",
+      "questionText": "What food is this?",
+      "questionTextKo": "이 음식은 무엇일까요?",
+      "gradingContext": "The picture shows a loaf of bread.",
+      "modelAnswer": "It is bread.",
+      "imageUrl": "/question-images/easy/food/short-answer/bread.webp",
+      "acceptedAnswers": [
+        "a loaf of bread"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q36-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "a loaf of bread",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 17,
+      "difficulty": "EASY",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "ANIMAL",
+      "questionText": "Where is the fish?",
+      "questionTextKo": "물고기는 어디에 있나요?",
+      "gradingContext": "The picture shows a fish surrounded by blue water and bubbles. The fish is in the water.",
+      "modelAnswer": "The fish is in the water.",
+      "imageUrl": "/question-images/easy/animal/picture-description/fish-in-water.webp",
+      "acceptedAnswers": [
+        "In the water"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q17-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "In the water",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 25,
+      "difficulty": "EASY",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "ANIMAL",
+      "questionText": "What can you give the hungry rabbit?",
+      "questionTextKo": "배고픈 토끼에게 무엇을 줄 수 있나요?",
+      "gradingContext": "The picture shows a rabbit with four possible things to give it: a carrot, lettuce, an apple, and a bowl of water. The rabbit is presented as hungry.",
+      "modelAnswer": "I can give it a carrot.",
+      "imageUrl": "/question-images/easy/animal/open-speaking/feed-hungry-rabbit.webp",
+      "acceptedAnswers": [
+        "A carrot"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q25-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "A carrot",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 39,
+      "difficulty": "EASY",
+      "questionType": "SHORT_ANSWER",
+      "topic": "FOOD",
+      "questionText": "What vegetable is this?",
+      "questionTextKo": "이 채소는 무엇일까요?",
+      "gradingContext": "The picture shows one orange carrot with green leaves.",
+      "modelAnswer": "It is a carrot.",
+      "imageUrl": "/question-images/easy/food/short-answer/carrot.webp",
+      "acceptedAnswers": [
+        "a carrot"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q39-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "a carrot",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 248,
+      "difficulty": "HARD",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "FOOD",
+      "questionText": "What snack are the children sharing, and where are they?",
+      "questionTextKo": "아이들은 어떤 간식을 나눠 먹고 있고, 어디에 있나요?",
+      "gradingContext": "Two children are sitting in front of a large screen in a dark movie-theater-like room. They are sharing a large tub of popcorn.",
+      "modelAnswer": "The children are sharing popcorn while watching a movie.",
+      "imageUrl": "/question-images/hard/food/picture-description/popcorn-at-movie.webp",
+      "acceptedAnswers": [
+        "The snack is popcorn, and they are watching a movie."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q248-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "The snack is popcorn, and they are watching a movie.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 165,
+      "difficulty": "NORMAL",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "DAILY_LIFE",
+      "questionText": "How is the girl helping her friend in the rain?",
+      "questionTextKo": "여자아이는 비 오는 날 친구를 어떻게 돕고 있나요?",
+      "gradingContext": "Two children are walking in the rain under one umbrella. A girl is holding the umbrella so her friend is covered too.",
+      "modelAnswer": "She is sharing her umbrella with her friend.",
+      "imageUrl": "/question-images/normal/daily-life/picture-description/girl-sharing-umbrella.webp",
+      "acceptedAnswers": [
+        "She is holding the umbrella for both of them"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q165-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "She is holding the umbrella for both of them",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 80,
+      "difficulty": "EASY",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "DAILY_LIFE",
+      "questionText": "Is the room clean?",
+      "questionTextKo": "방이 깨끗한가요?",
+      "gradingContext": "The picture shows a tidy bedroom with the bed made and objects put away. The room is clean.",
+      "modelAnswer": "Yes, the room is clean.",
+      "imageUrl": "/question-images/easy/daily-life/picture-description/clean-room.webp",
+      "acceptedAnswers": [
+        "It is clean"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q80-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It is clean",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 268,
+      "difficulty": "HARD",
+      "questionType": "SHORT_ANSWER",
+      "topic": "DAILY_LIFE",
+      "questionText": "Which object is used to carry money and cards?",
+      "questionTextKo": "돈과 카드를 가지고 다니는 데 사용하는 물건은 무엇인가요?",
+      "gradingContext": "The picture shows a folded brown wallet. A wallet is used to carry money and cards.",
+      "modelAnswer": "The object is a wallet.",
+      "imageUrl": "/question-images/hard/daily-life/short-answer/wallet.webp",
+      "acceptedAnswers": [
+        "It is a wallet."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q268-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It is a wallet.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 157,
+      "difficulty": "NORMAL",
+      "questionType": "SHORT_ANSWER",
+      "topic": "DAILY_LIFE",
+      "questionText": "What schoolwork do students finish at home?",
+      "questionTextKo": "학생들이 집에서 끝내는 학교 공부는 무엇인가요?",
+      "gradingContext": "The picture shows a student doing schoolwork at home with books or a worksheet. The schoolwork is homework.",
+      "modelAnswer": "It is homework.",
+      "imageUrl": "/question-images/normal/daily-life/short-answer/homework.webp",
+      "acceptedAnswers": [
+        "homework"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q157-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "homework",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 65,
+      "difficulty": "EASY",
+      "questionType": "SHORT_ANSWER",
+      "topic": "DAILY_LIFE",
+      "questionText": "What is this?",
+      "questionTextKo": "이것은 무엇일까요?",
+      "gradingContext": "The picture shows a bed with a pillow and blanket.",
+      "modelAnswer": "It is a bed.",
+      "imageUrl": "/question-images/easy/daily-life/short-answer/bed.webp",
+      "acceptedAnswers": [
+        "a bed"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q65-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "a bed",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 163,
+      "difficulty": "NORMAL",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "DAILY_LIFE",
+      "questionText": "Why is the family looking at a shopping list?",
+      "questionTextKo": "가족은 왜 장보기 목록을 보고 있나요?",
+      "gradingContext": "A family in a supermarket is looking at a shopping list to check and remember the things they need to buy.",
+      "modelAnswer": "They are checking what they need to buy.",
+      "imageUrl": "/question-images/normal/daily-life/picture-description/family-using-shopping-list.webp",
+      "acceptedAnswers": [
+        "Because they do not want to forget anything"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q163-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "Because they do not want to forget anything",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 267,
+      "difficulty": "HARD",
+      "questionType": "SHORT_ANSWER",
+      "topic": "DAILY_LIFE",
+      "questionText": "Which appliance cleans dust from the floor by sucking it up?",
+      "questionTextKo": "바닥의 먼지를 빨아들여 청소하는 가전제품은 무엇인가요?",
+      "gradingContext": "The picture shows a canister vacuum cleaner with a hose and floor-cleaning nozzle. The appliance is a vacuum cleaner.",
+      "modelAnswer": "The appliance is a vacuum cleaner.",
+      "imageUrl": "/question-images/hard/daily-life/short-answer/vacuum-cleaner.webp",
+      "acceptedAnswers": [
+        "It is a vacuum cleaner."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q267-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It is a vacuum cleaner.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 259,
+      "difficulty": "HARD",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "FOOD",
+      "questionText": "If you wanted to eat fewer sugary or fried snacks, what would you replace, and what would you choose instead?",
+      "questionTextKo": "단 음식이나 튀긴 간식을 줄이고 싶다면 무엇을 바꾸고, 대신 무엇을 고르겠나요?",
+      "gradingContext": "The picture pairs sugary or fried foods such as donuts, chocolate, and fries with fresher options such as grapes and salad. Several replacement choices are valid.",
+      "modelAnswer": "I would replace the donut with grapes because I want more fruit.",
+      "imageUrl": "/question-images/hard/food/open-speaking/reduce-junk-food.webp",
+      "acceptedAnswers": [
+        "I would choose grapes instead of chocolate."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q259-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I would choose grapes instead of chocolate.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 211,
+      "difficulty": "HARD",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "ANIMAL",
+      "questionText": "What is the dolphin doing, and what is nearby?",
+      "questionTextKo": "돌고래는 무엇을 하고 있고, 근처에는 무엇이 있나요?",
+      "gradingContext": "A dolphin is jumping above the sea surface. A small sailboat is visible nearby on the water.",
+      "modelAnswer": "The dolphin is jumping out of the water near a small boat.",
+      "imageUrl": "/question-images/hard/animal/picture-description/dolphin-jumping-near-boat.webp",
+      "acceptedAnswers": [
+        "A dolphin is jumping, and a boat is nearby."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q211-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "A dolphin is jumping, and a boat is nearby.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 148,
+      "difficulty": "NORMAL",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "FOOD",
+      "questionText": "Do you prefer sweet or salty snacks? Why?",
+      "questionTextKo": "달콤한 간식과 짭짤한 간식 중 무엇을 더 좋아하나요? 이유도 말해 보세요.",
+      "gradingContext": "The picture contrasts sweet snacks, such as fruit or chocolate, with salty snacks, such as crackers or chips. Either preference is valid if the learner explains it.",
+      "modelAnswer": "I prefer sweet snacks because I like fruit and chocolate.",
+      "imageUrl": "/question-images/normal/food/open-speaking/sweet-or-salty-snacks.webp",
+      "acceptedAnswers": [
+        "I like both because they are different"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q148-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I like both because they are different",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 30,
+      "difficulty": "EASY",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "ANIMAL",
+      "questionText": "How do you feel today?",
+      "questionTextKo": "오늘 기분이 어떤가요?",
+      "gradingContext": "The picture shows a puppy in several states that suggest feelings such as happy, sleepy, excited, and tired.",
+      "modelAnswer": "I feel happy.",
+      "imageUrl": "/question-images/easy/animal/open-speaking/animal-feelings.webp",
+      "acceptedAnswers": [
+        "I am happy"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q30-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I am happy",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 60,
+      "difficulty": "EASY",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "FOOD",
+      "questionText": "What food do you want to take on a picnic?",
+      "questionTextKo": "소풍에 어떤 음식을 가져가고 싶나요?",
+      "gradingContext": "The picture shows picnic food choices including a sandwich, fruit, an apple, and cookies.",
+      "modelAnswer": "I want to take sandwiches.",
+      "imageUrl": "/question-images/easy/food/open-speaking/picnic-food.webp",
+      "acceptedAnswers": [
+        "I want to take apples"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q60-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I want to take apples",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 26,
+      "difficulty": "EASY",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "ANIMAL",
+      "questionText": "Where do you want to watch birds?",
+      "questionTextKo": "어디에서 새를 보고 싶나요?",
+      "gradingContext": "The picture shows birds in several places, including a park, a forest, a zoo-like enclosure, and a garden.",
+      "modelAnswer": "I want to watch birds in the park.",
+      "imageUrl": "/question-images/easy/animal/open-speaking/watch-birds.webp",
+      "acceptedAnswers": [
+        "I want to watch birds at the zoo"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q26-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I want to watch birds at the zoo",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 275,
+      "difficulty": "HARD",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "DAILY_LIFE",
+      "questionText": "What is the student wearing, and what are they doing at the same time?",
+      "questionTextKo": "학생은 무엇을 착용하고 있고, 동시에 무엇을 하고 있나요?",
+      "gradingContext": "A student is sitting at a desk reading or writing in a book. Purple headphones are worn over the student’s ears.",
+      "modelAnswer": "The student is wearing headphones while studying at a desk.",
+      "imageUrl": "/question-images/hard/daily-life/picture-description/headphones-study.webp",
+      "acceptedAnswers": [
+        "The student has headphones on and is reading a book."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q275-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "The student has headphones on and is reading a book.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 222,
+      "difficulty": "HARD",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "ANIMAL",
+      "questionText": "If you saw a fox near your campsite, what would you do and why?",
+      "questionTextKo": "캠핑장 근처에서 여우를 봤다면 무엇을 하고, 왜 그렇게 하겠나요?",
+      "gradingContext": "A fox is standing near a campsite with a tent and backpack. The fox is a wild animal, and a safe response is to keep distance and get adult help rather than approach it.",
+      "modelAnswer": "I would stay far away and tell an adult because the fox is a wild animal.",
+      "imageUrl": "/question-images/hard/animal/open-speaking/fox-near-campsite.webp",
+      "acceptedAnswers": [
+        "I would give it space because it is wild."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q222-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I would give it space because it is wild.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 121,
+      "difficulty": "NORMAL",
+      "questionType": "SHORT_ANSWER",
+      "topic": "FOOD",
+      "questionText": "What food has bread with vegetables and cheese inside?",
+      "questionTextKo": "빵 사이에 채소와 치즈를 넣은 음식은 무엇인가요?",
+      "gradingContext": "The picture shows a sandwich made with bread and visible vegetables and cheese inside. The food is a sandwich.",
+      "modelAnswer": "It is a sandwich.",
+      "imageUrl": "/question-images/normal/food/short-answer/sandwich.webp",
+      "acceptedAnswers": [
+        "a sandwich"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q121-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "a sandwich",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 107,
+      "difficulty": "NORMAL",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "ANIMAL",
+      "questionText": "How are the two zebras different?",
+      "questionTextKo": "두 얼룩말은 어떻게 다른가요?",
+      "gradingContext": "Two zebras are standing next to each other. One zebra is noticeably taller than the other.",
+      "modelAnswer": "One zebra is taller than the other.",
+      "imageUrl": "/question-images/normal/animal/picture-description/two-different-sized-zebras.webp",
+      "acceptedAnswers": [
+        "One is tall and one is short"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q107-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "One is tall and one is short",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 124,
+      "difficulty": "NORMAL",
+      "questionType": "SHORT_ANSWER",
+      "topic": "FOOD",
+      "questionText": "What warm liquid food do you eat with a spoon?",
+      "questionTextKo": "숟가락으로 먹는 따뜻한 국물 음식은 무엇인가요?",
+      "gradingContext": "The picture shows a bowl of warm liquid soup with a spoon. The food is soup.",
+      "modelAnswer": "It is soup.",
+      "imageUrl": "/question-images/normal/food/short-answer/soup.webp",
+      "acceptedAnswers": [
+        "a bowl of soup"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q124-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "a bowl of soup",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 133,
+      "difficulty": "NORMAL",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "FOOD",
+      "questionText": "There were six cookies. How many are left?",
+      "questionTextKo": "쿠키가 여섯 개 있었습니다. 지금은 몇 개가 남았나요?",
+      "gradingContext": "Four cookies remain on the plate. The situation indicates that there were six cookies before, so two have already been eaten or removed.",
+      "modelAnswer": "There are four cookies left.",
+      "imageUrl": "/question-images/normal/food/picture-description/four-cookies-left.webp",
+      "acceptedAnswers": [
+        "Four"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q133-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "Four",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 47,
+      "difficulty": "EASY",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "FOOD",
+      "questionText": "Is the soup hot?",
+      "questionTextKo": "수프는 뜨거운가요?",
+      "gradingContext": "The picture shows a bowl of soup with steam rising from it. The soup is hot.",
+      "modelAnswer": "Yes, the soup is hot.",
+      "imageUrl": "/question-images/easy/food/picture-description/hot-soup.webp",
+      "acceptedAnswers": [
+        "It is hot"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q47-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It is hot",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 87,
+      "difficulty": "EASY",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "DAILY_LIFE",
+      "questionText": "What do you do before bed?",
+      "questionTextKo": "잠자기 전에 무엇을 하나요?",
+      "gradingContext": "The picture shows several bedtime activities: reading a book, brushing teeth, putting on pajamas, and washing the face.",
+      "modelAnswer": "I read a book.",
+      "imageUrl": "/question-images/easy/daily-life/open-speaking/bedtime-routine.webp",
+      "acceptedAnswers": [
+        "I brush my teeth"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q87-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I brush my teeth",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 1,
+      "difficulty": "EASY",
+      "questionType": "SHORT_ANSWER",
+      "topic": "ANIMAL",
+      "questionText": "What animal is this?",
+      "questionTextKo": "이 동물은 무엇일까요?",
+      "gradingContext": "The picture shows a cat sitting by itself.",
+      "modelAnswer": "It is a cat.",
+      "imageUrl": "/question-images/easy/animal/short-answer/cat.webp",
+      "acceptedAnswers": [
+        "a cat"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q1-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "a cat",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 14,
+      "difficulty": "EASY",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "ANIMAL",
+      "questionText": "Is the elephant big?",
+      "questionTextKo": "코끼리는 큰가요?",
+      "gradingContext": "The picture shows a large elephant. The intended description is that the elephant is big.",
+      "modelAnswer": "Yes, it is big.",
+      "imageUrl": "/question-images/easy/animal/picture-description/big-elephant.webp",
+      "acceptedAnswers": [
+        "It is big"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q14-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It is big",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 261,
+      "difficulty": "HARD",
+      "questionType": "SHORT_ANSWER",
+      "topic": "DAILY_LIFE",
+      "questionText": "Which piece of furniture is used to store books on several shelves?",
+      "questionTextKo": "여러 칸에 책을 보관하는 가구는 무엇인가요?",
+      "gradingContext": "The picture shows a wooden bookshelf with several rows of colorful books. The object is a bookshelf.",
+      "modelAnswer": "The object is a bookshelf.",
+      "imageUrl": "/question-images/hard/daily-life/short-answer/bookshelf.webp",
+      "acceptedAnswers": [
+        "It is a bookshelf."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q261-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It is a bookshelf.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 122,
+      "difficulty": "NORMAL",
+      "questionType": "SHORT_ANSWER",
+      "topic": "FOOD",
+      "questionText": "What dish is made with many fresh vegetables?",
+      "questionTextKo": "여러 가지 신선한 채소로 만든 음식은 무엇인가요?",
+      "gradingContext": "The picture shows a bowl of salad made with several fresh vegetables. The dish is a salad.",
+      "modelAnswer": "It is a salad.",
+      "imageUrl": "/question-images/normal/food/short-answer/salad.webp",
+      "acceptedAnswers": [
+        "a salad"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q122-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "a salad",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 42,
+      "difficulty": "EASY",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "FOOD",
+      "questionText": "How many bananas are there?",
+      "questionTextKo": "바나나는 몇 개 있나요?",
+      "gradingContext": "The picture shows exactly two bananas.",
+      "modelAnswer": "There are two bananas.",
+      "imageUrl": "/question-images/easy/food/picture-description/two-bananas.webp",
+      "acceptedAnswers": [
+        "I see two bananas"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q42-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I see two bananas",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 252,
+      "difficulty": "HARD",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "FOOD",
+      "questionText": "Would you rather share popcorn or chocolate during a movie, and why?",
+      "questionTextKo": "영화를 볼 때 팝콘과 초콜릿 중 무엇을 나눠 먹고 싶고, 왜 그런가요?",
+      "gradingContext": "The picture shows popcorn and chocolate as two movie-snack choices. Either preference is valid with a relevant reason.",
+      "modelAnswer": "I would rather share popcorn because it is easy for everyone to take a little.",
+      "imageUrl": "/question-images/hard/food/open-speaking/movie-snack-choice.webp",
+      "acceptedAnswers": [
+        "I would choose chocolate because I like sweet snacks."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q252-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I would choose chocolate because I like sweet snacks.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 281,
+      "difficulty": "HARD",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "DAILY_LIFE",
+      "questionText": "How would you organize this bookshelf so you could find a book quickly later?",
+      "questionTextKo": "나중에 책을 빨리 찾을 수 있도록 이 책장을 어떻게 정리하겠나요?",
+      "gradingContext": "The picture shows a bookshelf with books in mixed sizes and colors. The task is open-ended; reasonable organization methods include subject, size, author, or use.",
+      "modelAnswer": "I would put similar books together and keep the titles facing out.",
+      "imageUrl": "/question-images/hard/daily-life/open-speaking/organize-books.webp",
+      "acceptedAnswers": [
+        "I would put school books on one shelf and story books on another."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q281-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I would put school books on one shelf and story books on another.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 19,
+      "difficulty": "EASY",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "ANIMAL",
+      "questionText": "What color is the bear?",
+      "questionTextKo": "곰은 무슨 색인가요?",
+      "gradingContext": "The picture shows a bear with brown fur. The bear is brown.",
+      "modelAnswer": "The bear is brown.",
+      "imageUrl": "/question-images/easy/animal/picture-description/brown-bear.webp",
+      "acceptedAnswers": [
+        "Brown"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q19-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "Brown",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 82,
+      "difficulty": "EASY",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "DAILY_LIFE",
+      "questionText": "How do you go to school?",
+      "questionTextKo": "학교에 어떻게 가나요?",
+      "gradingContext": "The picture shows several ways to go to school: by bus, walking, by car, and by bicycle.",
+      "modelAnswer": "I go to school by bus.",
+      "imageUrl": "/question-images/easy/daily-life/open-speaking/go-to-school.webp",
+      "acceptedAnswers": [
+        "I go to school by bus"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q82-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I go to school by bus",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 255,
+      "difficulty": "HARD",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "FOOD",
+      "questionText": "Do you prefer a sweet snack or a salty snack, and what example would you choose?",
+      "questionTextKo": "단 간식과 짭짤한 간식 중 무엇을 더 좋아하고, 어떤 음식을 고르겠나요?",
+      "gradingContext": "The picture contrasts sweet foods such as chocolate and a donut with salty foods such as French fries. Either preference is valid.",
+      "modelAnswer": "I prefer sweet snacks, so I would choose chocolate.",
+      "imageUrl": "/question-images/hard/food/open-speaking/sweet-or-salty.webp",
+      "acceptedAnswers": [
+        "I like sweet snacks, and I would choose a donut."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q255-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I like sweet snacks, and I would choose a donut.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 56,
+      "difficulty": "EASY",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "FOOD",
+      "questionText": "What food can you share with a friend?",
+      "questionTextKo": "친구와 어떤 음식을 나눠 먹을 수 있나요?",
+      "gradingContext": "The picture shows four foods that could be shared: pizza, cookies, an apple, and bread.",
+      "modelAnswer": "I can share my pizza.",
+      "imageUrl": "/question-images/easy/food/open-speaking/share-food.webp",
+      "acceptedAnswers": [
+        "I can share an apple"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q56-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I can share an apple",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 168,
+      "difficulty": "NORMAL",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "DAILY_LIFE",
+      "questionText": "What time does the clock show?",
+      "questionTextKo": "시계가 몇 시를 가리키고 있나요?",
+      "gradingContext": "An analog clock shows 3:30, which is half past three.",
+      "modelAnswer": "The clock shows half past three.",
+      "imageUrl": "/question-images/normal/daily-life/picture-description/clock-half-past-three.webp",
+      "acceptedAnswers": [
+        "Half past three"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q168-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "Half past three",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 98,
+      "difficulty": "NORMAL",
+      "questionType": "SHORT_ANSWER",
+      "topic": "ANIMAL",
+      "questionText": "What large reptile has a long mouth and sharp teeth?",
+      "questionTextKo": "입이 길고 날카로운 이빨을 가진 큰 파충류는 무엇인가요?",
+      "gradingContext": "The picture shows a large crocodile with a long snout and visible sharp teeth. The animal is a crocodile.",
+      "modelAnswer": "It is a crocodile.",
+      "imageUrl": "/question-images/normal/animal/short-answer/crocodile.webp",
+      "acceptedAnswers": [
+        "a crocodile"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q98-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "a crocodile",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 177,
+      "difficulty": "NORMAL",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "DAILY_LIFE",
+      "questionText": "How do you keep your room tidy?",
+      "questionTextKo": "방을 어떻게 깔끔하게 정리하나요?",
+      "gradingContext": "The picture shows a tidy-room routine with a child making the bed, putting toys or books away, and organizing clothes or a desk.",
+      "modelAnswer": "I put away my toys and make my bed every day.",
+      "imageUrl": "/question-images/normal/daily-life/open-speaking/keep-room-tidy.webp",
+      "acceptedAnswers": [
+        "I clean my desk and put my clothes away"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q177-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I clean my desk and put my clothes away",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 269,
+      "difficulty": "HARD",
+      "questionType": "SHORT_ANSWER",
+      "topic": "DAILY_LIFE",
+      "questionText": "Which appliance washes clothes with water?",
+      "questionTextKo": "물을 사용해 옷을 세탁하는 가전제품은 무엇인가요?",
+      "gradingContext": "The picture shows a front-loading washing machine with a large round door. The appliance is a washing machine.",
+      "modelAnswer": "The appliance is a washing machine.",
+      "imageUrl": "/question-images/hard/daily-life/short-answer/washing-machine.webp",
+      "acceptedAnswers": [
+        "It is a washing machine."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q269-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It is a washing machine.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 110,
+      "difficulty": "NORMAL",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "ANIMAL",
+      "questionText": "How is the octopus protecting itself?",
+      "questionTextKo": "문어는 어떻게 자신을 보호하고 있나요?",
+      "gradingContext": "An octopus is underwater releasing a cloud of dark ink around itself as protection.",
+      "modelAnswer": "The octopus is spraying ink into the water.",
+      "imageUrl": "/question-images/normal/animal/picture-description/octopus-spraying-ink.webp",
+      "acceptedAnswers": [
+        "By spraying ink"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q110-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "By spraying ink",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 136,
+      "difficulty": "NORMAL",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "FOOD",
+      "questionText": "What is the girl adding to her cereal?",
+      "questionTextKo": "여자아이는 시리얼에 무엇을 넣고 있나요?",
+      "gradingContext": "A girl is pouring milk from a container into a bowl of cereal.",
+      "modelAnswer": "She is pouring milk over her cereal.",
+      "imageUrl": "/question-images/normal/food/picture-description/girl-pouring-milk-on-cereal.webp",
+      "acceptedAnswers": [
+        "Milk"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q136-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "Milk",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 95,
+      "difficulty": "NORMAL",
+      "questionType": "SHORT_ANSWER",
+      "topic": "ANIMAL",
+      "questionText": "What animal carries its baby in a pouch?",
+      "questionTextKo": "주머니에 새끼를 넣고 다니는 동물은 무엇인가요?",
+      "gradingContext": "The picture shows a kangaroo with a baby joey visible in its pouch. The animal is a kangaroo.",
+      "modelAnswer": "It is a kangaroo.",
+      "imageUrl": "/question-images/normal/animal/short-answer/kangaroo.webp",
+      "acceptedAnswers": [
+        "a kangaroo"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q95-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "a kangaroo",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 113,
+      "difficulty": "NORMAL",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "ANIMAL",
+      "questionText": "What can people do to protect wild animals?",
+      "questionTextKo": "사람들은 야생 동물을 보호하기 위해 무엇을 할 수 있나요?",
+      "gradingContext": "The picture shows people helping protect wildlife by keeping a natural habitat clean, protecting trees, and caring for animals. Other reasonable ways to protect wild animals are also valid.",
+      "modelAnswer": "People can keep their habitats clean.",
+      "imageUrl": "/question-images/normal/animal/open-speaking/protect-wild-animals.webp",
+      "acceptedAnswers": [
+        "People can give animals safe places to live"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q113-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "People can give animals safe places to live",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 209,
+      "difficulty": "HARD",
+      "questionType": "SHORT_ANSWER",
+      "topic": "ANIMAL",
+      "questionText": "Which sea animal has a very large body and a broad tail?",
+      "questionTextKo": "몸이 매우 크고 넓은 꼬리가 있는 바다 동물은 무엇인가요?",
+      "gradingContext": "The picture shows a large blue whale with a broad body, side flippers, and a wide tail fluke. The animal is a whale.",
+      "modelAnswer": "The animal is a whale.",
+      "imageUrl": "/question-images/hard/animal/short-answer/whale.webp",
+      "acceptedAnswers": [
+        "It is a whale."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q209-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It is a whale.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 140,
+      "difficulty": "NORMAL",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "FOOD",
+      "questionText": "What is the family doing at the table?",
+      "questionTextKo": "가족은 식탁에서 무엇을 하고 있나요?",
+      "gradingContext": "A family is sitting together around a table, eating and sharing dinner food.",
+      "modelAnswer": "The family is eating dinner and talking together.",
+      "imageUrl": "/question-images/normal/food/picture-description/family-sharing-dinner.webp",
+      "acceptedAnswers": [
+        "The family is sharing a meal"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q140-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "The family is sharing a meal",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 78,
+      "difficulty": "EASY",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "DAILY_LIFE",
+      "questionText": "What are the children doing?",
+      "questionTextKo": "아이들은 무엇을 하고 있나요?",
+      "gradingContext": "The picture shows two children outdoors tossing or playing with a ball together.",
+      "modelAnswer": "They are playing with a ball.",
+      "imageUrl": "/question-images/easy/daily-life/picture-description/children-playing-ball.webp",
+      "acceptedAnswers": [
+        "Playing with a ball"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q78-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "Playing with a ball",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 64,
+      "difficulty": "EASY",
+      "questionType": "SHORT_ANSWER",
+      "topic": "DAILY_LIFE",
+      "questionText": "What is this?",
+      "questionTextKo": "이것은 무엇일까요?",
+      "gradingContext": "The picture shows a yellow pencil with an eraser.",
+      "modelAnswer": "It is a pencil.",
+      "imageUrl": "/question-images/easy/daily-life/short-answer/pencil.webp",
+      "acceptedAnswers": [
+        "a pencil"
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q64-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "a pencil",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 270,
+      "difficulty": "HARD",
+      "questionType": "PICTURE_DESCRIPTION",
+      "topic": "DAILY_LIFE",
+      "questionText": "Where is the alarm clock, and what is the child doing?",
+      "questionTextKo": "알람 시계는 어디에 있고, 아이는 무엇을 하고 있나요?",
+      "gradingContext": "An alarm clock is beside a bed in a bedroom. A child is beside the bed and appears to be getting up or waking up.",
+      "modelAnswer": "The alarm clock is beside the bed, and the child is getting up.",
+      "imageUrl": "/question-images/hard/daily-life/picture-description/alarm-morning.webp",
+      "acceptedAnswers": [
+        "The child is getting out of bed near the alarm clock."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q270-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "The child is getting out of bed near the alarm clock.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 260,
+      "difficulty": "HARD",
+      "questionType": "SHORT_ANSWER",
+      "topic": "DAILY_LIFE",
+      "questionText": "Which object helps you wake up at a chosen time?",
+      "questionTextKo": "정해 둔 시간에 일어나도록 도와주는 물건은 무엇인가요?",
+      "gradingContext": "The picture shows a red alarm clock with a clock face and two bells on top. An alarm clock is used to alert someone at a chosen time.",
+      "modelAnswer": "The object is an alarm clock.",
+      "imageUrl": "/question-images/hard/daily-life/short-answer/alarm-clock.webp",
+      "acceptedAnswers": [
+        "It is an alarm clock."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q260-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It is an alarm clock.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 253,
+      "difficulty": "HARD",
+      "questionType": "OPEN_SPEAKING",
+      "topic": "FOOD",
+      "questionText": "Choose three foods to make a balanced lunch and explain your choices.",
+      "questionTextKo": "균형 잡힌 점심을 만들기 위해 음식 세 가지를 고르고 그 이유를 설명해 보세요.",
+      "gradingContext": "The picture presents several foods including salad, grapes, cheese, a hot dog, fries, and a donut. More than one balanced combination is reasonable if the learner explains the choices.",
+      "modelAnswer": "I would choose salad, grapes, and cheese because they give me vegetables, fruit, and another food group.",
+      "imageUrl": "/question-images/hard/food/open-speaking/balanced-lunch.webp",
+      "acceptedAnswers": [
+        "I would choose salad, grapes, and a hot dog because the meal has different kinds of food."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q253-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "I would choose salad, grapes, and a hot dog because the meal has different kinds of food.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    },
+    {
+      "questionId": 204,
+      "difficulty": "HARD",
+      "questionType": "SHORT_ANSWER",
+      "topic": "ANIMAL",
+      "questionText": "Which bird has large round eyes and sits upright?",
+      "questionTextKo": "크고 둥근 눈을 가지고 똑바로 앉아 있는 새는 무엇인가요?",
+      "gradingContext": "The picture shows a brown owl with large round eyes, a short hooked beak, and an upright body. The bird is an owl.",
+      "modelAnswer": "The bird is an owl.",
+      "imageUrl": "/question-images/hard/animal/short-answer/owl.webp",
+      "acceptedAnswers": [
+        "It is an owl."
+      ],
+      "cases": [
+        {
+          "caseId": "cache-q204-correct-unique",
+          "answerKind": "ACCEPTED_ANSWER",
+          "answerText": "It is an owl.",
+          "expectedResult": "CORRECT",
+          "criticalFalsePositive": false,
+          "rationaleKo": "새 평가 세트의 고유한 허용 답안으로 캐시 적중률 측정에 사용한다."
+        }
+      ]
+    }
+  ]
+}
