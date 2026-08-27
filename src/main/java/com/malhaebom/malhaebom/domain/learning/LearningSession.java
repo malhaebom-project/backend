@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Objects;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
@@ -76,6 +77,36 @@ public class LearningSession extends BaseEntity {
 	public LearningSessionQuestion getCurrentQuestion() {
 		validateInProgress();
 		return questions.getCurrent();
+	}
+
+	public AnswerSubmissionTarget answerSubmissionTarget(
+		Long sessionQuestionId
+	) {
+		validateAnswerSubmissionTarget(sessionQuestionId);
+		return new AnswerSubmissionTarget(questions.getCurrent());
+	}
+
+	public void applyAnswerResult(Answer answer) {
+		Objects.requireNonNull(answer, "답변은 null일 수 없습니다.");
+		validateAnswerSubmissionTarget(answer.getSessionQuestion().getId());
+
+		if (AnswerAttemptPolicy.canRetry(answer)) {
+			questions.recordWrongAnswerAttempt();
+			return;
+		}
+
+		questions.completeCurrent(answer.isCorrect());
+		if (questions.isCompleted()) {
+			complete();
+		}
+	}
+
+	public void validateAnswerSubmissionTarget(AnswerSubmission submission) {
+		Objects.requireNonNull(
+			submission,
+			"답변 제출 예약은 null일 수 없습니다."
+		);
+		validateAnswerSubmissionTarget(submission.getSessionQuestion().getId());
 	}
 
 	public void completeCurrentQuestion(boolean correct) {
@@ -160,6 +191,22 @@ public class LearningSession extends BaseEntity {
 	private void validateInProgress() {
 		if (status != LearningSessionStatus.IN_PROGRESS) {
 			throw new IllegalStateException("진행 중인 학습 세션이 아닙니다.");
+		}
+	}
+
+	private void validateAnswerSubmissionTarget(Long sessionQuestionId) {
+		if (!isInProgress()) {
+			throw new LearningSessionAnswerSubmissionException(
+				LearningSessionAnswerSubmissionException.Reason.SESSION_NOT_IN_PROGRESS,
+				"진행 중인 학습 세션이 아닙니다."
+			);
+		}
+
+		if (!Objects.equals(questions.getCurrent().getId(), sessionQuestionId)) {
+			throw new LearningSessionAnswerSubmissionException(
+				LearningSessionAnswerSubmissionException.Reason.CURRENT_QUESTION_MISMATCH,
+				"현재 문제가 아닙니다."
+			);
 		}
 	}
 

@@ -83,7 +83,7 @@ public class AnswerSubmission extends BaseEntity {
 	@Column(name = "failure_message", length = 1000)
 	private String failureMessage;
 
-	public static AnswerSubmission reserve(
+	static AnswerSubmission reserve(
 		LearningSessionQuestion sessionQuestion,
 		SpeechAnswer speechAnswer,
 		int attemptNo
@@ -111,19 +111,44 @@ public class AnswerSubmission extends BaseEntity {
 		failureMessage = null;
 	}
 
-	public void complete(String processingToken, Answer answer) {
+	public Answer complete(
+		String processingToken,
+		AnswerEvaluation evaluation,
+		String feedbackText
+	) {
 		validateProcessingToken(processingToken);
-		validateCompletedAnswer(answer);
+		Answer completedAnswer = Answer.create(
+			this,
+			evaluation,
+			feedbackText
+		);
 
 		status = AnswerSubmissionStatus.COMPLETED;
-		this.answer = answer;
+		answer = completedAnswer;
 		this.processingToken = null;
 		leaseExpiresAt = null;
 		failureMessage = null;
+		return completedAnswer;
 	}
 
 	public void fail(String processingToken, String failureMessage) {
 		validateProcessingToken(processingToken);
+		markFailed(failureMessage);
+	}
+
+	public boolean failIfProcessingWithToken(
+		String processingToken,
+		String failureMessage
+	) {
+		if (!isProcessingWithToken(processingToken)) {
+			return false;
+		}
+
+		markFailed(failureMessage);
+		return true;
+	}
+
+	private void markFailed(String failureMessage) {
 		validateText(
 			failureMessage,
 			MAX_FAILURE_MESSAGE_LENGTH,
@@ -205,24 +230,14 @@ public class AnswerSubmission extends BaseEntity {
 		);
 
 		if (status != AnswerSubmissionStatus.PROCESSING) {
-			throw new IllegalStateException("처리 중인 답변 제출 예약이 아닙니다.");
+			throw new AnswerSubmissionProcessingException(
+				"처리 중인 답변 제출 예약이 아닙니다."
+			);
 		}
 
 		if (!Objects.equals(this.processingToken, processingToken)) {
-			throw new IllegalStateException("답변 제출 예약의 처리 토큰이 일치하지 않습니다.");
-		}
-	}
-
-	private void validateCompletedAnswer(Answer answer) {
-		if (answer == null) {
-			throw new IllegalArgumentException("완료 답변은 null일 수 없습니다.");
-		}
-
-		if (!isSameQuestion(answer.getSessionQuestion(), sessionQuestion)
-			|| !isSameSpeechAnswer(answer.getSpeechAnswer(), speechAnswer)
-			|| answer.getAttemptNo() != attemptNo) {
-			throw new IllegalArgumentException(
-				"예약된 제출과 일치하는 답변만 완료 처리할 수 있습니다."
+			throw new AnswerSubmissionProcessingException(
+				"답변 제출 예약의 처리 토큰이 일치하지 않습니다."
 			);
 		}
 	}
@@ -236,58 +251,30 @@ public class AnswerSubmission extends BaseEntity {
 			throw new IllegalArgumentException("세션 문제는 null일 수 없습니다.");
 		}
 
-		if (!sessionQuestion.getLearningSession().isInProgress()
-			|| sessionQuestion.isCompleted()) {
-			throw new IllegalStateException("진행 중인 문제만 제출을 예약할 수 있습니다.");
-		}
-
-		LearningSessionQuestion currentQuestion = sessionQuestion
-			.getLearningSession()
-			.getCurrentQuestion();
-		if (!isSameQuestion(sessionQuestion, currentQuestion)) {
-			throw new IllegalStateException("현재 문제만 제출을 예약할 수 있습니다.");
-		}
-
 		if (speechAnswer == null) {
 			throw new IllegalArgumentException("음성 답변은 null일 수 없습니다.");
 		}
 
-		if (!speechAnswer.isUsableFor(sessionQuestion)) {
-			throw new IllegalArgumentException(
-				"현재 문제에 사용할 수 있는 완료된 음성 답변이 아닙니다."
+		if (!speechAnswer.isCompleted()) {
+			throw new AnswerSubmissionReservationException(
+				AnswerSubmissionReservationException.Reason.SPEECH_ANSWER_NOT_COMPLETED,
+				"처리가 완료되지 않은 음성 답변입니다."
 			);
 		}
 
-		if (attemptNo < 1) {
-			throw new IllegalArgumentException("답변 시도 번호는 1 이상이어야 합니다.");
-		}
-	}
-
-	private static boolean isSameQuestion(
-		LearningSessionQuestion first,
-		LearningSessionQuestion second
-	) {
-		if (first == second) {
-			return true;
+		if (!speechAnswer.isUsableFor(sessionQuestion)) {
+			throw new AnswerSubmissionReservationException(
+				AnswerSubmissionReservationException.Reason.SPEECH_ANSWER_QUESTION_MISMATCH,
+				"현재 문제에 사용할 수 있는 음성 답변이 아닙니다."
+			);
 		}
 
-		return first.getId() != null
-			&& second.getId() != null
-			&& Objects.equals(first.getId(), second.getId());
-	}
-
-	private static boolean isSameSpeechAnswer(
-		SpeechAnswer first,
-		SpeechAnswer second
-	) {
-		if (first == second) {
-			return true;
+		if (!AnswerAttemptPolicy.isAllowed(attemptNo)) {
+			throw new AnswerSubmissionReservationException(
+				AnswerSubmissionReservationException.Reason.ATTEMPT_NOT_ALLOWED,
+				"답변 가능 횟수를 초과했습니다."
+			);
 		}
-
-		return first != null
-			&& second != null
-			&& first.getId() != null
-			&& Objects.equals(first.getId(), second.getId());
 	}
 
 	private static void validateText(

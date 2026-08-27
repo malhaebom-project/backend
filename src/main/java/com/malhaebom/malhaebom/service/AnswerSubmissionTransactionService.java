@@ -11,10 +11,13 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.malhaebom.malhaebom.domain.learning.Answer;
-import com.malhaebom.malhaebom.domain.learning.AnswerAttemptPolicy;
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmission;
+import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionProcessingException;
+import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionReservationException;
 import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionStatus;
+import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionTarget;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
+import com.malhaebom.malhaebom.domain.learning.LearningSessionAnswerSubmissionException;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
@@ -78,19 +81,20 @@ public class AnswerSubmissionTransactionService {
 			);
 		}
 
-		validateInProgress(session);
-		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
-		validateCurrentQuestion(currentQuestion, sessionQuestionId);
-		SpeechAnswer speechAnswer = getSpeechAnswer(speechAnswerId);
-		validateSpeechAnswer(speechAnswer, currentQuestion);
-		validateSpeechAnswerNotUsed(speechAnswerId);
-		validateNoConflictingSubmission(currentQuestion.getId());
-
-		int attemptNo = getNextAttemptNo(currentQuestion.getId());
-		validateAttemptCount(attemptNo);
-		AnswerSubmission submission = answerSubmissionRepository.save(
-			AnswerSubmission.reserve(currentQuestion, speechAnswer, attemptNo)
+		AnswerSubmissionTarget target = getAnswerSubmissionTarget(
+			session,
+			sessionQuestionId
 		);
+		SpeechAnswer speechAnswer = getSpeechAnswer(speechAnswerId);
+		int attemptNo = getNextAttemptNo(sessionQuestionId);
+		AnswerSubmission submission = reserveSubmission(
+			target,
+			speechAnswer,
+			attemptNo
+		);
+		validateSpeechAnswerNotUsed(speechAnswerId);
+		validateNoConflictingSubmission(sessionQuestionId);
+		answerSubmissionRepository.save(submission);
 		AnswerSubmissionPreparation preparation = claim(
 			submission,
 			clock.instant(),
@@ -112,28 +116,14 @@ public class AnswerSubmissionTransactionService {
 			found.getSessionQuestion().getLearningSession().getId()
 		);
 		AnswerSubmission submission = getSubmissionForUpdate(submissionId);
-		validateProcessingToken(submission, processingToken);
 		validateDeadline(deadline);
-		validateInProgress(session);
-		validateCurrentQuestion(
-			session.getCurrentQuestion(),
-			submission.getSessionQuestion().getId()
-		);
-
-		Answer answer = answerRepository.save(Answer.create(
+		Answer answer = answerRepository.save(completeSubmission(
 			submission,
-			assessment.toEvaluation(),
-			assessment.feedbackText()
+			processingToken,
+			assessment
 		));
-		boolean canRetry = AnswerAttemptPolicy.canRetry(answer);
-		if (canRetry) {
-			session.recordWrongAnswerAttempt();
-		} else {
-			session.completeCurrentQuestion(answer.isCorrect());
-		}
+		applyAnswerResult(session, answer);
 		validateDeadline(deadline);
-		submission.complete(processingToken, answer);
-
 		return AnswerSubmissionResult.from(answer);
 	}
 
@@ -146,12 +136,11 @@ public class AnswerSubmissionTransactionService {
 		AnswerSubmission submission = answerSubmissionRepository
 			.findForUpdateById(submissionId)
 			.orElse(null);
-		if (submission == null
-			|| !submission.isProcessingWithToken(processingToken)) {
+		if (submission == null) {
 			return;
 		}
 
-		submission.fail(
+		submission.failIfProcessingWithToken(
 			processingToken,
 			toFailureMessage(exception)
 		);
@@ -179,11 +168,7 @@ public class AnswerSubmissionTransactionService {
 			throw new ApiException(ErrorCode.ANSWER_SUBMISSION_PROCESSING);
 		}
 
-		validateInProgress(session);
-		validateCurrentQuestion(
-			session.getCurrentQuestion(),
-			submission.getSessionQuestion().getId()
-		);
+		validateSubmissionTarget(session, submission);
 		boolean retryingFailed =
 			submission.getStatus() == AnswerSubmissionStatus.FAILED;
 		if (retryingFailed) {
@@ -249,15 +234,6 @@ public class AnswerSubmissionTransactionService {
 		}
 	}
 
-	private void validateAttemptCount(int attemptNo) {
-		if (!AnswerAttemptPolicy.isAllowed(attemptNo)) {
-			throw new ApiException(
-				ErrorCode.INVALID_REQUEST,
-				"답변 가능 횟수를 초과했습니다."
-			);
-		}
-	}
-
 	private LearningSession getSessionForUpdate(Long sessionId) {
 		return learningSessionRepository.findForUpdateById(sessionId)
 			.orElseThrow(() -> new ApiException(
@@ -298,46 +274,100 @@ public class AnswerSubmissionTransactionService {
 		}
 	}
 
-	private void validateInProgress(LearningSession session) {
-		if (!session.isInProgress()) {
-			throw new ApiException(
-				ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS
-			);
+	private AnswerSubmission reserveSubmission(
+		AnswerSubmissionTarget target,
+		SpeechAnswer speechAnswer,
+		int attemptNo
+	) {
+		try {
+			return target.reserve(speechAnswer, attemptNo);
+		} catch (AnswerSubmissionReservationException exception) {
+			throw toApiException(exception);
 		}
 	}
 
-	private void validateCurrentQuestion(
-		LearningSessionQuestion currentQuestion,
+	private AnswerSubmissionTarget getAnswerSubmissionTarget(
+		LearningSession session,
 		Long sessionQuestionId
 	) {
-		if (!Objects.equals(currentQuestion.getId(), sessionQuestionId)) {
-			throw new ApiException(ErrorCode.CURRENT_QUESTION_MISMATCH);
+		try {
+			return session.answerSubmissionTarget(sessionQuestionId);
+		} catch (LearningSessionAnswerSubmissionException exception) {
+			throw toApiException(exception);
 		}
 	}
 
-	private void validateSpeechAnswer(
-		SpeechAnswer speechAnswer,
-		LearningSessionQuestion currentQuestion
+	private void validateSubmissionTarget(
+		LearningSession session,
+		AnswerSubmission submission
 	) {
-		if (!speechAnswer.isCompleted()) {
-			throw new ApiException(
-				ErrorCode.INVALID_REQUEST,
-				"처리가 완료되지 않은 음성 답변입니다."
+		try {
+			session.validateAnswerSubmissionTarget(submission);
+		} catch (LearningSessionAnswerSubmissionException exception) {
+			throw toApiException(exception);
+		}
+	}
+
+	private void applyAnswerResult(LearningSession session, Answer answer) {
+		try {
+			session.applyAnswerResult(answer);
+		} catch (LearningSessionAnswerSubmissionException exception) {
+			throw toApiException(exception);
+		}
+	}
+
+	private ApiException toApiException(
+		AnswerSubmissionReservationException exception
+	) {
+		return switch (exception.getReason()) {
+			case SPEECH_ANSWER_QUESTION_MISMATCH -> new ApiException(
+				ErrorCode.CURRENT_QUESTION_MISMATCH,
+				exception
 			);
-		}
-		if (!speechAnswer.isUsableFor(currentQuestion)) {
-			throw new ApiException(ErrorCode.CURRENT_QUESTION_MISMATCH);
-		}
+			case SPEECH_ANSWER_NOT_COMPLETED -> new ApiException(
+				ErrorCode.INVALID_REQUEST,
+				"처리가 완료되지 않은 음성 답변입니다.",
+				exception
+			);
+			case ATTEMPT_NOT_ALLOWED -> new ApiException(
+				ErrorCode.INVALID_REQUEST,
+				"답변 가능 횟수를 초과했습니다.",
+				exception
+			);
+		};
 	}
 
-	private void validateProcessingToken(
-		AnswerSubmission submission,
-		String processingToken
+	private ApiException toApiException(
+		LearningSessionAnswerSubmissionException exception
 	) {
-		if (!submission.isProcessingWithToken(processingToken)) {
+		return switch (exception.getReason()) {
+			case SESSION_NOT_IN_PROGRESS -> new ApiException(
+				ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS,
+				exception
+			);
+			case CURRENT_QUESTION_MISMATCH -> new ApiException(
+				ErrorCode.CURRENT_QUESTION_MISMATCH,
+				exception
+			);
+		};
+	}
+
+	private Answer completeSubmission(
+		AnswerSubmission submission,
+		String processingToken,
+		AnswerAssessment assessment
+	) {
+		try {
+			return submission.complete(
+				processingToken,
+				assessment.toEvaluation(),
+				assessment.feedbackText()
+			);
+		} catch (AnswerSubmissionProcessingException exception) {
 			throw new ApiException(
 				ErrorCode.ANSWER_SUBMISSION_PROCESSING,
-				"답변 제출 처리 권한이 만료되었습니다."
+				"답변 제출 처리 권한이 만료되었습니다.",
+				exception
 			);
 		}
 	}

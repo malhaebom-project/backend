@@ -26,7 +26,7 @@ class AnswerSubmissionTest {
 		LearningSessionQuestion sessionQuestion = createSessionQuestion();
 		SpeechAnswer speechAnswer = completedSpeechAnswer(sessionQuestion);
 
-		AnswerSubmission submission = AnswerSubmission.reserve(
+		AnswerSubmission submission = reserve(
 			sessionQuestion,
 			speechAnswer,
 			1
@@ -48,8 +48,8 @@ class AnswerSubmissionTest {
 		);
 
 		assertThrows(
-			IllegalArgumentException.class,
-			() -> AnswerSubmission.reserve(sessionQuestion, processing, 1)
+			AnswerSubmissionReservationException.class,
+			() -> reserve(sessionQuestion, processing, 1)
 		);
 	}
 
@@ -59,8 +59,8 @@ class AnswerSubmissionTest {
 		LearningSessionQuestion otherQuestion = createSessionQuestion();
 
 		assertThrows(
-			IllegalArgumentException.class,
-			() -> AnswerSubmission.reserve(
+			AnswerSubmissionReservationException.class,
+			() -> reserve(
 				currentQuestion,
 				completedSpeechAnswer(otherQuestion),
 				1
@@ -75,8 +75,8 @@ class AnswerSubmissionTest {
 		sessionQuestion.getLearningSession().completeCurrentQuestion(true);
 
 		assertThrows(
-			IllegalStateException.class,
-			() -> AnswerSubmission.reserve(
+			LearningSessionAnswerSubmissionException.class,
+			() -> reserve(
 				sessionQuestion,
 				speechAnswer,
 				1
@@ -89,13 +89,53 @@ class AnswerSubmissionTest {
 		LearningSessionQuestion sessionQuestion = createSessionQuestion();
 
 		assertThrows(
-			IllegalArgumentException.class,
-			() -> AnswerSubmission.reserve(
+			AnswerSubmissionReservationException.class,
+			() -> reserve(
 				sessionQuestion,
 				completedSpeechAnswer(sessionQuestion),
 				0
 			)
 		);
+	}
+
+	@Test
+	void 최대_답변_시도_횟수를_초과하면_예약할_수_없다() {
+		LearningSessionQuestion sessionQuestion = createSessionQuestion();
+
+		AnswerSubmissionReservationException exception = assertThrows(
+			AnswerSubmissionReservationException.class,
+			() -> reserve(
+				sessionQuestion,
+				completedSpeechAnswer(sessionQuestion),
+				3
+			)
+		);
+
+		assertEquals(
+			AnswerSubmissionReservationException.Reason.ATTEMPT_NOT_ALLOWED,
+			exception.getReason()
+		);
+	}
+
+	@Test
+	void 오답의_첫_번째_시도는_현재_문제의_재시도로_반영한다() {
+		LearningSessionQuestion sessionQuestion = createSessionQuestion();
+		AnswerSubmission submission = reserve(
+			sessionQuestion,
+			completedSpeechAnswer(sessionQuestion),
+			1
+		);
+		submission.claim(PROCESSING_TOKEN, CLAIMED_AT, LEASE_EXPIRES_AT);
+		Answer answer = submission.complete(
+			PROCESSING_TOKEN,
+			AnswerEvaluation.from(AnswerResult.INCORRECT),
+			"다시 시도해 보세요."
+		);
+
+		sessionQuestion.getLearningSession().applyAnswerResult(answer);
+
+		assertFalse(sessionQuestion.isCompleted());
+		assertEquals(1, sessionQuestion.getWrongAnswerCount());
 	}
 
 	@Test
@@ -148,15 +188,22 @@ class AnswerSubmissionTest {
 	}
 
 	@Test
-	void 처리_토큰이_일치하면_예약을_완료한다() {
+	void 처리_토큰이_일치하면_답변을_생성하고_예약을_완료한다() {
 		AnswerSubmission submission = createSubmission();
 		submission.claim(PROCESSING_TOKEN, CLAIMED_AT, LEASE_EXPIRES_AT);
-		Answer answer = createAnswer(submission);
 
-		submission.complete(PROCESSING_TOKEN, answer);
+		Answer answer = submission.complete(
+			PROCESSING_TOKEN,
+			AnswerEvaluation.from(AnswerResult.CORRECT),
+			"현재진행형을 정확하게 사용했어요!"
+		);
 
 		assertEquals(AnswerSubmissionStatus.COMPLETED, submission.getStatus());
 		assertSame(answer, submission.getAnswer());
+		assertSame(submission.getSessionQuestion(), answer.getSessionQuestion());
+		assertSame(submission.getSpeechAnswer(), answer.getSpeechAnswer());
+		assertEquals(submission.getAttemptNo(), answer.getAttemptNo());
+		assertEquals(AnswerResult.CORRECT, answer.getResult());
 		assertNull(submission.getProcessingToken());
 		assertNull(submission.getLeaseExpiresAt());
 		assertNull(submission.getFailureMessage());
@@ -174,10 +221,11 @@ class AnswerSubmissionTest {
 		);
 
 		assertThrows(
-			IllegalStateException.class,
+			AnswerSubmissionProcessingException.class,
 			() -> submission.complete(
 				PROCESSING_TOKEN,
-				createAnswer(submission)
+				AnswerEvaluation.from(AnswerResult.CORRECT),
+				"현재진행형을 정확하게 사용했어요!"
 			)
 		);
 	}
@@ -233,21 +281,37 @@ class AnswerSubmissionTest {
 
 	private AnswerSubmission createSubmission() {
 		LearningSessionQuestion sessionQuestion = createSessionQuestion();
-		return AnswerSubmission.reserve(
+		return reserve(
 			sessionQuestion,
 			completedSpeechAnswer(sessionQuestion),
 			1
 		);
 	}
 
-	private Answer createAnswer(AnswerSubmission submission) {
-		return Answer.create(
-			submission.getSessionQuestion(),
-			submission.getSpeechAnswer(),
-			submission.getAttemptNo(),
-			AnswerEvaluation.from(AnswerResult.CORRECT),
-			"현재진행형을 정확하게 사용했어요!"
+	private AnswerSubmission reserve(
+		LearningSessionQuestion sessionQuestion,
+		SpeechAnswer speechAnswer,
+		int attemptNo
+	) {
+		return sessionQuestion.getLearningSession()
+			.answerSubmissionTarget(sessionQuestion.getId())
+			.reserve(speechAnswer, attemptNo);
+	}
+
+	@Test
+	void 이전_처리_토큰의_실패_콜백은_상태를_변경하지_않는다() {
+		AnswerSubmission submission = createSubmission();
+		submission.claim(PROCESSING_TOKEN, CLAIMED_AT, LEASE_EXPIRES_AT);
+
+		boolean failed = submission.failIfProcessingWithToken(
+			"3cbafaf0-fd5b-47aa-8d2d-18c7c2a47f0a",
+			"이전 작업의 실패 콜백입니다."
 		);
+
+		assertFalse(failed);
+		assertEquals(AnswerSubmissionStatus.PROCESSING, submission.getStatus());
+		assertEquals(PROCESSING_TOKEN, submission.getProcessingToken());
+		assertNull(submission.getFailureMessage());
 	}
 
 	private SpeechAnswer completedSpeechAnswer(
