@@ -198,6 +198,7 @@ public class SpeechAnswerService implements SmartLifecycle {
 			task = transcribeAndComplete(startResult, audio, provider);
 		} catch (RuntimeException exception) {
 			permit.release();
+			failClaimed(startResult, provider, exception);
 			logFailure(startedAt, exception);
 			throw exception;
 		}
@@ -306,26 +307,13 @@ public class SpeechAnswerService implements SmartLifecycle {
 	) {
 		CompletableFuture<SpeechAnswerResult> result = new CompletableFuture<>();
 		AtomicBoolean terminal = new AtomicBoolean();
-		SpeechTranscriptionTask transcription;
-		try {
-			transcription = Objects.requireNonNull(
-				transcriber.transcribeAsync(
-					audio,
-					startResult.adaptationPhrases()
-				),
-				"음성 변환 작업은 null일 수 없습니다."
-			);
-		} catch (RuntimeException exception) {
-			terminal.set(true);
-			executeCompletion(() -> fail(
-				startResult.speechAnswer().getId(),
-				startResult.processingToken(),
-				provider,
-				toApiException(exception),
-				result
-			));
-			return new SpeechAnswerTask(result, () -> false);
-		}
+		SpeechTranscriptionTask transcription = Objects.requireNonNull(
+			transcriber.transcribeAsync(
+				audio,
+				startResult.adaptationPhrases()
+			),
+			"음성 변환 작업은 null일 수 없습니다."
+		);
 
 		transcription.result().whenComplete((transcriptionResult, exception) ->
 			executeCompletion(() -> completeFromProvider(
@@ -349,6 +337,24 @@ public class SpeechAnswerService implements SmartLifecycle {
 				result
 			)
 		);
+	}
+
+	private void failClaimed(
+		SpeechAnswerStartResult startResult,
+		String provider,
+		RuntimeException exception
+	) {
+		ApiException failure = toApiException(exception);
+		try {
+			stateService.fail(
+				startResult.speechAnswer().getId(),
+				startResult.processingToken(),
+				failure.getErrorCode().getMessage(),
+				provider
+			);
+		} catch (RuntimeException stateFailure) {
+			exception.addSuppressed(stateFailure);
+		}
 	}
 
 	private void completeFromProvider(

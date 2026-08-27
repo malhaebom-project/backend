@@ -2,6 +2,8 @@ package com.malhaebom.malhaebom.integration.learning;
 
 import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Duration;
 import java.util.List;
@@ -122,6 +124,22 @@ class SpeechAnswerServiceJpaTest {
 		assertFailed(ErrorCode.STT_PROCESSING_FAILED.getMessage());
 	}
 
+	@Test
+	void 예상하지_못한_동기_STT_오류는_원본을_유지하고_실패_상태로_저장한다() {
+		RuntimeException providerException = new IllegalStateException(
+			"invalid provider state"
+		);
+		transcriber.willThrowSynchronously(providerException);
+
+		RuntimeException thrown = assertThrows(
+			RuntimeException.class,
+			this::upload
+		);
+
+		assertSame(providerException, thrown);
+		assertFailed(ErrorCode.STT_PROCESSING_FAILED.getMessage());
+	}
+
 	private SpeechAnswerResult upload() {
 		return await(speechAnswerService.uploadAsync(
 			new SpeechAnswerRequest(
@@ -159,15 +177,24 @@ class SpeechAnswerServiceJpaTest {
 
 		private SpeechTranscriptionResult result;
 		private RuntimeException exception;
+		private RuntimeException synchronousException;
 		private List<String> adaptationPhrases;
 
 		void willReturn(SpeechTranscriptionResult result) {
 			this.result = result;
 			this.exception = null;
+			this.synchronousException = null;
 		}
 
 		void willThrow(RuntimeException exception) {
 			this.exception = exception;
+			this.result = null;
+			this.synchronousException = null;
+		}
+
+		void willThrowSynchronously(RuntimeException exception) {
+			this.synchronousException = exception;
+			this.exception = null;
 			this.result = null;
 		}
 
@@ -182,6 +209,9 @@ class SpeechAnswerServiceJpaTest {
 			List<String> adaptationPhrases
 		) {
 			this.adaptationPhrases = List.copyOf(adaptationPhrases);
+			if (synchronousException != null) {
+				throw synchronousException;
+			}
 			if (exception != null) {
 				return SpeechTranscriptionTask.failed(exception);
 			}
