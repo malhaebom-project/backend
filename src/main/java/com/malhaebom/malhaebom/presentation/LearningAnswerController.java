@@ -1,7 +1,5 @@
 package com.malhaebom.malhaebom.presentation;
 
-import java.util.concurrent.CompletionException;
-
 import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,7 +47,7 @@ public class LearningAnswerController {
 
 		submission.result().whenComplete((result, exception) -> {
 			if (exception != null) {
-				response.setErrorResult(unwrapCompletionException(exception));
+				response.setErrorResult(exception);
 				return;
 			}
 			response.setResult(ApiResponse.success(
@@ -63,15 +61,6 @@ public class LearningAnswerController {
 			));
 		});
 		return response;
-	}
-
-	private Throwable unwrapCompletionException(Throwable exception) {
-		Throwable cause = exception;
-		while (cause instanceof CompletionException
-			&& cause.getCause() != null) {
-			cause = cause.getCause();
-		}
-		return cause;
 	}
 
 	@PostMapping("/{sessionId}/questions/{sessionQuestionId}/skip-retry")
