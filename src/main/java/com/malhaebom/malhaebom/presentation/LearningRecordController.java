@@ -7,6 +7,7 @@ import com.malhaebom.malhaebom.service.dto.LoginUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -26,7 +27,7 @@ public class LearningRecordController {
 	public ApiResponse<LearningHistoryResponse> getHistory(
 		@Auth LoginUser loginUser,
 		@PathVariable Long childId,
-		@Valid @ModelAttribute LearningHistoryRequest request
+		@Valid @ParameterObject @ModelAttribute LearningHistoryRequest request
 	) {
 		return ApiResponse.success(
 			LearningHistoryResponse.from(

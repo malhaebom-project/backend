@@ -88,6 +88,8 @@ gcp:
     pitch: 0.0
 
 springdoc:
+  api-docs:
+    version: openapi_3_0
   swagger-ui:
     doc-expansion: none
     display-request-duration: true
