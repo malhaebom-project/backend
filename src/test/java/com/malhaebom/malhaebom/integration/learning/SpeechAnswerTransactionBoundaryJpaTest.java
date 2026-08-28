@@ -41,7 +41,7 @@ import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
 import com.malhaebom.malhaebom.infra.speech.GoogleSpeechRateLimitProperties;
-import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter;
+import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
 import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionRateLimiter;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
@@ -53,6 +53,8 @@ import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import com.malhaebom.malhaebom.service.policy.SpeechProcessingLease;
+import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -177,10 +179,28 @@ class SpeechAnswerTransactionBoundaryJpaTest {
 		}
 
 		@Bean
-		SpeechTranscriptionConcurrencyLimiter concurrencyLimiter(
+		SpeechTranscriptionConcurrencyPolicy concurrencyPolicy(
 			SpeechAnswerAsyncProperties properties
 		) {
-			return new SpeechTranscriptionConcurrencyLimiter(properties);
+			return new SpeechTranscriptionConcurrencyPolicy(
+				properties.maxConcurrentRequests()
+			);
+		}
+
+		@Bean
+		SpeechProcessingLease processingLease(
+			SpeechAnswerAsyncProperties properties
+		) {
+			return new SpeechProcessingLease(properties.processingLease());
+		}
+
+		@Bean
+		SpeechShutdownPolicy shutdownPolicy(
+			SpeechAnswerAsyncProperties properties
+		) {
+			return new SpeechShutdownPolicy(
+				properties.shutdownDrainTimeout()
+			);
 		}
 
 		@Bean

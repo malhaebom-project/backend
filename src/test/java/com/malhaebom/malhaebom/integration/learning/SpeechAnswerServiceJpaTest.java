@@ -14,7 +14,6 @@ import java.util.concurrent.CompletionStage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -28,7 +27,8 @@ import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
-import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter;
+import com.malhaebom.malhaebom.infra.async.SpeechAnswerPolicyConfiguration;
+import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
@@ -38,10 +38,14 @@ import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
 
 @DataJpaTest
-@Import({SpeechAnswerStateService.class, JpaAuditingConfiguration.class})
-@EnableConfigurationProperties(SpeechAnswerAsyncProperties.class)
+@Import({
+	SpeechAnswerStateService.class,
+	SpeechAnswerPolicyConfiguration.class,
+	JpaAuditingConfiguration.class
+})
 class SpeechAnswerServiceJpaTest {
 
 	private static final String REQUEST_KEY =
@@ -82,8 +86,12 @@ class SpeechAnswerServiceJpaTest {
 			stateService,
 			transcriber,
 			Runnable::run,
-			new SpeechTranscriptionConcurrencyLimiter(asyncProperties),
-			asyncProperties
+			new SpeechTranscriptionConcurrencyPolicy(
+				asyncProperties.maxConcurrentRequests()
+			),
+			new SpeechShutdownPolicy(
+				asyncProperties.shutdownDrainTimeout()
+			)
 		);
 		session = LearningJpaTestFixture.saveSession(
 			questionRepository,

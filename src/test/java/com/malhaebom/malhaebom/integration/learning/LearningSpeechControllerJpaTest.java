@@ -23,7 +23,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -49,9 +48,11 @@ import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
-import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter;
+import com.malhaebom.malhaebom.infra.async.SpeechAnswerPolicyConfiguration;
+import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.presentation.LearningSpeechController;
+import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
@@ -59,14 +60,18 @@ import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
 import com.malhaebom.malhaebom.support.StubLoginUserArgumentResolver;
 
 import jakarta.servlet.AsyncEvent;
 import jakarta.servlet.AsyncListener;
 
 @DataJpaTest
-@Import({SpeechAnswerStateService.class, JpaAuditingConfiguration.class})
-@EnableConfigurationProperties(SpeechAnswerAsyncProperties.class)
+@Import({
+	SpeechAnswerStateService.class,
+	SpeechAnswerPolicyConfiguration.class,
+	JpaAuditingConfiguration.class
+})
 class LearningSpeechControllerJpaTest {
 
 	private static final String REQUEST_KEY =
@@ -88,7 +93,7 @@ class LearningSpeechControllerJpaTest {
 	private ChildProfileService childProfileService;
 
 	private TestSpeechTranscriber transcriber;
-	private SpeechTranscriptionConcurrencyLimiter concurrencyLimiter;
+	private SpeechTranscriptionConcurrencyPolicy concurrencyPolicy;
 	private MockMvc mockMvc;
 	private LearningSession session;
 	private Long sessionQuestionId;
@@ -103,19 +108,22 @@ class LearningSpeechControllerJpaTest {
 				Duration.ofSeconds(60),
 				Duration.ofSeconds(20)
 			);
-		concurrencyLimiter =
-			new SpeechTranscriptionConcurrencyLimiter(asyncProperties);
+		concurrencyPolicy = new SpeechTranscriptionConcurrencyPolicy(
+			asyncProperties.maxConcurrentRequests()
+		);
 		SpeechAnswerService speechAnswerService = new SpeechAnswerService(
 			stateService,
 			transcriber,
 			Runnable::run,
-			concurrencyLimiter,
-			asyncProperties
+			concurrencyPolicy,
+			new SpeechShutdownPolicy(
+				asyncProperties.shutdownDrainTimeout()
+			)
 		);
 		mockMvc = MockMvcBuilders.standaloneSetup(
 			new LearningSpeechController(
 				speechAnswerService,
-				asyncProperties
+				new SpeechRequestTimeout(asyncProperties.requestTimeout())
 			)
 		)
 			.setCustomArgumentResolvers(
@@ -344,7 +352,7 @@ class LearningSpeechControllerJpaTest {
 			ErrorCode.STT_PROCESSING_TIMEOUT.getMessage(),
 			failed.getFailureMessage()
 		);
-		assertEquals(0, concurrencyLimiter.activeRequests());
+		assertEquals(0, concurrencyPolicy.activeRequests());
 		assertFalse(transcriber.completeSuccess());
 	}
 

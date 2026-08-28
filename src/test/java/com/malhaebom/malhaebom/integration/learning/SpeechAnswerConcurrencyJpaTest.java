@@ -60,9 +60,10 @@ import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
 import com.malhaebom.malhaebom.infra.speech.GoogleSpeechRateLimitProperties;
-import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter;
+import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
 import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionRateLimiter;
 import com.malhaebom.malhaebom.presentation.LearningSpeechController;
+import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
@@ -74,6 +75,8 @@ import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import com.malhaebom.malhaebom.service.policy.SpeechProcessingLease;
+import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
 import com.malhaebom.malhaebom.support.StubLoginUserArgumentResolver;
 
 @DataJpaTest
@@ -124,7 +127,10 @@ class SpeechAnswerConcurrencyJpaTest {
 		requestPrefix = UUID.randomUUID().toString();
 		transcriber.reset();
 		mockMvc = MockMvcBuilders.standaloneSetup(
-			new LearningSpeechController(speechAnswerService, asyncProperties)
+			new LearningSpeechController(
+				speechAnswerService,
+				new SpeechRequestTimeout(asyncProperties.requestTimeout())
+			)
 		)
 			.setCustomArgumentResolvers(
 				new StubLoginUserArgumentResolver(LearningJpaTestFixture.USER_ID)
@@ -238,18 +244,22 @@ class SpeechAnswerConcurrencyJpaTest {
 				Duration.ofSeconds(60),
 				Duration.ofSeconds(20)
 			);
-		SpeechTranscriptionConcurrencyLimiter concurrencyLimiter =
-			new SpeechTranscriptionConcurrencyLimiter(properties);
+		SpeechTranscriptionConcurrencyPolicy concurrencyPolicy =
+			new SpeechTranscriptionConcurrencyPolicy(
+				properties.maxConcurrentRequests()
+			);
 		SpeechAnswerService rateLimitedService = new SpeechAnswerService(
 			stateService,
 			transcriber,
 			Runnable::run,
-			concurrencyLimiter,
+			concurrencyPolicy,
 			new SpeechTranscriptionRateLimiter(
 				new GoogleSpeechRateLimitProperties(1),
 				ProviderRateLimitMetricsRecorder.NOOP
 			),
-			properties
+			new SpeechShutdownPolicy(
+				properties.shutdownDrainTimeout()
+			)
 		);
 		LearningSession session = saveSession();
 		Long sessionQuestionId = session.getCurrentQuestion().getId();
@@ -273,7 +283,7 @@ class SpeechAnswerConcurrencyJpaTest {
 		assertEquals(HttpStatus.TOO_MANY_REQUESTS,
 			failure.getErrorCode().getHttpStatus());
 		assertEquals(1, transcriber.callCount());
-		assertEquals(0, concurrencyLimiter.activeRequests());
+		assertEquals(0, concurrencyPolicy.activeRequests());
 		SpeechAnswer failed = speechAnswerRepository
 			.findByRequestKey(rejectedKey)
 			.orElseThrow();
@@ -505,8 +515,12 @@ class SpeechAnswerConcurrencyJpaTest {
 			stateService,
 			transcriber,
 			Runnable::run,
-			new SpeechTranscriptionConcurrencyLimiter(properties),
-			properties
+			new SpeechTranscriptionConcurrencyPolicy(
+				properties.maxConcurrentRequests()
+			),
+			new SpeechShutdownPolicy(
+				properties.shutdownDrainTimeout()
+			)
 		);
 	}
 
@@ -601,10 +615,28 @@ class SpeechAnswerConcurrencyJpaTest {
 		}
 
 		@Bean
-		SpeechTranscriptionConcurrencyLimiter concurrencyLimiter(
+		SpeechTranscriptionConcurrencyPolicy concurrencyPolicy(
 			SpeechAnswerAsyncProperties properties
 		) {
-			return new SpeechTranscriptionConcurrencyLimiter(properties);
+			return new SpeechTranscriptionConcurrencyPolicy(
+				properties.maxConcurrentRequests()
+			);
+		}
+
+		@Bean
+		SpeechProcessingLease processingLease(
+			SpeechAnswerAsyncProperties properties
+		) {
+			return new SpeechProcessingLease(properties.processingLease());
+		}
+
+		@Bean
+		SpeechShutdownPolicy shutdownPolicy(
+			SpeechAnswerAsyncProperties properties
+		) {
+			return new SpeechShutdownPolicy(
+				properties.shutdownDrainTimeout()
+			);
 		}
 
 		@Bean

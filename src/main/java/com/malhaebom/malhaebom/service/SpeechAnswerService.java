@@ -16,7 +16,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,13 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.infra.async.AsyncConfiguration;
-import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
-import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
-import com.malhaebom.malhaebom.infra.speech.GoogleSpeechRateLimitProperties;
-import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter;
-import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionConcurrencyLimiter.Permit;
-import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionRateLimiter;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerRequest;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
@@ -39,12 +31,17 @@ import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import com.malhaebom.malhaebom.service.port.SpeechAnswerLifecycleOperations;
+import com.malhaebom.malhaebom.service.port.SpeechTranscriptionRateLimit;
+import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
+import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
+import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy.Permit;
 
 import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
-public class SpeechAnswerService implements SmartLifecycle {
+public class SpeechAnswerService implements SpeechAnswerLifecycleOperations {
 	private static final int REQUEST_LOCK_COUNT = 64;
 	private static final long MAX_SHUTDOWN_CLEANUP_MILLIS = 5_000L;
 	private static final long MIN_SHUTDOWN_CLEANUP_MILLIS = 100L;
@@ -52,9 +49,9 @@ public class SpeechAnswerService implements SmartLifecycle {
 	private final SpeechAnswerStateService stateService;
 	private final SpeechTranscriber transcriber;
 	private final Executor completionExecutor;
-	private final SpeechTranscriptionConcurrencyLimiter concurrencyLimiter;
-	private final SpeechTranscriptionRateLimiter rateLimiter;
-	private final SpeechAnswerAsyncProperties asyncProperties;
+	private final SpeechTranscriptionConcurrencyPolicy concurrencyPolicy;
+	private final SpeechTranscriptionRateLimit rateLimit;
+	private final SpeechShutdownPolicy shutdownPolicy;
 	private final ConcurrentMap<String, InFlightSpeechAnswerTask> inFlightTasks =
 		new ConcurrentHashMap<>();
 	private final ReentrantLock[] requestLocks = createRequestLocks();
@@ -68,37 +65,34 @@ public class SpeechAnswerService implements SmartLifecycle {
 	public SpeechAnswerService(
 		SpeechAnswerStateService stateService,
 		SpeechTranscriber transcriber,
-		@Qualifier(AsyncConfiguration.SPEECH_COMPLETION_EXECUTOR)
+		@Qualifier("speechCompletionExecutor")
 		Executor completionExecutor,
-		SpeechTranscriptionConcurrencyLimiter concurrencyLimiter,
-		SpeechTranscriptionRateLimiter rateLimiter,
-		SpeechAnswerAsyncProperties asyncProperties
+		SpeechTranscriptionConcurrencyPolicy concurrencyPolicy,
+		SpeechTranscriptionRateLimit rateLimit,
+		SpeechShutdownPolicy shutdownPolicy
 	) {
 		this.stateService = stateService;
 		this.transcriber = transcriber;
 		this.completionExecutor = completionExecutor;
-		this.concurrencyLimiter = concurrencyLimiter;
-		this.rateLimiter = rateLimiter;
-		this.asyncProperties = asyncProperties;
+		this.concurrencyPolicy = concurrencyPolicy;
+		this.rateLimit = rateLimit;
+		this.shutdownPolicy = shutdownPolicy;
 	}
 
 	public SpeechAnswerService(
 		SpeechAnswerStateService stateService,
 		SpeechTranscriber transcriber,
 		Executor completionExecutor,
-		SpeechTranscriptionConcurrencyLimiter concurrencyLimiter,
-		SpeechAnswerAsyncProperties asyncProperties
+		SpeechTranscriptionConcurrencyPolicy concurrencyPolicy,
+		SpeechShutdownPolicy shutdownPolicy
 	) {
 		this(
 			stateService,
 			transcriber,
 			completionExecutor,
-			concurrencyLimiter,
-			new SpeechTranscriptionRateLimiter(
-				new GoogleSpeechRateLimitProperties(240),
-				ProviderRateLimitMetricsRecorder.NOOP
-			),
-			asyncProperties
+			concurrencyPolicy,
+			SpeechTranscriptionRateLimit.UNLIMITED,
+			shutdownPolicy
 		);
 	}
 
@@ -152,8 +146,8 @@ public class SpeechAnswerService implements SmartLifecycle {
 		}
 		log.warn(
 			"event=stt_rejected reason=shutdown active={} limit={}",
-			concurrencyLimiter.activeRequests(),
-			concurrencyLimiter.maxConcurrentRequests()
+			concurrencyPolicy.activeRequests(),
+			concurrencyPolicy.maxConcurrentRequests()
 		);
 		throw new ApiException(ErrorCode.STT_PROCESSING_OVERLOADED);
 	}
@@ -165,7 +159,7 @@ public class SpeechAnswerService implements SmartLifecycle {
 	) {
 		SpeechAnswer started = startResult.speechAnswer();
 		String provider = transcriber.provider();
-		Permit permit = concurrencyLimiter.tryAcquire();
+		Permit permit = concurrencyPolicy.tryAcquire();
 		if (permit == null) {
 			return reject(
 				started.getId(),
@@ -175,7 +169,7 @@ public class SpeechAnswerService implements SmartLifecycle {
 				startedAt
 			);
 		}
-		if (!rateLimiter.tryAcquire()) {
+		if (!rateLimit.tryAcquire()) {
 			permit.release();
 			return reject(
 				started.getId(),
@@ -187,8 +181,8 @@ public class SpeechAnswerService implements SmartLifecycle {
 		}
 		log.info(
 			"event=stt_accepted active={} limit={}",
-			concurrencyLimiter.activeRequests(),
-			concurrencyLimiter.maxConcurrentRequests()
+			concurrencyPolicy.activeRequests(),
+			concurrencyPolicy.maxConcurrentRequests()
 		);
 
 		SpeechAnswerTask task;
@@ -206,8 +200,8 @@ public class SpeechAnswerService implements SmartLifecycle {
 				log.info(
 					"event=stt_completed cached=false duration_ms={} active={} limit={}",
 					elapsedMillis(startedAt),
-					concurrencyLimiter.activeRequests(),
-					concurrencyLimiter.maxConcurrentRequests()
+					concurrencyPolicy.activeRequests(),
+					concurrencyPolicy.maxConcurrentRequests()
 				);
 				return;
 			}
@@ -223,8 +217,8 @@ public class SpeechAnswerService implements SmartLifecycle {
 		log.info(
 			"event=stt_completed cached=true duration_ms={} active={} limit={}",
 			elapsedMillis(startedAt),
-			concurrencyLimiter.activeRequests(),
-			concurrencyLimiter.maxConcurrentRequests()
+			concurrencyPolicy.activeRequests(),
+			concurrencyPolicy.maxConcurrentRequests()
 		);
 		return SpeechAnswerTask.completed(SpeechAnswerResult.from(speechAnswer));
 	}
@@ -292,8 +286,8 @@ public class SpeechAnswerService implements SmartLifecycle {
 			"event=stt_rejected error_code={} duration_ms={} active={} limit={}",
 			overload.getErrorCode(),
 			elapsedMillis(startedAt),
-			concurrencyLimiter.activeRequests(),
-			concurrencyLimiter.maxConcurrentRequests()
+			concurrencyPolicy.activeRequests(),
+			concurrencyPolicy.maxConcurrentRequests()
 		);
 		return new SpeechAnswerTask(result, () -> false);
 	}
@@ -464,8 +458,8 @@ public class SpeechAnswerService implements SmartLifecycle {
 			"event=stt_failed error_code={} duration_ms={} active={} limit={}",
 			errorCode(exception),
 			elapsedMillis(startedAt),
-			concurrencyLimiter.activeRequests(),
-			concurrencyLimiter.maxConcurrentRequests()
+			concurrencyPolicy.activeRequests(),
+			concurrencyPolicy.maxConcurrentRequests()
 		);
 	}
 
@@ -537,11 +531,6 @@ public class SpeechAnswerService implements SmartLifecycle {
 		return running;
 	}
 
-	@Override
-	public int getPhase() {
-		return Integer.MAX_VALUE;
-	}
-
 	private void drain(List<InFlightSpeechAnswerTask> snapshot) {
 		if (snapshot.isEmpty()) {
 			completeShutdown(false, 0);
@@ -555,7 +544,7 @@ public class SpeechAnswerService implements SmartLifecycle {
 				completeShutdown(false, 0);
 			}
 		});
-		long drainTimeoutMillis = asyncProperties.shutdownDrainTimeout()
+		long drainTimeoutMillis = shutdownPolicy.drainTimeout()
 			.toMillis();
 		CompletableFuture.delayedExecutor(
 			drainTimeoutMillis,
@@ -588,7 +577,7 @@ public class SpeechAnswerService implements SmartLifecycle {
 			MAX_SHUTDOWN_CLEANUP_MILLIS,
 			Math.max(
 				MIN_SHUTDOWN_CLEANUP_MILLIS,
-				asyncProperties.shutdownDrainTimeout().toMillis() / 4
+				shutdownPolicy.drainTimeout().toMillis() / 4
 			)
 		);
 		allTasks(pending)

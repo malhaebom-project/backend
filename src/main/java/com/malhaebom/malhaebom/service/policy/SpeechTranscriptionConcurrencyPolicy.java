@@ -1,22 +1,20 @@
-package com.malhaebom.malhaebom.infra.speech;
+package com.malhaebom.malhaebom.service.policy;
 
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.springframework.stereotype.Component;
-
-import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
-
-@Component
-public class SpeechTranscriptionConcurrencyLimiter {
+public class SpeechTranscriptionConcurrencyPolicy {
 
 	private final Semaphore permits;
 	private final int maxConcurrentRequests;
 
-	public SpeechTranscriptionConcurrencyLimiter(
-		SpeechAnswerAsyncProperties properties
-	) {
-		maxConcurrentRequests = properties.maxConcurrentRequests();
+	public SpeechTranscriptionConcurrencyPolicy(int maxConcurrentRequests) {
+		if (maxConcurrentRequests < 1) {
+			throw new IllegalArgumentException(
+				"최대 동시 음성 변환 요청 수는 1 이상이어야 합니다."
+			);
+		}
+		this.maxConcurrentRequests = maxConcurrentRequests;
 		permits = new Semaphore(maxConcurrentRequests);
 	}
 
@@ -41,18 +39,18 @@ public class SpeechTranscriptionConcurrencyLimiter {
 
 	public static final class Permit {
 
-		private final SpeechTranscriptionConcurrencyLimiter limiter;
+		private final SpeechTranscriptionConcurrencyPolicy policy;
 		private final AtomicBoolean released = new AtomicBoolean();
 
-		private Permit(SpeechTranscriptionConcurrencyLimiter limiter) {
-			this.limiter = limiter;
+		private Permit(SpeechTranscriptionConcurrencyPolicy policy) {
+			this.policy = policy;
 		}
 
 		public boolean release() {
 			if (!released.compareAndSet(false, true)) {
 				return false;
 			}
-			limiter.release();
+			policy.release();
 			return true;
 		}
 	}
