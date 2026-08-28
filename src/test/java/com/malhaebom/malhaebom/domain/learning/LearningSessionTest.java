@@ -71,7 +71,7 @@ class LearningSessionTest {
 		LearningSessionQuestion skippedQuestion = session.getCurrentQuestion();
 		session.recordWrongAnswerAttempt();
 
-		session.skipRetryOnCurrentQuestion();
+		session.skipRetry(createRetryableAnswer(skippedQuestion));
 
 		assertTrue(skippedQuestion.isCompleted());
 		assertFalse(skippedQuestion.isCorrect());
@@ -90,7 +90,7 @@ class LearningSessionTest {
 		);
 		session.recordWrongAnswerAttempt();
 
-		session.skipRetryOnCurrentQuestion();
+		session.skipRetry(createRetryableAnswer(session.getCurrentQuestion()));
 
 		assertTrue(session.isCompleted());
 		assertEquals(1, session.getCurrentQuestionIndex());
@@ -166,6 +166,24 @@ class LearningSessionTest {
 			LearningTopic.ANIMAL,
 			Difficulty.EASY,
 			questions
+		);
+	}
+
+	private Answer createRetryableAnswer(
+		LearningSessionQuestion sessionQuestion
+	) {
+		SpeechAnswer speechAnswer = SpeechAnswer.start(
+			sessionQuestion,
+			"request-key-" + sessionQuestion.getQuestionIndex(),
+			1
+		);
+		speechAnswer.complete("wrong answer", 0.9, "TEST_STT");
+		return Answer.create(
+			sessionQuestion,
+			speechAnswer,
+			1,
+			AnswerEvaluation.from(AnswerResult.INCORRECT),
+			"다시 시도해 보세요."
 		);
 	}
 

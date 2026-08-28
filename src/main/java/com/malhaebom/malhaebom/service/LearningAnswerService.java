@@ -2,7 +2,6 @@ package com.malhaebom.malhaebom.service;
 
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
@@ -16,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.malhaebom.malhaebom.domain.learning.Answer;
 import com.malhaebom.malhaebom.domain.learning.AnswerAttemptPolicy;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
+import com.malhaebom.malhaebom.domain.learning.LearningSessionAnswerSubmissionException;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerSubmissionRepository;
@@ -238,13 +238,14 @@ public class LearningAnswerService {
 				ErrorCode.LEARNING_SESSION_NOT_FOUND
 			));
 		childProfileService.getOwnedActive(userId, session.getChildId());
-		validateInProgress(session);
-		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
-		validateCurrentQuestion(currentQuestion, sessionQuestionId);
-		validateNoConflictingSubmission(sessionQuestionId);
+		LearningSessionQuestion target = getRetrySkipTarget(
+			session,
+			sessionQuestionId
+		);
+		validateNoConflictingSubmission(target.getId());
 
 		Answer latestAnswer = answerRepository
-			.findFirstBySessionQuestion_IdOrderByAttemptNoDesc(sessionQuestionId)
+			.findFirstBySessionQuestion_IdOrderByAttemptNoDesc(target.getId())
 			.orElseThrow(() -> new ApiException(
 				ErrorCode.INVALID_REQUEST,
 				"오답 제출 후에만 재시도를 건너뛸 수 있습니다."
@@ -255,15 +256,17 @@ public class LearningAnswerService {
 				"재시도 가능한 오답이 아닙니다."
 			);
 		}
-
-		session.skipRetryOnCurrentQuestion();
+		session.skipRetry(latestAnswer);
 	}
 
-	private void validateInProgress(LearningSession session) {
-		if (!session.isInProgress()) {
-			throw new ApiException(
-				ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS
-			);
+	private LearningSessionQuestion getRetrySkipTarget(
+		LearningSession session,
+		Long sessionQuestionId
+	) {
+		try {
+			return session.retrySkipTarget(sessionQuestionId);
+		} catch (LearningSessionAnswerSubmissionException exception) {
+			throw toApiException(exception);
 		}
 	}
 
@@ -274,12 +277,18 @@ public class LearningAnswerService {
 		}
 	}
 
-	private void validateCurrentQuestion(
-		LearningSessionQuestion currentQuestion,
-		Long sessionQuestionId
+	private ApiException toApiException(
+		LearningSessionAnswerSubmissionException exception
 	) {
-		if (!Objects.equals(currentQuestion.getId(), sessionQuestionId)) {
-			throw new ApiException(ErrorCode.CURRENT_QUESTION_MISMATCH);
-		}
+		return switch (exception.getReason()) {
+			case SESSION_NOT_IN_PROGRESS -> new ApiException(
+				ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS,
+				exception
+			);
+			case CURRENT_QUESTION_MISMATCH -> new ApiException(
+				ErrorCode.CURRENT_QUESTION_MISMATCH,
+				exception
+			);
+		};
 	}
 }

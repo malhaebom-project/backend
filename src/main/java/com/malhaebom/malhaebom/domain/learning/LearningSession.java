@@ -123,8 +123,18 @@ public class LearningSession extends BaseEntity {
 		questions.recordWrongAnswerAttempt();
 	}
 
-	public void skipRetryOnCurrentQuestion() {
-		validateInProgress();
+	public LearningSessionQuestion retrySkipTarget(Long sessionQuestionId) {
+		validateRetrySkipTarget(sessionQuestionId);
+		return questions.getCurrent();
+	}
+
+	public void skipRetry(Answer latestAnswer) {
+		Objects.requireNonNull(latestAnswer, "최신 답변은 null일 수 없습니다.");
+		validateRetrySkipTarget(latestAnswer.getSessionQuestion().getId());
+		if (!AnswerAttemptPolicy.canRetry(latestAnswer)) {
+			throw new IllegalStateException("재시도 가능한 오답이 아닙니다.");
+		}
+
 		questions.skipRetryOnCurrentQuestion();
 
 		if (questions.isCompleted()) {
@@ -191,6 +201,22 @@ public class LearningSession extends BaseEntity {
 	private void validateInProgress() {
 		if (status != LearningSessionStatus.IN_PROGRESS) {
 			throw new IllegalStateException("진행 중인 학습 세션이 아닙니다.");
+		}
+	}
+
+	private void validateRetrySkipTarget(Long sessionQuestionId) {
+		if (!isInProgress()) {
+			throw new LearningSessionAnswerSubmissionException(
+				LearningSessionAnswerSubmissionException.Reason.SESSION_NOT_IN_PROGRESS,
+				"진행 중인 학습 세션이 아닙니다."
+			);
+		}
+
+		if (!Objects.equals(questions.getCurrent().getId(), sessionQuestionId)) {
+			throw new LearningSessionAnswerSubmissionException(
+				LearningSessionAnswerSubmissionException.Reason.CURRENT_QUESTION_MISMATCH,
+				"현재 문제가 아닙니다."
+			);
 		}
 	}
 
