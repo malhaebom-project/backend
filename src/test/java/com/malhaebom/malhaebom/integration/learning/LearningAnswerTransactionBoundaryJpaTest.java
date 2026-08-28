@@ -47,7 +47,6 @@ import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerSubmissionMetricsRecorder;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
-import com.malhaebom.malhaebom.service.AnswerAssessmentService;
 import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
@@ -68,7 +67,6 @@ import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 	LearningAnswerService.class,
 	MicrometerAnswerSubmissionMetricsRecorder.class,
 	AnswerSubmissionTransactionService.class,
-	AnswerAssessmentService.class,
 	LearningAnswerTransactionBoundaryJpaTest.AssessmentTestConfiguration.class
 })
 class LearningAnswerTransactionBoundaryJpaTest {
