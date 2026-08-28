@@ -6,6 +6,9 @@ import com.malhaebom.malhaebom.presentation.dto.*;
 import com.malhaebom.malhaebom.service.LearningSessionService;
 import com.malhaebom.malhaebom.service.dto.LoginUser;
 import com.malhaebom.malhaebom.service.port.QuestionImageUrlResolver;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -13,11 +16,14 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/learning-sessions")
 @RequiredArgsConstructor
+@Tag(name = "학습 세션", description = "학습을 시작하고 진행 상태를 관리하는 API")
+@SecurityRequirement(name = "bearerAuth")
 public class LearningSessionController {
 	private final LearningSessionService learningSessionService;
 	private final QuestionImageUrlResolver questionImageUrlResolver;
 
 	@PostMapping
+	@Operation(summary = "학습 시작")
 	public ApiResponse<CreateLearningSessionResponse> create(
 		@Auth LoginUser loginUser,
 		@Valid @RequestBody CreateLearningSessionRequest request
@@ -38,6 +44,7 @@ public class LearningSessionController {
 	}
 
 	@GetMapping("/{sessionId}/questions/next")
+	@Operation(summary = "다음 문제 조회")
 	public ApiResponse<NextQuestionResponse> getNextQuestion(
 		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId
@@ -55,6 +62,7 @@ public class LearningSessionController {
 	}
 
 	@GetMapping("/{sessionId}")
+	@Operation(summary = "학습 세션 조회")
 	public ApiResponse<LearningSessionResponse> get(
 		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId
@@ -68,6 +76,7 @@ public class LearningSessionController {
 	}
 
 	@PostMapping("/{sessionId}/complete")
+	@Operation(summary = "학습 완료")
 	public ApiResponse<LearningSessionResultResponse> complete(
 		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId

@@ -11,6 +11,9 @@ import com.malhaebom.malhaebom.service.dto.SpeechAnswerRequest;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.speech.SpeechAnswerCoordinator;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
@@ -24,6 +27,8 @@ import java.util.Locale;
 @RestController
 @RequestMapping("/api/v1/learning-sessions")
 @RequiredArgsConstructor
+@Tag(name = "학습 세션")
+@SecurityRequirement(name = "bearerAuth")
 public class LearningSpeechController {
 	private static final long MAX_AUDIO_FILE_SIZE = 5L * 1024 * 1024;
 	private final SpeechAnswerCoordinator speechAnswerCoordinator;
@@ -33,6 +38,7 @@ public class LearningSpeechController {
 		path = "/{sessionId}/questions/{sessionQuestionId}/speech",
 		consumes = MediaType.MULTIPART_FORM_DATA_VALUE
 	)
+	@Operation(summary = "음성 답변 업로드")
 	public DeferredResult<ApiResponse<SpeechAnswerResponse>> upload(
 		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId,

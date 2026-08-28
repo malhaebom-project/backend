@@ -11,6 +11,9 @@ import com.malhaebom.malhaebom.service.LearningAnswerRetryService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionTask;
 import com.malhaebom.malhaebom.service.dto.LoginUser;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -19,12 +22,15 @@ import org.springframework.web.context.request.async.DeferredResult;
 @RestController
 @RequestMapping("/api/v1/learning-sessions")
 @RequiredArgsConstructor
+@Tag(name = "학습 세션")
+@SecurityRequirement(name = "bearerAuth")
 public class LearningAnswerController {
 	private final LearningAnswerService learningAnswerService;
 	private final LearningAnswerRetryService learningAnswerRetryService;
 	private final AnswerSubmissionAsyncProperties asyncProperties;
 
 	@PostMapping("/{sessionId}/questions/{sessionQuestionId}/answers")
+	@Operation(summary = "답변 제출")
 	public DeferredResult<ApiResponse<SubmitAnswerResponse>> submit(
 		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId,
@@ -59,6 +65,7 @@ public class LearningAnswerController {
 	}
 
 	@PostMapping("/{sessionId}/questions/{sessionQuestionId}/skip-retry")
+	@Operation(summary = "재시도 건너뛰기")
 	public ApiResponse<Void> skipRetry(
 		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId,

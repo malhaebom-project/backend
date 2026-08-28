@@ -86,3 +86,10 @@ gcp:
     voice-name: en-US-Standard-C
     speaking-rate: 1.0
     pitch: 0.0
+
+springdoc:
+  swagger-ui:
+    doc-expansion: none
+    display-request-duration: true
+    operations-sorter: alpha
+    tags-sorter: alpha
