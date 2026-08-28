@@ -25,10 +25,6 @@ public record AnswerEvaluation(
 		validateScore("문법 점수", grammarScore, MAX_GRAMMAR_SCORE);
 	}
 
-	public int score() {
-		return meaningScore + expressionScore + grammarScore;
-	}
-
 	public static AnswerEvaluation from(AnswerResult result) {
 		if (result == null) {
 			throw new IllegalArgumentException("답변 결과는 null일 수 없습니다.");
