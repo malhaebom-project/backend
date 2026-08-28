@@ -49,6 +49,7 @@ import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.AnswerAssessmentService;
 import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
+import com.malhaebom.malhaebom.service.LearningAnswerRetryService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
@@ -85,6 +86,7 @@ class LearningAnswerServiceJpaTest {
 	private SimpleMeterRegistry meterRegistry;
 	private AnswerSubmissionTransactionService submissionTransactionService;
 	private LearningAnswerService learningAnswerService;
+	private LearningAnswerRetryService learningAnswerRetryService;
 
 	@BeforeEach
 	void setUp() {
@@ -107,13 +109,15 @@ class LearningAnswerServiceJpaTest {
 			new MicrometerAnswerSubmissionMetricsRecorder(meterRegistry)
 		);
 		learningAnswerService = new LearningAnswerService(
+			assessmentService,
+			submissionTransactionService,
+			clock
+		);
+		learningAnswerRetryService = new LearningAnswerRetryService(
 			learningSessionRepository,
 			answerRepository,
 			answerSubmissionRepository,
-			assessmentService,
-			submissionTransactionService,
-			childProfileService,
-			clock
+			childProfileService
 		);
 	}
 
@@ -539,7 +543,7 @@ class LearningAnswerServiceJpaTest {
 			speechAnswer.getId()
 		);
 
-		learningAnswerService.skipRetry(LearningJpaTestFixture.USER_ID,
+		learningAnswerRetryService.skipRetry(LearningJpaTestFixture.USER_ID,
 			session.getId(),
 			skippedQuestion.getId()
 		);
@@ -564,7 +568,7 @@ class LearningAnswerServiceJpaTest {
 			speechAnswer.getId()
 		);
 
-		learningAnswerService.skipRetry(LearningJpaTestFixture.USER_ID, session.getId(), question.getId());
+		learningAnswerRetryService.skipRetry(LearningJpaTestFixture.USER_ID, session.getId(), question.getId());
 
 		assertTrue(session.isCompleted());
 		assertEquals(1, session.getCurrentQuestionIndex());
@@ -576,7 +580,7 @@ class LearningAnswerServiceJpaTest {
 
 		assertApiException(
 			ErrorCode.INVALID_REQUEST,
-			() -> learningAnswerService.skipRetry(LearningJpaTestFixture.USER_ID,
+			() -> learningAnswerRetryService.skipRetry(LearningJpaTestFixture.USER_ID,
 				session.getId(),
 				session.getCurrentQuestion().getId()
 			)
@@ -598,7 +602,7 @@ class LearningAnswerServiceJpaTest {
 
 		assertApiException(
 			ErrorCode.INVALID_REQUEST,
-			() -> learningAnswerService.skipRetry(LearningJpaTestFixture.USER_ID,
+			() -> learningAnswerRetryService.skipRetry(LearningJpaTestFixture.USER_ID,
 				session.getId(),
 				question.getId()
 			)
@@ -611,7 +615,7 @@ class LearningAnswerServiceJpaTest {
 
 		assertApiException(
 			ErrorCode.CURRENT_QUESTION_MISMATCH,
-			() -> learningAnswerService.skipRetry(LearningJpaTestFixture.USER_ID, session.getId(), 999L)
+			() -> learningAnswerRetryService.skipRetry(LearningJpaTestFixture.USER_ID, session.getId(), 999L)
 		);
 	}
 
@@ -622,7 +626,7 @@ class LearningAnswerServiceJpaTest {
 
 		assertApiException(
 			ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS,
-			() -> learningAnswerService.skipRetry(LearningJpaTestFixture.USER_ID, session.getId(), 999L)
+			() -> learningAnswerRetryService.skipRetry(LearningJpaTestFixture.USER_ID, session.getId(), 999L)
 		);
 	}
 
@@ -630,7 +634,7 @@ class LearningAnswerServiceJpaTest {
 	void 존재하지_않는_세션의_재시도는_건너뛸_수_없다() {
 		assertApiException(
 			ErrorCode.LEARNING_SESSION_NOT_FOUND,
-			() -> learningAnswerService.skipRetry(LearningJpaTestFixture.USER_ID, 999L, 999L)
+			() -> learningAnswerRetryService.skipRetry(LearningJpaTestFixture.USER_ID, 999L, 999L)
 		);
 	}
 
@@ -643,7 +647,7 @@ class LearningAnswerServiceJpaTest {
 			.when(childProfileService).getOwnedActive(otherUserId, session.getChildId());
 
 		assertApiException(ErrorCode.CHILD_ACCESS_DENIED,
-			() -> learningAnswerService.skipRetry(otherUserId, session.getId(), question.getId()));
+			() -> learningAnswerRetryService.skipRetry(otherUserId, session.getId(), question.getId()));
 
 		assertEquals(0, question.getWrongAnswerCount());
 		assertFalse(question.isCompleted());

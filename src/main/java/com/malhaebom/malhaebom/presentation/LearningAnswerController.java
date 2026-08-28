@@ -14,6 +14,7 @@ import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.async.AnswerSubmissionAsyncProperties;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
+import com.malhaebom.malhaebom.service.LearningAnswerRetryService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionTask;
 import com.malhaebom.malhaebom.service.dto.LoginUser;
@@ -27,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 public class LearningAnswerController {
 
 	private final LearningAnswerService learningAnswerService;
+	private final LearningAnswerRetryService learningAnswerRetryService;
 	private final AnswerSubmissionAsyncProperties asyncProperties;
 
 	@PostMapping("/{sessionId}/questions/{sessionQuestionId}/answers")
@@ -69,7 +71,7 @@ public class LearningAnswerController {
 		@PathVariable Long sessionId,
 		@PathVariable Long sessionQuestionId
 	) {
-		learningAnswerService.skipRetry(
+		learningAnswerRetryService.skipRetry(
 			loginUser.userId(),
 			sessionId,
 			sessionQuestionId

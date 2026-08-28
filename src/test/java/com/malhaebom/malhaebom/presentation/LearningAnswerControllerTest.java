@@ -33,6 +33,7 @@ import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.async.AnswerSubmissionAsyncProperties;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
+import com.malhaebom.malhaebom.service.LearningAnswerRetryService;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionTask;
 import com.malhaebom.malhaebom.support.StubLoginUserArgumentResolver;
@@ -53,6 +54,8 @@ class LearningAnswerControllerTest {
 
 	@Mock
 	private LearningAnswerService learningAnswerService;
+	@Mock
+	private LearningAnswerRetryService learningAnswerRetryService;
 
 	private MockMvc mockMvc;
 
@@ -61,6 +64,7 @@ class LearningAnswerControllerTest {
 		mockMvc = MockMvcBuilders.standaloneSetup(
 			new LearningAnswerController(
 				learningAnswerService,
+				learningAnswerRetryService,
 				new AnswerSubmissionAsyncProperties(Duration.ofSeconds(30))
 			)
 		)
