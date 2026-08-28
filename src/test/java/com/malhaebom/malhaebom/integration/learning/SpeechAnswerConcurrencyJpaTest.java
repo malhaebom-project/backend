@@ -1,5 +1,7 @@
 package com.malhaebom.malhaebom.integration.learning;
 
+import static com.malhaebom.malhaebom.support.SpeechAnswerTestQueries.findByRequestKey;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -25,6 +27,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import io.github.bucket4j.TimeMeter;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -177,8 +181,7 @@ class SpeechAnswerConcurrencyJpaTest {
 			.andExpect(jsonPath("$.errorCode")
 				.value("STT_PROCESSING_OVERLOADED"));
 		assertEquals(MAX_CONCURRENT_REQUESTS, transcriber.callCount());
-		SpeechAnswer failed = speechAnswerRepository
-			.findByRequestKey(rejectedKey)
+		SpeechAnswer failed = findByRequestKey(speechAnswerRepository, rejectedKey)
 			.orElseThrow();
 		assertEquals(SpeechProcessingStatus.FAILED, failed.getProcessingStatus());
 		assertEquals(
@@ -230,8 +233,7 @@ class SpeechAnswerConcurrencyJpaTest {
 
 		assertEquals(MAX_CONCURRENT_REQUESTS + 1, transcriber.callCount());
 		assertFalse(accepted.result().toCompletableFuture().isDone());
-		SpeechAnswer failed = speechAnswerRepository
-			.findByRequestKey(requestKey("failure-active-0"))
+		SpeechAnswer failed = findByRequestKey(speechAnswerRepository, requestKey("failure-active-0"))
 			.orElseThrow();
 		assertEquals(SpeechProcessingStatus.FAILED, failed.getProcessingStatus());
 		assertEquals(
@@ -266,7 +268,8 @@ class SpeechAnswerConcurrencyJpaTest {
 			concurrencyPolicy,
 			new SpeechTranscriptionRateLimiter(
 				new GoogleSpeechRateLimitProperties(1),
-				ProviderRateLimitMetricsRecorder.NOOP
+				ProviderRateLimitMetricsRecorder.NOOP,
+				TimeMeter.SYSTEM_NANOTIME
 			),
 			inFlightRegistry,
 			new SpeechAnswerLifecycle(
@@ -298,8 +301,7 @@ class SpeechAnswerConcurrencyJpaTest {
 			failure.getErrorCode().getHttpStatus());
 		assertEquals(1, transcriber.callCount());
 		assertEquals(0, concurrencyPolicy.activeRequests());
-		SpeechAnswer failed = speechAnswerRepository
-			.findByRequestKey(rejectedKey)
+		SpeechAnswer failed = findByRequestKey(speechAnswerRepository, rejectedKey)
 			.orElseThrow();
 		assertEquals(SpeechProcessingStatus.FAILED,
 			failed.getProcessingStatus());
@@ -354,8 +356,7 @@ class SpeechAnswerConcurrencyJpaTest {
 		assertEquals(1, transcriber.cancellationCount());
 		assertEquals(
 			SpeechProcessingStatus.FAILED,
-			speechAnswerRepository
-				.findByRequestKey(requestKey(requestSuffix))
+			findByRequestKey(speechAnswerRepository, requestKey(requestSuffix))
 				.orElseThrow()
 				.getProcessingStatus()
 		);
@@ -421,8 +422,7 @@ class SpeechAnswerConcurrencyJpaTest {
 
 		completion.get(2, TimeUnit.SECONDS);
 		SpeechAnswerStartResult resolved = reclaim.get(2, TimeUnit.SECONDS);
-		SpeechAnswer completed = speechAnswerRepository
-			.findByRequestKey(requestKey)
+		SpeechAnswer completed = findByRequestKey(speechAnswerRepository, requestKey)
 			.orElseThrow();
 		assertTrue(resolved.isCompleted());
 		assertEquals(
@@ -472,8 +472,7 @@ class SpeechAnswerConcurrencyJpaTest {
 		assertTrue(shutdown.await(1, TimeUnit.SECONDS));
 		assertEquals(
 			SpeechProcessingStatus.COMPLETED,
-			speechAnswerRepository
-				.findByRequestKey(requestKey("shutdown-active"))
+			findByRequestKey(speechAnswerRepository, requestKey("shutdown-active"))
 				.orElseThrow()
 				.getProcessingStatus()
 		);
@@ -506,8 +505,7 @@ class SpeechAnswerConcurrencyJpaTest {
 			timeout.getErrorCode()
 		);
 		assertEquals(1, transcriber.cancellationCount());
-		SpeechAnswer failed = speechAnswerRepository
-			.findByRequestKey(requestKey)
+		SpeechAnswer failed = findByRequestKey(speechAnswerRepository, requestKey)
 			.orElseThrow();
 		assertEquals(
 			SpeechProcessingStatus.FAILED,
@@ -678,7 +676,8 @@ class SpeechAnswerConcurrencyJpaTest {
 		SpeechTranscriptionRateLimiter rateLimiter() {
 			return new SpeechTranscriptionRateLimiter(
 				new GoogleSpeechRateLimitProperties(240),
-				ProviderRateLimitMetricsRecorder.NOOP
+				ProviderRateLimitMetricsRecorder.NOOP,
+				TimeMeter.SYSTEM_NANOTIME
 			);
 		}
 

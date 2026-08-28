@@ -13,8 +13,6 @@ import jakarta.persistence.LockModeType;
 
 public interface SpeechAnswerRepository extends JpaRepository<SpeechAnswer, Long> {
 
-	Optional<SpeechAnswer> findByRequestKey(String requestKey);
-
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query(
 		"select speechAnswer from SpeechAnswer speechAnswer "

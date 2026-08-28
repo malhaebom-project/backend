@@ -32,6 +32,7 @@ import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.speech.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartStatus;
 
 import jakarta.persistence.EntityManager;
 
@@ -158,7 +159,7 @@ class SpeechAnswerStateServiceJpaTest {
 			REQUEST_KEY
 		);
 
-		assertTrue(first.isClaimed());
+		assertEquals(SpeechAnswerStartStatus.CLAIMED, first.status());
 		assertTrue(existing.isProcessing());
 		assertEquals(first.processingToken(), existing.processingToken());
 		assertEquals(
@@ -191,7 +192,7 @@ class SpeechAnswerStateServiceJpaTest {
 			REQUEST_KEY
 		);
 
-		assertTrue(reclaimed.isClaimed());
+		assertEquals(SpeechAnswerStartStatus.CLAIMED, reclaimed.status());
 		assertNotEquals(first.processingToken(), reclaimed.processingToken());
 		assertTrue(stateService.complete(
 			speechAnswerId,

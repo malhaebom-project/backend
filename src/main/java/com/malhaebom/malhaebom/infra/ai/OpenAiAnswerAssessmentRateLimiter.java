@@ -8,7 +8,6 @@ import io.github.bucket4j.Bucket;
 import io.github.bucket4j.ConsumptionProbe;
 import io.github.bucket4j.TimeMeter;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
@@ -23,14 +22,6 @@ public class OpenAiAnswerAssessmentRateLimiter {
 	private final Bucket tokenBucket;
 	private final long tokensPerRequest;
 	private final ProviderRateLimitMetricsRecorder metrics;
-
-	@Autowired
-	public OpenAiAnswerAssessmentRateLimiter(
-		OpenAiAnswerAssessmentRateLimitProperties properties,
-		ProviderRateLimitMetricsRecorder metrics
-	) {
-		this(properties, metrics, TimeMeter.SYSTEM_NANOTIME);
-	}
 
 	public OpenAiAnswerAssessmentRateLimiter(
 		OpenAiAnswerAssessmentRateLimitProperties properties,

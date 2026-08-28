@@ -13,13 +13,12 @@ import java.util.function.Supplier;
 
 import jakarta.annotation.PreDestroy;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import com.malhaebom.malhaebom.infra.ai.OpenAiAnswerAssessmentRateLimiter.AcquireResult;
 import com.malhaebom.malhaebom.infra.observability.AnswerAssessmentMetricsRecorder;
 import com.malhaebom.malhaebom.infra.observability.AnswerAssessmentMetricsRecorder.QueueWaitResult;
-import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 import com.malhaebom.malhaebom.service.exception.AnswerAssessmentOverloadedException;
@@ -27,18 +26,10 @@ import com.malhaebom.malhaebom.service.exception.AnswerAssessmentOverloadedExcep
 @Component
 public class AnswerAssessmentRateLimitQueue {
 
-	private static final OpenAiAnswerAssessmentRateLimitProperties
-		DEFAULT_RATE_LIMIT = new OpenAiAnswerAssessmentRateLimitProperties(
-			400,
-			400_000,
-			3_000
-		);
-
 	private final Object lock = new Object();
 	private final int queueCapacity;
 	private final Duration maxQueueWait;
 	private final AnswerAssessmentQueueTimeoutScheduler timeoutScheduler;
-	private final boolean ownsTimeoutScheduler;
 	private final LongSupplier nanoTime;
 	private final AnswerAssessmentMetricsRecorder metrics;
 	private final OpenAiAnswerAssessmentRateLimiter rateLimiter;
@@ -48,62 +39,13 @@ public class AnswerAssessmentRateLimitQueue {
 	private boolean accepting = true;
 	private AnswerAssessmentQueueTimeoutScheduler.TimeoutHandle rateRetryHandle;
 
-	@Autowired
 	public AnswerAssessmentRateLimitQueue(
 		AnswerAssessmentQueueProperties properties,
 		AnswerAssessmentMetricsRecorder metrics,
 		OpenAiAnswerAssessmentRateLimiter rateLimiter,
-		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler
-	) {
-		this(properties, metrics, rateLimiter, timeoutScheduler,
-			System::nanoTime, false);
-	}
-
-	AnswerAssessmentRateLimitQueue(
-		AnswerAssessmentQueueProperties properties,
-		AnswerAssessmentMetricsRecorder metrics,
 		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler,
+		@Qualifier("answerAssessmentNanoTime")
 		LongSupplier nanoTime
-	) {
-		this(properties, metrics, defaultRateLimiter(), timeoutScheduler,
-			nanoTime, false);
-	}
-
-	public AnswerAssessmentRateLimitQueue(
-		AnswerAssessmentQueueProperties properties,
-		AnswerAssessmentMetricsRecorder metrics
-	) {
-		this(properties, metrics, defaultRateLimiter(),
-			new ExecutorAnswerAssessmentQueueTimeoutScheduler(),
-			System::nanoTime, true);
-	}
-
-	public AnswerAssessmentRateLimitQueue(
-		AnswerAssessmentQueueProperties properties,
-		AnswerAssessmentMetricsRecorder metrics,
-		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler
-	) {
-		this(properties, metrics, defaultRateLimiter(), timeoutScheduler,
-			System::nanoTime, false);
-	}
-
-	AnswerAssessmentRateLimitQueue(
-		AnswerAssessmentQueueProperties properties,
-		AnswerAssessmentMetricsRecorder metrics,
-		OpenAiAnswerAssessmentRateLimiter rateLimiter,
-		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler,
-		LongSupplier nanoTime
-	) {
-		this(properties, metrics, rateLimiter, timeoutScheduler, nanoTime, false);
-	}
-
-	private AnswerAssessmentRateLimitQueue(
-		AnswerAssessmentQueueProperties properties,
-		AnswerAssessmentMetricsRecorder metrics,
-		OpenAiAnswerAssessmentRateLimiter rateLimiter,
-		AnswerAssessmentQueueTimeoutScheduler timeoutScheduler,
-		LongSupplier nanoTime,
-		boolean ownsTimeoutScheduler
 	) {
 		Objects.requireNonNull(properties, "대기열 설정은 null일 수 없습니다.");
 		this.metrics = Objects.requireNonNull(
@@ -114,7 +56,6 @@ public class AnswerAssessmentRateLimitQueue {
 			timeoutScheduler, "대기열 timeout scheduler는 null일 수 없습니다.");
 		this.nanoTime = Objects.requireNonNull(
 			nanoTime, "단조 시간 공급자는 null일 수 없습니다.");
-		this.ownsTimeoutScheduler = ownsTimeoutScheduler;
 		queueCapacity = properties.queueCapacity();
 		maxQueueWait = properties.maxQueueWait();
 		metrics.bind(queuedRequests::get, queueCapacity);
@@ -174,16 +115,6 @@ public class AnswerAssessmentRateLimitQueue {
 		for (QueueEntry entry : shutdownEntries) {
 			recordWait(entry, QueueWaitResult.SHUTDOWN);
 			entry.result.completeExceptionally(shutdownException());
-		}
-		if (ownsTimeoutScheduler
-			&& timeoutScheduler instanceof AutoCloseable closeable) {
-			try {
-				closeable.close();
-			} catch (Exception exception) {
-				throw new IllegalStateException(
-					"답안 평가 대기열 scheduler를 종료할 수 없습니다.",
-					exception);
-			}
 		}
 	}
 
@@ -470,11 +401,6 @@ public class AnswerAssessmentRateLimitQueue {
 
 	private IllegalStateException shutdownException() {
 		return new IllegalStateException("답안 평가 rate limit 대기열이 종료되었습니다.");
-	}
-
-	private static OpenAiAnswerAssessmentRateLimiter defaultRateLimiter() {
-		return new OpenAiAnswerAssessmentRateLimiter(
-			DEFAULT_RATE_LIMIT, ProviderRateLimitMetricsRecorder.NOOP);
 	}
 
 	private enum Admission {

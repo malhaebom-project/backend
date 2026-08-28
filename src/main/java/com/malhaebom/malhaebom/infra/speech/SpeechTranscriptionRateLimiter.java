@@ -7,7 +7,6 @@ import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.TimeMeter;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
@@ -22,14 +21,6 @@ public class SpeechTranscriptionRateLimiter
 
 	private final Bucket requestBucket;
 	private final ProviderRateLimitMetricsRecorder metrics;
-
-	@Autowired
-	public SpeechTranscriptionRateLimiter(
-		GoogleSpeechRateLimitProperties properties,
-		ProviderRateLimitMetricsRecorder metrics
-	) {
-		this(properties, metrics, TimeMeter.SYSTEM_NANOTIME);
-	}
 
 	public SpeechTranscriptionRateLimiter(
 		GoogleSpeechRateLimitProperties properties,

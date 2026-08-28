@@ -1,5 +1,6 @@
 package com.malhaebom.malhaebom.integration.child;
 
+import static com.malhaebom.malhaebom.support.LearningSessionTestActions.completeCurrentQuestion;
 import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -120,7 +121,7 @@ class ChildProfileServiceJpaTest {
 			Difficulty.EASY,
 			List.of(question)
 		);
-		session.completeCurrentQuestion(true);
+		completeCurrentQuestion(session, true);
 		learningSessionRepository.saveAndFlush(session);
 
 		var result = childProfileService.get(userId, childId);

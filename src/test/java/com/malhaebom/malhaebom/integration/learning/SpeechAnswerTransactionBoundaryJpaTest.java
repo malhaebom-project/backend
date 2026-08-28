@@ -1,5 +1,7 @@
 package com.malhaebom.malhaebom.integration.learning;
 
+import static com.malhaebom.malhaebom.support.SpeechAnswerTestQueries.findByRequestKey;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -12,6 +14,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 import javax.sql.DataSource;
+
+import io.github.bucket4j.TimeMeter;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -131,8 +135,7 @@ class SpeechAnswerTransactionBoundaryJpaTest {
 
 		assertFalse(task.result().toCompletableFuture().isDone());
 		assertEquals(List.of(false), transcriber.transactionStates);
-		SpeechAnswer processing = speechAnswerRepository
-			.findByRequestKey(REQUEST_KEY)
+		SpeechAnswer processing = findByRequestKey(speechAnswerRepository, REQUEST_KEY)
 			.orElseThrow();
 		assertEquals(
 			SpeechProcessingStatus.PROCESSING,
@@ -211,7 +214,8 @@ class SpeechAnswerTransactionBoundaryJpaTest {
 		SpeechTranscriptionRateLimiter rateLimiter() {
 			return new SpeechTranscriptionRateLimiter(
 				new GoogleSpeechRateLimitProperties(240),
-				ProviderRateLimitMetricsRecorder.NOOP
+				ProviderRateLimitMetricsRecorder.NOOP,
+				TimeMeter.SYSTEM_NANOTIME
 			);
 		}
 	}

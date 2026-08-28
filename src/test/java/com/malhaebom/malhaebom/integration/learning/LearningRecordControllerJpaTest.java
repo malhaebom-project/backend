@@ -1,5 +1,6 @@
 package com.malhaebom.malhaebom.integration.learning;
 
+import static com.malhaebom.malhaebom.support.LearningSessionTestActions.completeCurrentQuestion;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -480,7 +481,7 @@ class LearningRecordControllerJpaTest {
 			Difficulty.EASY,
 			questions
 		);
-		results.forEach(session::completeCurrentQuestion);
+		results.forEach(result -> completeCurrentQuestion(session, result));
 		ReflectionTestUtils.setField(session, "startedAt", startedAt);
 		ReflectionTestUtils.setField(session, "completedAt", completedAt);
 		return learningSessionRepository.saveAndFlush(session);

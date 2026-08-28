@@ -1,5 +1,6 @@
 package com.malhaebom.malhaebom.integration.learning;
 
+import static com.malhaebom.malhaebom.support.LearningSessionTestActions.completeCurrentQuestion;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDateTime;
@@ -361,7 +362,7 @@ class LearningHistoryRepositoryJpaTest {
 			Difficulty.EASY,
 			questions
 		);
-		results.forEach(session::completeCurrentQuestion);
+		results.forEach(result -> completeCurrentQuestion(session, result));
 		ReflectionTestUtils.setField(
 			session,
 			"startedAt",

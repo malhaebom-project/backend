@@ -641,7 +641,8 @@ class LearningAnswerConcurrencyJpaTest {
 				),
 				metrics,
 				rateLimiter,
-				timeoutScheduler
+				timeoutScheduler,
+				System::nanoTime
 			);
 		}
 

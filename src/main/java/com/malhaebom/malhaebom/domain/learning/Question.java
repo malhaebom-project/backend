@@ -193,20 +193,6 @@ public class Question extends BaseEntity {
 			.anyMatch(normalizedAnswer::equals);
 	}
 
-	/**
-	 * AI 평가 실패 시 모범 답안과 허용 답안을 기준으로 수행하는
-	 * fallback 평가
-	 *
-	 * @param answerText 학습자 답안
-	 * @return 등록 답안과 일치하면 정답, 아니면 오답 평가
-	 */
-	public AnswerEvaluation evaluateAnswer(String answerText) {
-		AnswerResult result = matchesAnswer(answerText)
-			? AnswerResult.CORRECT
-			: AnswerResult.INCORRECT;
-		return AnswerEvaluation.from(result);
-	}
-
 	private static void validateQuestionValues(
 		LearningTopic topic,
 		Difficulty difficulty,

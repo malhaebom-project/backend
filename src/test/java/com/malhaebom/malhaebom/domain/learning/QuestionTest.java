@@ -1,6 +1,5 @@
 package com.malhaebom.malhaebom.domain.learning;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -22,21 +21,13 @@ class QuestionTest {
 	void 등록된_허용_답안도_정답으로_판정한다() {
 		Question question = createQuestion();
 
-		AnswerEvaluation evaluation = question.evaluateAnswer("He's running.");
-
-		assertEquals(AnswerResult.CORRECT, evaluation.result());
-		assertEquals(100, evaluation.score());
+		assertTrue(question.matchesAnswer("He's running."));
 	}
 
 	@Test
 	void 등록되지_않은_답안은_오답으로_판정한다() {
 		Question question = createQuestion();
-		AnswerEvaluation evaluation = question.evaluateAnswer(
-			"He is walking."
-		);
-
-		assertEquals(AnswerResult.INCORRECT, evaluation.result());
-		assertEquals(0, evaluation.score());
+		assertFalse(question.matchesAnswer("He is walking."));
 		assertFalse(question.matchesAnswer(" "));
 	}
 
