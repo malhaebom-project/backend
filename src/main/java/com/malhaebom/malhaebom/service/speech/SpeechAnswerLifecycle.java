@@ -137,12 +137,10 @@ public class SpeechAnswerLifecycle implements SpeechAnswerLifecycleOperations {
 			completeShutdown(true, 0);
 			return;
 		}
-		long cleanupMillis = Math.min(
-			MAX_SHUTDOWN_CLEANUP_MILLIS,
-			Math.max(
-				MIN_SHUTDOWN_CLEANUP_MILLIS,
-				shutdownPolicy.drainTimeout().toMillis() / 4
-			)
+		long cleanupMillis = Math.clamp(
+                shutdownPolicy.drainTimeout().toMillis() / 4,
+                MIN_SHUTDOWN_CLEANUP_MILLIS,
+                MAX_SHUTDOWN_CLEANUP_MILLIS
 		);
 		allTasks(pending)
 			.completeOnTimeout(null, cleanupMillis, TimeUnit.MILLISECONDS)
