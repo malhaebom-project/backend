@@ -1,7 +1,5 @@
 package com.malhaebom.malhaebom.service.dto;
 
-import java.util.Objects;
-
 import com.malhaebom.malhaebom.domain.learning.AnswerEvaluation;
 import com.malhaebom.malhaebom.domain.learning.AnswerResult;
 
@@ -17,10 +15,6 @@ public record AnswerAssessment(
 	private static final int MAX_EXPRESSION_SCORE = 30;
 	private static final int MAX_GRAMMAR_SCORE = 20;
 	private static final int MAX_FEEDBACK_LENGTH = 300;
-	private static final String CORRECT_FALLBACK =
-		"정확하고 또박또박 잘 말했어요!";
-	private static final String RETRY_FALLBACK =
-		"좋은 시도예요! 모범 답안을 참고해서 다시 말해 보세요.";
 
 	public AnswerAssessment {
 		validateScore("의미 전달 점수", meaningScore, MAX_MEANING_SCORE);
@@ -34,21 +28,6 @@ public record AnswerAssessment(
 		}
 
 		feedbackText = normalizeFeedback(feedbackText);
-	}
-
-	public static AnswerAssessment fallback(AnswerEvaluation evaluation) {
-		Objects.requireNonNull(evaluation, "평가 결과는 null일 수 없습니다.");
-		String feedbackText = evaluation.result().isCorrect()
-			? CORRECT_FALLBACK
-			: RETRY_FALLBACK;
-
-		return new AnswerAssessment(
-			evaluation.result() != AnswerResult.UNRECOGNIZED,
-			evaluation.meaningScore(),
-			evaluation.expressionScore(),
-			evaluation.grammarScore(),
-			feedbackText
-		);
 	}
 
 	public int totalScore() {
