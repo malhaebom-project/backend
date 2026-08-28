@@ -51,13 +51,14 @@ import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository
 import com.malhaebom.malhaebom.domain.repository.UserRepository;
 import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
+import com.malhaebom.malhaebom.infra.storage.image.DefaultQuestionImageUrlResolver;
 import com.malhaebom.malhaebom.infra.storage.image.QuestionImageProperties;
-import com.malhaebom.malhaebom.infra.storage.image.QuestionImageUrlResolver;
 import com.malhaebom.malhaebom.presentation.LearningRecordController;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.LearningRecordQueryService;
 import com.malhaebom.malhaebom.service.dto.LoginUser;
+import com.malhaebom.malhaebom.service.port.QuestionImageUrlResolver;
 
 @DataJpaTest
 @Import({
@@ -542,7 +543,7 @@ class LearningRecordControllerJpaTest {
 
 		@Bean
 		QuestionImageUrlResolver questionImageUrlResolver() {
-			return new QuestionImageUrlResolver(
+			return new DefaultQuestionImageUrlResolver(
 				new QuestionImageProperties(IMAGE_BASE_URL)
 			);
 		}

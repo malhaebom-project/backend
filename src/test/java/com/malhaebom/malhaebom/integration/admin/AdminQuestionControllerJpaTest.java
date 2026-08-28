@@ -31,8 +31,8 @@ import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.repository.UserRepository;
 import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
+import com.malhaebom.malhaebom.infra.storage.image.DefaultQuestionImageUrlResolver;
 import com.malhaebom.malhaebom.infra.storage.image.QuestionImageProperties;
-import com.malhaebom.malhaebom.infra.storage.image.QuestionImageUrlResolver;
 import com.malhaebom.malhaebom.presentation.AdminQuestionController;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.service.AdminQuestionService;
@@ -73,8 +73,8 @@ class AdminQuestionControllerJpaTest {
 			Set.of("He is running.", "The boy is running.")
 		);
 
-		QuestionImageUrlResolver imageUrlResolver =
-			new QuestionImageUrlResolver(
+		DefaultQuestionImageUrlResolver imageUrlResolver =
+			new DefaultQuestionImageUrlResolver(
 				new QuestionImageProperties("https://cdn.test")
 			);
 		mockMvc = MockMvcBuilders.standaloneSetup(

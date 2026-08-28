@@ -24,13 +24,13 @@ import com.malhaebom.malhaebom.domain.learning.repository.projection.LearningSes
 import com.malhaebom.malhaebom.domain.learning.repository.projection.TopicStatisticsProjection;
 import com.malhaebom.malhaebom.domain.learning.repository.projection.WrongAnswerProjection;
 import com.malhaebom.malhaebom.global.time.LearningTime;
-import com.malhaebom.malhaebom.infra.storage.image.QuestionImageUrlResolver;
 import com.malhaebom.malhaebom.service.dto.ChildStatistics;
 import com.malhaebom.malhaebom.service.dto.LearningHistory;
 import com.malhaebom.malhaebom.service.dto.LearningHistoryItem;
 import com.malhaebom.malhaebom.service.dto.LearningStatistics;
 import com.malhaebom.malhaebom.service.dto.TopicStatistics;
 import com.malhaebom.malhaebom.service.dto.WrongAnswer;
+import com.malhaebom.malhaebom.service.port.QuestionImageUrlResolver;
 
 import lombok.RequiredArgsConstructor;
 

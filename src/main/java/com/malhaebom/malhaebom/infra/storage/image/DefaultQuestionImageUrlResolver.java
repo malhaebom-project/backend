@@ -2,17 +2,20 @@ package com.malhaebom.malhaebom.infra.storage.image;
 
 import org.springframework.stereotype.Component;
 
+import com.malhaebom.malhaebom.service.port.QuestionImageUrlResolver;
+
 import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
-public class QuestionImageUrlResolver {
+public class DefaultQuestionImageUrlResolver implements QuestionImageUrlResolver {
 
 	private static final String HTTP_SCHEME = "http://";
 	private static final String HTTPS_SCHEME = "https://";
 
 	private final QuestionImageProperties properties;
 
+	@Override
 	public String resolve(String imagePath) {
 		if (imagePath == null || imagePath.isBlank()) {
 			return null;
