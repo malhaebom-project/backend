@@ -13,16 +13,7 @@ import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 
 public interface QuestionRepository extends JpaRepository<Question, Long> {
-
-	List<Question>
-		findAllByTopicAndDifficultyAndTypeInAndActiveTrueAndTtsUrlIsNotNullOrderByIdAsc(
-		LearningTopic topic,
-		Difficulty difficulty,
-		Collection<QuestionType> types
-	);
-
-	List<Question>
-	findAllByTopicAndDifficultyAndTypeInAndActiveTrue(
+	List<Question> findAllByTopicAndDifficultyAndTypeInAndActiveTrue(
 			LearningTopic topic,
 			Difficulty difficulty,
 			Collection<QuestionType> types
