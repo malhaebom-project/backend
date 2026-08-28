@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.malhaebom.malhaebom.domain.learning.Question;
-import com.malhaebom.malhaebom.infra.storage.image.QuestionImageUrlResolver;
+import com.malhaebom.malhaebom.service.port.QuestionImageUrlResolver;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.AdminQuestionRequest;
 import com.malhaebom.malhaebom.presentation.dto.AdminQuestionResponse;
