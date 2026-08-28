@@ -1,23 +1,20 @@
 package com.malhaebom.malhaebom.service;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.util.Optional;
-
+import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
+import com.malhaebom.malhaebom.service.event.QuestionTtsRequestedEvent;
+import com.malhaebom.malhaebom.service.port.QuestionTtsStorage;
+import com.malhaebom.malhaebom.service.port.TtsClient;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
-import com.malhaebom.malhaebom.service.event.QuestionTtsRequestedEvent;
-import com.malhaebom.malhaebom.service.port.QuestionTtsStorage;
-import com.malhaebom.malhaebom.service.port.TtsClient;
+import java.util.Optional;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class QuestionTtsEventListenerTest {

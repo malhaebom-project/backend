@@ -1,32 +1,25 @@
 package com.malhaebom.malhaebom.presentation;
 
-import java.io.IOException;
-import java.util.Locale;
-
-import org.springframework.http.InvalidMediaTypeException;
-import org.springframework.http.MediaType;
-import org.springframework.web.context.request.async.DeferredResult;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
-
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
+import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.SpeechAnswerResponse;
-import com.malhaebom.malhaebom.service.speech.SpeechAnswerCoordinator;
+import com.malhaebom.malhaebom.service.dto.LoginUser;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerRequest;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
-import com.malhaebom.malhaebom.service.dto.LoginUser;
-
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerCoordinator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.InvalidMediaTypeException;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.async.DeferredResult;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.Locale;
 
 @RestController
 @RequestMapping("/api/v1/learning-sessions")

@@ -1,8 +1,8 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
-import java.util.List;
-
 import com.malhaebom.malhaebom.service.dto.LearningHistory;
+
+import java.util.List;
 
 public record LearningHistoryResponse(
 	List<LearningHistoryItemResponse> content,

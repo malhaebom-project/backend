@@ -1,12 +1,11 @@
 package com.malhaebom.malhaebom.presentation.cookie;
 
-import java.time.Duration;
-
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 
-import lombok.RequiredArgsConstructor;
+import java.time.Duration;
 
 @Component
 @RequiredArgsConstructor

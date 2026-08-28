@@ -1,19 +1,18 @@
 package com.malhaebom.malhaebom.infra.observability;
 
-import java.net.SocketTimeoutException;
-import java.net.http.HttpTimeoutException;
-import java.util.EnumMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.CancellationException;
-
+import com.malhaebom.malhaebom.global.concurrent.CompletionFailures;
 import com.openai.errors.OpenAIIoException;
 import com.openai.errors.OpenAIServiceException;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.stereotype.Component;
 
-import com.malhaebom.malhaebom.global.concurrent.CompletionFailures;
+import java.net.SocketTimeoutException;
+import java.net.http.HttpTimeoutException;
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CancellationException;
 
 @Component
 public class MicrometerOpenAiAnswerAssessmentMetricsRecorder

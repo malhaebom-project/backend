@@ -1,14 +1,13 @@
 package com.malhaebom.malhaebom.infra.speech;
 
-import java.time.Duration;
-
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotNull;
+import java.time.Duration;
 
 @Validated
 @ConfigurationProperties(prefix = "gcp.stt")

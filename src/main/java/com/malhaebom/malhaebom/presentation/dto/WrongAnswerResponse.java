@@ -1,9 +1,9 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
+import com.malhaebom.malhaebom.service.dto.WrongAnswer;
+
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-
-import com.malhaebom.malhaebom.service.dto.WrongAnswer;
 
 public record WrongAnswerResponse(
 	Long answerId,

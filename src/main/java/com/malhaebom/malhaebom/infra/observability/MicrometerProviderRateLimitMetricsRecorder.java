@@ -1,15 +1,14 @@
 package com.malhaebom.malhaebom.infra.observability;
 
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.stereotype.Component;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongSupplier;
-
-import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.MeterRegistry;
-
-import org.springframework.stereotype.Component;
 
 @Component
 public class MicrometerProviderRateLimitMetricsRecorder

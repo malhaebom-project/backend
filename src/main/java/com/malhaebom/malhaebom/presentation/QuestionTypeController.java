@@ -1,15 +1,14 @@
 package com.malhaebom.malhaebom.presentation;
 
-import java.util.List;
-import java.util.stream.Stream;
-
+import com.malhaebom.malhaebom.domain.learning.QuestionType;
+import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
+import com.malhaebom.malhaebom.presentation.dto.QuestionTypeResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.malhaebom.malhaebom.domain.learning.QuestionType;
-import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
-import com.malhaebom.malhaebom.presentation.dto.QuestionTypeResponse;
+import java.util.List;
+import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/api/v1/question-types")

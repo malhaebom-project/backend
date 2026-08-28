@@ -1,24 +1,14 @@
 package com.malhaebom.malhaebom.presentation;
 
-import java.util.List;
-
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.malhaebom.malhaebom.presentation.auth.Auth;
-import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
-import com.malhaebom.malhaebom.presentation.dto.LearningHistoryRequest;
-import com.malhaebom.malhaebom.presentation.dto.LearningHistoryResponse;
-import com.malhaebom.malhaebom.presentation.dto.LearningStatisticsResponse;
-import com.malhaebom.malhaebom.presentation.dto.WrongAnswerResponse;
+import com.malhaebom.malhaebom.presentation.dto.*;
 import com.malhaebom.malhaebom.service.LearningRecordQueryService;
 import com.malhaebom.malhaebom.service.dto.LoginUser;
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/children")

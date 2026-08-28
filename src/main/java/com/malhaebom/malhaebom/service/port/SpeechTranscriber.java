@@ -1,9 +1,9 @@
 package com.malhaebom.malhaebom.service.port;
 
-import java.util.List;
-
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
+
+import java.util.List;
 
 public interface SpeechTranscriber {
 	String provider();

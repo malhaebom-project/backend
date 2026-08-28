@@ -1,9 +1,9 @@
 package com.malhaebom.malhaebom.service.dto;
 
+import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
+
 import java.util.List;
 import java.util.Objects;
-
-import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 
 public record SpeechAnswerStartResult(
 	SpeechAnswer speechAnswer,

@@ -1,10 +1,10 @@
 package com.malhaebom.malhaebom.service.policy;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AnswerSubmissionPolicyPropertiesTest {
 	@Test

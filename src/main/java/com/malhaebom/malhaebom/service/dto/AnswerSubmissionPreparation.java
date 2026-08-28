@@ -1,8 +1,8 @@
 package com.malhaebom.malhaebom.service.dto;
 
-import java.util.Objects;
-
 import com.malhaebom.malhaebom.service.policy.AnswerSubmissionDeadline;
+
+import java.util.Objects;
 
 public sealed interface AnswerSubmissionPreparation
 	permits AnswerSubmissionPreparation.Processing,

@@ -1,18 +1,11 @@
 package com.malhaebom.malhaebom.infra.tts;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
-
-import com.google.cloud.texttospeech.v1.AudioConfig;
-import com.google.cloud.texttospeech.v1.AudioEncoding;
-import com.google.cloud.texttospeech.v1.SynthesisInput;
-import com.google.cloud.texttospeech.v1.SynthesizeSpeechResponse;
-import com.google.cloud.texttospeech.v1.TextToSpeechClient;
-import com.google.cloud.texttospeech.v1.VoiceSelectionParams;
+import com.google.cloud.texttospeech.v1.*;
 import com.malhaebom.malhaebom.service.dto.TtsAudio;
 import com.malhaebom.malhaebom.service.port.TtsClient;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor

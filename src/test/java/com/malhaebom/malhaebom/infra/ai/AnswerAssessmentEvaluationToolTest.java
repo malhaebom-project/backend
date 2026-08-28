@@ -1,19 +1,16 @@
 package com.malhaebom.malhaebom.infra.ai;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.malhaebom.malhaebom.domain.learning.AnswerResult;
+import com.malhaebom.malhaebom.domain.learning.Difficulty;
+import com.malhaebom.malhaebom.domain.learning.QuestionType;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
+import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.jupiter.api.Test;
-
-import com.malhaebom.malhaebom.domain.learning.AnswerResult;
-import com.malhaebom.malhaebom.domain.learning.Difficulty;
-import com.malhaebom.malhaebom.domain.learning.QuestionType;
-import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
+import static org.junit.jupiter.api.Assertions.*;
 
 class AnswerAssessmentEvaluationToolTest {
 	@Test

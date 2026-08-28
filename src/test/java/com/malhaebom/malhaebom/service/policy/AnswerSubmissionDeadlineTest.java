@@ -1,11 +1,11 @@
 package com.malhaebom.malhaebom.service.policy;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.time.Instant;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class AnswerSubmissionDeadlineTest {
 	@Test

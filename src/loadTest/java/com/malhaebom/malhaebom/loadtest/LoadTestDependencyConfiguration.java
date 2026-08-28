@@ -1,11 +1,10 @@
 package com.malhaebom.malhaebom.loadtest;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 @Configuration(proxyBeanMethods = false)
 public class LoadTestDependencyConfiguration {

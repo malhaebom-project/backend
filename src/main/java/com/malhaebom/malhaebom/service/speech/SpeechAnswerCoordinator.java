@@ -1,34 +1,26 @@
 package com.malhaebom.malhaebom.service.speech;
 
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.service.dto.*;
+import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
+import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy.Permit;
+import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import com.malhaebom.malhaebom.service.port.SpeechTranscriptionRateLimit;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
-import com.malhaebom.malhaebom.global.exception.ApiException;
-import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerRequest;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
-import com.malhaebom.malhaebom.service.dto.SpeechAudio;
-import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
-import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
-import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
-import com.malhaebom.malhaebom.service.port.SpeechTranscriptionRateLimit;
-import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
-import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy.Permit;
-
-import lombok.extern.slf4j.Slf4j;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 @Slf4j

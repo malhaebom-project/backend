@@ -1,18 +1,14 @@
 package com.malhaebom.malhaebom.infra.speech;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.malhaebom.malhaebom.infra.observability.MicrometerProviderRateLimitMetricsRecorder;
+import io.github.bucket4j.TimeMeter;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 
-import io.github.bucket4j.TimeMeter;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-
-import org.junit.jupiter.api.Test;
-
-import com.malhaebom.malhaebom.infra.observability.MicrometerProviderRateLimitMetricsRecorder;
+import static org.junit.jupiter.api.Assertions.*;
 
 class SpeechTranscriptionRateLimiterTest {
 	@Test

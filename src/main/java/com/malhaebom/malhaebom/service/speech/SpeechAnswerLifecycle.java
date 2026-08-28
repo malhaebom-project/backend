@@ -1,5 +1,15 @@
 package com.malhaebom.malhaebom.service.speech;
 
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
+import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
+import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
+import com.malhaebom.malhaebom.service.port.SpeechAnswerLifecycleOperations;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -8,18 +18,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
-
-import org.springframework.stereotype.Service;
-
-import com.malhaebom.malhaebom.global.exception.ApiException;
-import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
-import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
-import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
-import com.malhaebom.malhaebom.service.port.SpeechAnswerLifecycleOperations;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor

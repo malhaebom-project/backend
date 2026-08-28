@@ -1,5 +1,19 @@
 package com.malhaebom.malhaebom.service;
 
+import com.malhaebom.malhaebom.domain.learning.AnswerResult;
+import com.malhaebom.malhaebom.domain.learning.LearningSessionStatus;
+import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
+import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
+import com.malhaebom.malhaebom.domain.learning.repository.projection.*;
+import com.malhaebom.malhaebom.global.time.LearningTime;
+import com.malhaebom.malhaebom.service.dto.*;
+import com.malhaebom.malhaebom.service.port.QuestionImageUrlResolver;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -8,31 +22,6 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import com.malhaebom.malhaebom.domain.learning.LearningSessionStatus;
-import com.malhaebom.malhaebom.domain.learning.AnswerResult;
-import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.projection.ChildStatisticsProjection;
-import com.malhaebom.malhaebom.domain.learning.repository.projection.LearningHistoryProjection;
-import com.malhaebom.malhaebom.domain.learning.repository.projection.LearningSessionPeriodProjection;
-import com.malhaebom.malhaebom.domain.learning.repository.projection.TopicStatisticsProjection;
-import com.malhaebom.malhaebom.domain.learning.repository.projection.WrongAnswerProjection;
-import com.malhaebom.malhaebom.global.time.LearningTime;
-import com.malhaebom.malhaebom.service.dto.ChildStatistics;
-import com.malhaebom.malhaebom.service.dto.LearningHistory;
-import com.malhaebom.malhaebom.service.dto.LearningHistoryItem;
-import com.malhaebom.malhaebom.service.dto.LearningStatistics;
-import com.malhaebom.malhaebom.service.dto.TopicStatistics;
-import com.malhaebom.malhaebom.service.dto.WrongAnswer;
-import com.malhaebom.malhaebom.service.port.QuestionImageUrlResolver;
-
-import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor

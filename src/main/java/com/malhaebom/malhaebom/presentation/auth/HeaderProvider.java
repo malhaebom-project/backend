@@ -1,9 +1,8 @@
 package com.malhaebom.malhaebom.presentation.auth;
 
-import org.springframework.stereotype.Component;
-
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import org.springframework.stereotype.Component;
 
 @Component
 public class HeaderProvider {

@@ -1,13 +1,12 @@
 package com.malhaebom.malhaebom.infra.async;
 
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
 import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
 import com.malhaebom.malhaebom.service.policy.SpeechProcessingLease;
 import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
 import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(SpeechAnswerAsyncProperties.class)

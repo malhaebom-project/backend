@@ -1,11 +1,10 @@
 package com.malhaebom.malhaebom.service.dto;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
+import com.malhaebom.malhaebom.domain.learning.AnswerResult;
 import org.junit.jupiter.api.Test;
 
-import com.malhaebom.malhaebom.domain.learning.AnswerResult;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class AnswerAssessmentTest {
 	@Test

@@ -1,13 +1,12 @@
 package com.malhaebom.malhaebom.infra.time;
 
-import java.time.Clock;
-import java.util.function.LongSupplier;
-
 import io.github.bucket4j.TimeMeter;
-
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.time.Clock;
+import java.util.function.LongSupplier;
 
 @Configuration(proxyBeanMethods = false)
 public class TimeConfiguration {

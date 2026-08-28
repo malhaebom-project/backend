@@ -1,12 +1,5 @@
 package com.malhaebom.malhaebom.service;
 
-import java.time.Instant;
-
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.malhaebom.malhaebom.domain.LoginSession;
 import com.malhaebom.malhaebom.domain.User;
 import com.malhaebom.malhaebom.domain.repository.LoginSessionRepository;
@@ -17,8 +10,13 @@ import com.malhaebom.malhaebom.infra.auth.jwt.JwtProperties;
 import com.malhaebom.malhaebom.infra.auth.jwt.JwtProvider;
 import com.malhaebom.malhaebom.infra.auth.jwt.JwtUserPayload;
 import com.malhaebom.malhaebom.service.dto.TokenPair;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor

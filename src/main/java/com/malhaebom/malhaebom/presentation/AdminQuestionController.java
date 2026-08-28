@@ -1,29 +1,20 @@
 package com.malhaebom.malhaebom.presentation;
 
-import java.util.List;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.malhaebom.malhaebom.domain.learning.Question;
-import com.malhaebom.malhaebom.service.port.QuestionImageUrlResolver;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.AdminQuestionRequest;
 import com.malhaebom.malhaebom.presentation.dto.AdminQuestionResponse;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.service.AdminQuestionService;
 import com.malhaebom.malhaebom.service.dto.LoginUser;
-
+import com.malhaebom.malhaebom.service.port.QuestionImageUrlResolver;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin/questions")

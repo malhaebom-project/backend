@@ -1,12 +1,10 @@
 package com.malhaebom.malhaebom.infra.storage.s3;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
-
 import com.malhaebom.malhaebom.service.dto.TtsAudio;
 import com.malhaebom.malhaebom.service.port.QuestionTtsStorage;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;

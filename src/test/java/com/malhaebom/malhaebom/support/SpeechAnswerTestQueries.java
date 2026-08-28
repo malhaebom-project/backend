@@ -1,9 +1,9 @@
 package com.malhaebom.malhaebom.support;
 
-import java.util.Optional;
-
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
+
+import java.util.Optional;
 
 public final class SpeechAnswerTestQueries {
 	private SpeechAnswerTestQueries() {}

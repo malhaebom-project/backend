@@ -1,10 +1,8 @@
 package com.malhaebom.malhaebom.infra.storage.image;
 
-import org.springframework.stereotype.Component;
-
 import com.malhaebom.malhaebom.service.port.QuestionImageUrlResolver;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor

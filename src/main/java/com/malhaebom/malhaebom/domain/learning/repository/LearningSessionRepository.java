@@ -1,9 +1,12 @@
 package com.malhaebom.malhaebom.domain.learning.repository;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-
+import com.malhaebom.malhaebom.domain.learning.LearningSession;
+import com.malhaebom.malhaebom.domain.learning.LearningSessionStatus;
+import com.malhaebom.malhaebom.domain.learning.repository.projection.ChildStatisticsProjection;
+import com.malhaebom.malhaebom.domain.learning.repository.projection.LearningHistoryProjection;
+import com.malhaebom.malhaebom.domain.learning.repository.projection.LearningSessionPeriodProjection;
+import com.malhaebom.malhaebom.domain.learning.repository.projection.TopicStatisticsProjection;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,14 +14,9 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import com.malhaebom.malhaebom.domain.learning.LearningSession;
-import com.malhaebom.malhaebom.domain.learning.LearningSessionStatus;
-import com.malhaebom.malhaebom.domain.learning.repository.projection.ChildStatisticsProjection;
-import com.malhaebom.malhaebom.domain.learning.repository.projection.LearningHistoryProjection;
-import com.malhaebom.malhaebom.domain.learning.repository.projection.LearningSessionPeriodProjection;
-import com.malhaebom.malhaebom.domain.learning.repository.projection.TopicStatisticsProjection;
-
-import jakarta.persistence.LockModeType;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 
 public interface LearningSessionRepository extends JpaRepository<LearningSession, Long> {
 	@Query("""

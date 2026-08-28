@@ -1,9 +1,9 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
+import com.malhaebom.malhaebom.domain.learning.LearningSession;
+
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-
-import com.malhaebom.malhaebom.domain.learning.LearningSession;
 
 public record LearningSessionResultResponse(
 	Long sessionId,

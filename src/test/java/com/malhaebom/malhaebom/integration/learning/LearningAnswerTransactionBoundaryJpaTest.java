@@ -1,22 +1,16 @@
 package com.malhaebom.malhaebom.integration.learning;
 
-import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
-
+import com.malhaebom.malhaebom.domain.learning.*;
+import com.malhaebom.malhaebom.domain.learning.repository.*;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerSubmissionMetricsRecorder;
+import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
+import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
+import com.malhaebom.malhaebom.service.ChildProfileService;
+import com.malhaebom.malhaebom.service.LearningAnswerService;
+import com.malhaebom.malhaebom.service.dto.*;
+import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,37 +19,22 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 
-import com.malhaebom.malhaebom.domain.learning.AnswerSubmission;
-import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionStatus;
-import com.malhaebom.malhaebom.domain.learning.LearningSession;
-import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
-import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
-import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.AnswerSubmissionRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
-import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerSubmissionMetricsRecorder;
-import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
-import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
-import com.malhaebom.malhaebom.service.ChildProfileService;
-import com.malhaebom.malhaebom.service.LearningAnswerService;
-import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
-import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
-import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
-import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
-import com.malhaebom.malhaebom.service.dto.AnswerSubmissionTask;
-import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
+import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
+import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)

@@ -1,15 +1,5 @@
 package com.malhaebom.malhaebom.integration.learning;
 
-import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.doThrow;
-
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
@@ -17,8 +7,17 @@ import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
-import com.malhaebom.malhaebom.service.LearningHintService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
+import com.malhaebom.malhaebom.service.LearningHintService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.doThrow;
 
 @DataJpaTest
 @Import({LearningHintService.class, JpaAuditingConfiguration.class})

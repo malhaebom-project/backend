@@ -1,16 +1,5 @@
 package com.malhaebom.malhaebom.integration.user;
 
-import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
-import static org.assertj.core.api.Assertions.assertThat;
-
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
-import jakarta.persistence.EntityManager;
-
 import com.malhaebom.malhaebom.domain.AccountRole;
 import com.malhaebom.malhaebom.domain.User;
 import com.malhaebom.malhaebom.domain.repository.UserRepository;
@@ -18,6 +7,15 @@ import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.auth.PasswordEncoderConfiguration;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.UserService;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @Import({

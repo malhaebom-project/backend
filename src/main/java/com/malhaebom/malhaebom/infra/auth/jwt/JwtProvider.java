@@ -1,20 +1,17 @@
 package com.malhaebom.malhaebom.infra.auth.jwt;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Date;
-
-import javax.crypto.SecretKey;
-
-import org.springframework.stereotype.Component;
-
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
+import org.springframework.stereotype.Component;
 
-import com.malhaebom.malhaebom.global.exception.ApiException;
-import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import javax.crypto.SecretKey;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
 
 @Component
 public class JwtProvider {

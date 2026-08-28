@@ -1,5 +1,13 @@
 package com.malhaebom.malhaebom.service.speech;
 
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -9,16 +17,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
-
-import org.springframework.stereotype.Component;
-
-import com.malhaebom.malhaebom.global.exception.ApiException;
-import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
-
-import lombok.extern.slf4j.Slf4j;
 
 @Component
 @Slf4j

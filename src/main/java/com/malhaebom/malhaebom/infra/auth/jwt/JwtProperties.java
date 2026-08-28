@@ -1,13 +1,11 @@
 package com.malhaebom.malhaebom.infra.auth.jwt;
 
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-
-import javax.crypto.SecretKey;
-
+import io.jsonwebtoken.security.Keys;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import io.jsonwebtoken.security.Keys;
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 
 @ConfigurationProperties(prefix = "jwt")
 public record JwtProperties(Token access, Token refresh) {

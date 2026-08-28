@@ -1,15 +1,14 @@
 package com.malhaebom.malhaebom.presentation;
 
-import java.util.List;
-import java.util.stream.Stream;
-
+import com.malhaebom.malhaebom.domain.learning.LearningTopic;
+import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
+import com.malhaebom.malhaebom.presentation.dto.LearningTopicResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.malhaebom.malhaebom.domain.learning.LearningTopic;
-import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
-import com.malhaebom.malhaebom.presentation.dto.LearningTopicResponse;
+import java.util.List;
+import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/api/v1/learning-topics")

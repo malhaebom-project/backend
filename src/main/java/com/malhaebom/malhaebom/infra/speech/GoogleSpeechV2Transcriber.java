@@ -1,24 +1,10 @@
 package com.malhaebom.malhaebom.infra.speech;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CancellationException;
-
 import com.google.api.core.ApiFuture;
 import com.google.api.core.ApiFutureCallback;
 import com.google.api.core.ApiFutures;
 import com.google.api.gax.rpc.StatusCode;
-import com.google.cloud.speech.v2.AutoDetectDecodingConfig;
-import com.google.cloud.speech.v2.RecognitionConfig;
-import com.google.cloud.speech.v2.RecognizeRequest;
-import com.google.cloud.speech.v2.RecognizeResponse;
-import com.google.cloud.speech.v2.RecognizerName;
-import com.google.cloud.speech.v2.PhraseSet;
-import com.google.cloud.speech.v2.SpeechClient;
-import com.google.cloud.speech.v2.SpeechAdaptation;
-import com.google.cloud.speech.v2.SpeechRecognitionAlternative;
+import com.google.cloud.speech.v2.*;
 import com.google.protobuf.ByteString;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
@@ -26,6 +12,12 @@ import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.List;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 
 public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 	public static final String PROVIDER = "GOOGLE_CLOUD_STT_V2";

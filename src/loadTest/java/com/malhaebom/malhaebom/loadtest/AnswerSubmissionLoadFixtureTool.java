@@ -1,19 +1,17 @@
 package com.malhaebom.malhaebom.loadtest;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.malhaebom.malhaebom.MalhaebomApplication;
+import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.context.ConfigurableApplicationContext;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-
-import org.springframework.boot.WebApplicationType;
-import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.context.ConfigurableApplicationContext;
-
-import com.malhaebom.malhaebom.MalhaebomApplication;
 
 public final class AnswerSubmissionLoadFixtureTool {
 	private static final String ACTION_PROPERTY = "load.test.action";

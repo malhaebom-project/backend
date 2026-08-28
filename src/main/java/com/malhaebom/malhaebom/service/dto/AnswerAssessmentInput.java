@@ -1,14 +1,10 @@
 package com.malhaebom.malhaebom.service.dto;
 
+import com.malhaebom.malhaebom.domain.learning.*;
+
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
-
-import com.malhaebom.malhaebom.domain.learning.AnswerSubmission;
-import com.malhaebom.malhaebom.domain.learning.Difficulty;
-import com.malhaebom.malhaebom.domain.learning.Question;
-import com.malhaebom.malhaebom.domain.learning.QuestionType;
-import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 
 public record AnswerAssessmentInput(
 	Difficulty difficulty,

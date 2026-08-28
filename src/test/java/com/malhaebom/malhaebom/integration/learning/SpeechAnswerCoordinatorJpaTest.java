@@ -1,25 +1,5 @@
 package com.malhaebom.malhaebom.integration.learning;
 
-import static com.malhaebom.malhaebom.support.SpeechAnswerTestQueries.findByRequestKey;
-
-import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import java.time.Duration;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import com.malhaebom.malhaebom.domain.learning.SpeechProcessingStatus;
@@ -27,23 +7,35 @@ import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionReposit
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
 import com.malhaebom.malhaebom.infra.async.SpeechAnswerPolicyConfiguration;
-import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
-import com.malhaebom.malhaebom.service.speech.SpeechAnswerCoordinator;
-import com.malhaebom.malhaebom.service.speech.SpeechAnswerStateService;
-import com.malhaebom.malhaebom.service.speech.InFlightSpeechAnswerRegistry;
-import com.malhaebom.malhaebom.service.speech.SpeechAnswerLifecycle;
+import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.ChildProfileService;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerRequest;
-import com.malhaebom.malhaebom.service.dto.SpeechAudio;
-import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
-import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
+import com.malhaebom.malhaebom.service.dto.*;
+import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
+import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriptionRateLimit;
-import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
+import com.malhaebom.malhaebom.service.speech.InFlightSpeechAnswerRegistry;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerCoordinator;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerLifecycle;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerStateService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import java.time.Duration;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
+
+import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
+import static com.malhaebom.malhaebom.support.SpeechAnswerTestQueries.findByRequestKey;
+import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
 @Import({

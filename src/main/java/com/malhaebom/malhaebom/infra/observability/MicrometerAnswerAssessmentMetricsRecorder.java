@@ -1,17 +1,16 @@
 package com.malhaebom.malhaebom.infra.observability;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import org.springframework.stereotype.Component;
+
 import java.time.Duration;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.IntSupplier;
-
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
-
-import org.springframework.stereotype.Component;
 
 @Component
 public class MicrometerAnswerAssessmentMetricsRecorder implements AnswerAssessmentMetricsRecorder {

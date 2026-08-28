@@ -1,9 +1,9 @@
 package com.malhaebom.malhaebom.presentation.cookie;
 
-import java.time.Duration;
-
 import lombok.Getter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import java.time.Duration;
 
 @Getter
 @ConfigurationProperties(prefix = "cookie.refresh-token")

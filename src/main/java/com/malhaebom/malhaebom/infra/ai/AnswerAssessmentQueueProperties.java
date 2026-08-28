@@ -1,9 +1,9 @@
 package com.malhaebom.malhaebom.infra.ai;
 
-import java.time.Duration;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.ConstructorBinding;
+
+import java.time.Duration;
 
 @ConfigurationProperties(prefix = "malhaebom.answer-assessment")
 public record AnswerAssessmentQueueProperties(int queueCapacity, Duration maxQueueWait) {

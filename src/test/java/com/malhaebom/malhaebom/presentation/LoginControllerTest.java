@@ -1,14 +1,11 @@
 package com.malhaebom.malhaebom.presentation;
 
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.presentation.cookie.RefreshCookieProvider;
+import com.malhaebom.malhaebom.service.LoginService;
+import com.malhaebom.malhaebom.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,12 +16,10 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import com.malhaebom.malhaebom.global.exception.ApiException;
-import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
-import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.presentation.cookie.RefreshCookieProvider;
-import com.malhaebom.malhaebom.service.LoginService;
-import com.malhaebom.malhaebom.service.UserService;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
 class LoginControllerTest {

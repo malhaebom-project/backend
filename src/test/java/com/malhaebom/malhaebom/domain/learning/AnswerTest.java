@@ -1,17 +1,12 @@
 package com.malhaebom.malhaebom.domain.learning;
 
-import static com.malhaebom.malhaebom.support.LearningSessionTestActions.completeCurrentQuestion;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Set;
 
-import org.junit.jupiter.api.Test;
+import static com.malhaebom.malhaebom.support.LearningSessionTestActions.completeCurrentQuestion;
+import static org.junit.jupiter.api.Assertions.*;
 
 class AnswerTest {
 	private static final String FEEDBACK_TEXT = "현재진행형을 정확하게 사용했어요!";

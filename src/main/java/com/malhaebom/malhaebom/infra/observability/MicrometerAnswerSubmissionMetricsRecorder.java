@@ -1,11 +1,9 @@
 package com.malhaebom.malhaebom.infra.observability;
 
+import com.malhaebom.malhaebom.service.port.AnswerSubmissionMetricsRecorder;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-
 import org.springframework.stereotype.Component;
-
-import com.malhaebom.malhaebom.service.port.AnswerSubmissionMetricsRecorder;
 
 @Component
 public class MicrometerAnswerSubmissionMetricsRecorder implements AnswerSubmissionMetricsRecorder {

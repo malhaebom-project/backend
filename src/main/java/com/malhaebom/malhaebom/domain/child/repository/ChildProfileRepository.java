@@ -1,11 +1,10 @@
 package com.malhaebom.malhaebom.domain.child.repository;
 
-import java.util.List;
-import java.util.Optional;
-
+import com.malhaebom.malhaebom.domain.child.ChildProfile;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.malhaebom.malhaebom.domain.child.ChildProfile;
+import java.util.List;
+import java.util.Optional;
 
 public interface ChildProfileRepository extends JpaRepository<ChildProfile, Long> {
 	List<ChildProfile> findAllByUserIdAndActiveTrueOrderByCreatedAtAsc(Long userId);

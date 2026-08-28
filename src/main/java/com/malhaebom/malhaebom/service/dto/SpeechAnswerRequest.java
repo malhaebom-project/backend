@@ -1,9 +1,9 @@
 package com.malhaebom.malhaebom.service.dto;
 
-import java.util.Objects;
-
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+
+import java.util.Objects;
 
 public record SpeechAnswerRequest(
 	Long userId,

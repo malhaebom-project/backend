@@ -1,20 +1,14 @@
 package com.malhaebom.malhaebom.service;
 
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import com.malhaebom.malhaebom.domain.learning.Answer;
-import com.malhaebom.malhaebom.domain.learning.AnswerAttemptPolicy;
-import com.malhaebom.malhaebom.domain.learning.LearningSession;
-import com.malhaebom.malhaebom.domain.learning.LearningSessionAnswerSubmissionException;
-import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
+import com.malhaebom.malhaebom.domain.learning.*;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerSubmissionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor

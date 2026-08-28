@@ -1,13 +1,12 @@
 package com.malhaebom.malhaebom.infra.speech;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 
-import org.junit.jupiter.api.Test;
-
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class GoogleSpeechV2PropertiesTest {
 	private final Validator validator = Validation

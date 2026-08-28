@@ -1,7 +1,6 @@
 package com.malhaebom.malhaebom;
 
-import static org.mockito.Mockito.mock;
-
+import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -9,7 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import static org.mockito.Mockito.mock;
 
 @SpringBootTest
 @ActiveProfiles("test")

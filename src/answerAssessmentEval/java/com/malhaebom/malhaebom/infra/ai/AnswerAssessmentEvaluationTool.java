@@ -1,5 +1,22 @@
 package com.malhaebom.malhaebom.infra.ai;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.malhaebom.malhaebom.domain.learning.AnswerResult;
+import com.malhaebom.malhaebom.domain.learning.Difficulty;
+import com.malhaebom.malhaebom.domain.learning.QuestionType;
+import com.malhaebom.malhaebom.infra.observability.AnswerAssessmentMetricsRecorder;
+import com.malhaebom.malhaebom.infra.observability.OpenAiAnswerAssessmentMetricsRecorder;
+import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
+import com.openai.client.OpenAIClientAsync;
+import io.github.bucket4j.TimeMeter;
+import org.springframework.ai.openai.http.okhttp.OpenAiHttpClientBuilderCustomizer;
+import org.springframework.beans.factory.support.StaticListableBeanFactory;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -10,35 +27,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
-
-import io.github.bucket4j.TimeMeter;
-
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.openai.client.OpenAIClientAsync;
-import org.springframework.beans.factory.support.StaticListableBeanFactory;
-import org.springframework.ai.openai.http.okhttp.OpenAiHttpClientBuilderCustomizer;
-
-import com.malhaebom.malhaebom.domain.learning.AnswerResult;
-import com.malhaebom.malhaebom.domain.learning.Difficulty;
-import com.malhaebom.malhaebom.domain.learning.QuestionType;
-import com.malhaebom.malhaebom.infra.observability.AnswerAssessmentMetricsRecorder;
-import com.malhaebom.malhaebom.infra.observability.OpenAiAnswerAssessmentMetricsRecorder;
-import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
-import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
-import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
-import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 
 public final class AnswerAssessmentEvaluationTool {
 

@@ -1,10 +1,10 @@
 package com.malhaebom.malhaebom.presentation.cookie;
 
-import java.time.Duration;
-
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+
+import java.time.Duration;
 
 @Component
 public class CookieProvider {

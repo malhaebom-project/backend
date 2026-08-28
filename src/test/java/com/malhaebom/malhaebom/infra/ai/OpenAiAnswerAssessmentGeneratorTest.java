@@ -1,25 +1,12 @@
 package com.malhaebom.malhaebom.infra.ai;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.net.SocketTimeoutException;
-import java.time.Duration;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-
+import com.malhaebom.malhaebom.domain.learning.*;
+import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerAssessmentMetricsRecorder;
+import com.malhaebom.malhaebom.infra.observability.MicrometerOpenAiAnswerAssessmentMetricsRecorder;
+import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 import com.openai.client.OpenAIClientAsync;
 import com.openai.core.http.Headers;
 import com.openai.errors.OpenAIIoException;
@@ -35,19 +22,17 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-import com.malhaebom.malhaebom.domain.learning.AnswerResult;
-import com.malhaebom.malhaebom.domain.learning.Difficulty;
-import com.malhaebom.malhaebom.domain.learning.LearningTopic;
-import com.malhaebom.malhaebom.domain.learning.Question;
-import com.malhaebom.malhaebom.domain.learning.QuestionType;
-import com.malhaebom.malhaebom.global.exception.ApiException;
-import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerAssessmentMetricsRecorder;
-import com.malhaebom.malhaebom.infra.observability.MicrometerOpenAiAnswerAssessmentMetricsRecorder;
-import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
-import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
-import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
-import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
+import java.net.SocketTimeoutException;
+import java.time.Duration;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 class OpenAiAnswerAssessmentGeneratorTest {
 	@Test

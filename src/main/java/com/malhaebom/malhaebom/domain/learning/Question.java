@@ -1,28 +1,12 @@
 package com.malhaebom.malhaebom.domain.learning;
 
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Set;
-
-import jakarta.persistence.CollectionTable;
-import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Table;
-
+import com.malhaebom.malhaebom.domain.BaseEntity;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import com.malhaebom.malhaebom.domain.BaseEntity;
+import java.util.*;
 
 @Entity
 @Table(name = "questions")

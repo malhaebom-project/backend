@@ -1,11 +1,9 @@
 package com.malhaebom.malhaebom.infra.async;
 
+import com.malhaebom.malhaebom.service.port.SpeechAnswerLifecycleOperations;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
-
-import com.malhaebom.malhaebom.service.port.SpeechAnswerLifecycleOperations;
-
-import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor

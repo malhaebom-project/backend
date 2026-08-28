@@ -1,9 +1,9 @@
 package com.malhaebom.malhaebom.domain.learning.repository.projection;
 
-import java.time.LocalDateTime;
-
 import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningTopic;
+
+import java.time.LocalDateTime;
 
 public interface LearningHistoryProjection {
 	Long getSessionId();

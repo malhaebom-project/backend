@@ -1,15 +1,13 @@
 package com.malhaebom.malhaebom.domain.learning.repository;
 
-import java.util.Optional;
-
+import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
-
-import jakarta.persistence.LockModeType;
+import java.util.Optional;
 
 public interface SpeechAnswerRepository extends JpaRepository<SpeechAnswer, Long> {
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
