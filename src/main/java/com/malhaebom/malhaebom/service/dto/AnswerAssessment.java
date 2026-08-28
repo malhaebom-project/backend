@@ -67,6 +67,10 @@ public record AnswerAssessment(boolean recognized, int meaningScore, int express
 		if (text == null || text.isBlank()) {
 			return null;
 		}
-		return text.strip().substring(0, maximumLength);
+		String normalized = text.strip();
+		if (normalized.length() <= maximumLength) {
+			return normalized;
+		}
+		return normalized.substring(0, maximumLength);
 	}
 }
