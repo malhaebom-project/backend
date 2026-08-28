@@ -3,6 +3,7 @@ package com.malhaebom.malhaebom.presentation;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.SpeechProcessingErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
@@ -14,6 +15,8 @@ import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.speech.SpeechAnswerCoordinator;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -41,8 +44,21 @@ public class LearningSpeechController {
 		path = "/{sessionId}/questions/{sessionQuestionId}/speech",
 		consumes = MediaType.MULTIPART_FORM_DATA_VALUE
 	)
-	@Operation(summary = "음성 답변 업로드")
+	@Operation(
+		summary = "음성 답변 업로드",
+		description = """
+			녹음 파일을 업로드하고 STT 결과가 완료될 때까지 같은 HTTP 요청으로 기다립니다.
+
+			- 지원 형식: `audio/webm`, `audio/mp4`, `audio/mpeg`
+			- 파일 크기: 최대 5MB
+			- 처리 제한시간: 20초. 초과 시 `504 STT_PROCESSING_TIMEOUT`
+			- 과부하 시 대기열에 넣지 않고 `503 STT_PROCESSING_OVERLOADED`로 즉시 거절
+			- 같은 녹음의 네트워크 재전송에는 같은 `Idempotency-Key` 사용
+			- 새로 녹음한 답변에는 새로운 `Idempotency-Key` 사용
+			"""
+	)
 	@ValidationErrorResponses
+	@SpeechProcessingErrorResponses
 	public DeferredResult<ApiResponse<SpeechAnswerResponse>> upload(
 		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId,
@@ -50,8 +66,20 @@ public class LearningSpeechController {
 		@RequestHeader(
 			value = "Idempotency-Key",
 			required = false
-		) String requestKey,
-		@RequestPart(value = "audio", required = false) MultipartFile audio
+		)
+		@Parameter(
+			description = "같은 녹음 요청의 중복 처리를 방지하는 식별 키. 1~100자이며 UUID 사용을 권장합니다.",
+			required = true,
+			example = "550e8400-e29b-41d4-a716-446655440000"
+		)
+		String requestKey,
+		@RequestPart(value = "audio", required = false)
+		@Parameter(
+			description = "STT로 변환할 음성 파일 (webm, mp4 또는 mp3, 최대 5MB)",
+			required = true,
+			schema = @Schema(type = "string", format = "binary")
+		)
+		MultipartFile audio
 	) {
 		SpeechAudio speechAudio = toSpeechAudio(audio);
 		SpeechAnswerTask task = speechAnswerCoordinator.uploadAsync(

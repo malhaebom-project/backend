@@ -90,8 +90,119 @@ public class OpenApiConfiguration {
 					)
 				));
 			}
+			if (handlerMethod.hasMethodAnnotation(SpeechProcessingErrorResponses.class)) {
+				markSpeechAudioAsRequired(operation);
+				addSpeechProcessingResponses(responses);
+			}
+			if (handlerMethod.hasMethodAnnotation(AnswerSubmissionErrorResponses.class)) {
+				addAnswerSubmissionResponses(responses);
+			}
 			return operation;
 		};
+	}
+
+	private void markSpeechAudioAsRequired(io.swagger.v3.oas.models.Operation operation) {
+		if (operation.getRequestBody() == null || operation.getRequestBody().getContent() == null) {
+			return;
+		}
+		operation.getRequestBody().setRequired(true);
+		MediaType multipart = operation.getRequestBody().getContent().get("multipart/form-data");
+		if (multipart != null && multipart.getSchema() != null) {
+			multipart.getSchema().addRequiredItem("audio");
+		}
+	}
+
+	private void addSpeechProcessingResponses(ApiResponses responses) {
+		responses.addApiResponse("404", singleErrorResponse(
+			"학습 세션을 찾을 수 없음",
+			"LEARNING_SESSION_NOT_FOUND",
+			"학습 세션을 찾을 수 없습니다."
+		));
+		responses.addApiResponse("409", singleErrorResponse(
+			"같은 음성 답변을 처리하고 있음",
+			"SPEECH_PROCESSING",
+			"음성 답변을 처리하고 있습니다."
+		));
+		responses.addApiResponse("422", singleErrorResponse(
+			"음성에서 답변을 인식하지 못함",
+			"SPEECH_NOT_RECOGNIZED",
+			"음성을 인식하지 못했습니다."
+		));
+		responses.addApiResponse("429", singleErrorResponse(
+			"외부 음성 인식 요청 한도 초과",
+			"AI_REQUEST_LIMIT_EXCEEDED",
+			"음성 인식 요청이 많습니다. 잠시 후 다시 시도해 주세요."
+		));
+		responses.addApiResponse("500", singleErrorResponse(
+			"음성 변환 처리 실패",
+			"STT_PROCESSING_FAILED",
+			"음성 변환 처리에 실패했습니다."
+		));
+		responses.addApiResponse("503", singleErrorResponse(
+			"음성 변환 처리 용량 초과",
+			"STT_PROCESSING_OVERLOADED",
+			"음성 변환 요청이 많습니다. 잠시 후 다시 시도해 주세요."
+		));
+		responses.addApiResponse("504", singleErrorResponse(
+			"음성 변환 처리시간 초과",
+			"STT_PROCESSING_TIMEOUT",
+			"음성 변환 처리 시간이 초과되었습니다."
+		));
+	}
+
+	private void addAnswerSubmissionResponses(ApiResponses responses) {
+		responses.addApiResponse("404", errorResponse(
+			"학습 세션 또는 음성 답변을 찾을 수 없음",
+			Map.of(
+				"LEARNING_SESSION_NOT_FOUND", errorExample(
+					"학습 세션을 찾을 수 없습니다.",
+					"LEARNING_SESSION_NOT_FOUND"
+				),
+				"SPEECH_ANSWER_NOT_FOUND", errorExample(
+					"음성 답변을 찾을 수 없습니다.",
+					"SPEECH_ANSWER_NOT_FOUND"
+				)
+			)
+		));
+		responses.addApiResponse("409", errorResponse(
+			"답변 제출이 처리 중이거나 충돌함",
+			Map.of(
+				"ANSWER_SUBMISSION_PROCESSING", errorExample(
+					"답변 제출을 처리하고 있습니다.",
+					"ANSWER_SUBMISSION_PROCESSING"
+				),
+				"ANSWER_SUBMISSION_CONFLICT", errorExample(
+					"처리 중이거나 재시도할 답변 제출이 이미 있습니다.",
+					"ANSWER_SUBMISSION_CONFLICT"
+				)
+			)
+		));
+		responses.addApiResponse("502", singleErrorResponse(
+			"외부 답변 채점 실패",
+			"ANSWER_ASSESSMENT_FAILED",
+			"답변 채점에 실패했습니다. 잠시 후 다시 시도해 주세요."
+		));
+		responses.addApiResponse("503", singleErrorResponse(
+			"답변 채점 처리 용량 초과",
+			"ANSWER_ASSESSMENT_OVERLOADED",
+			"답변 채점 요청이 많습니다. 잠시 후 다시 시도해 주세요."
+		));
+		responses.addApiResponse("504", singleErrorResponse(
+			"답변 제출 처리시간 초과",
+			"ANSWER_SUBMISSION_TIMEOUT",
+			"답변 제출 처리 시간이 초과되었습니다."
+		));
+	}
+
+	private ApiResponse singleErrorResponse(
+		String description,
+		String errorCode,
+		String message
+	) {
+		return errorResponse(
+			description,
+			Map.of(errorCode, errorExample(message, errorCode))
+		);
 	}
 
 	private ApiResponse errorResponse(String description, Map<String, Example> examples) {
