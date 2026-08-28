@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @EnableConfigurationProperties(RefreshTokenCookieProperties.class)
 public class RefreshCookieProvider {
-
 	public static final String REFRESH_TOKEN_KEY = "refresh_token";
 
 	private final RefreshTokenCookieProperties properties;

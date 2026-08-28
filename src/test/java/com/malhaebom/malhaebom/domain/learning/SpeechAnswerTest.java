@@ -14,9 +14,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class SpeechAnswerTest {
-
-	private static final String REQUEST_KEY =
-		"e23b37e7-d7d4-407e-9f54-dcdaee508799";
+	private static final String REQUEST_KEY = "e23b37e7-d7d4-407e-9f54-dcdaee508799";
 	private static final String STT_PROVIDER = "GOOGLE_CLOUD_STT_V2";
 
 	@Test

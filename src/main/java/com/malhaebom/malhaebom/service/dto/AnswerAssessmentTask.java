@@ -7,14 +7,10 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 
 public final class AnswerAssessmentTask {
-
 	private final CompletionStage<AnswerAssessment> result;
 	private final BooleanSupplier cancellation;
 
-	public AnswerAssessmentTask(
-		CompletionStage<AnswerAssessment> result,
-		BooleanSupplier cancellation
-	) {
+	public AnswerAssessmentTask(CompletionStage<AnswerAssessment> result, BooleanSupplier cancellation) {
 		this.result = Objects.requireNonNull(
 			result,
 			"채점 작업 결과는 null일 수 없습니다."
@@ -41,14 +37,11 @@ public final class AnswerAssessmentTask {
 		return cancellation.getAsBoolean();
 	}
 
-	public AnswerAssessmentTask map(
-		Function<AnswerAssessment, AnswerAssessment> mapper
-	) {
+	public AnswerAssessmentTask map(Function<AnswerAssessment, AnswerAssessment> mapper) {
 		Objects.requireNonNull(mapper, "채점 결과 변환기는 null일 수 없습니다.");
 		return new AnswerAssessmentTask(
 			result.thenApply(mapper),
 			this::cancel
 		);
 	}
-
 }

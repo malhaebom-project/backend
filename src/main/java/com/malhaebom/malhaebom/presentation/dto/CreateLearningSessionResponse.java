@@ -17,7 +17,6 @@ public record CreateLearningSessionResponse(
 	LearningSessionStatus status,
 	OffsetDateTime startedAt
 ) {
-
 	public static CreateLearningSessionResponse from(LearningSession session) {
 		return new CreateLearningSessionResponse(
 			session.getId(),

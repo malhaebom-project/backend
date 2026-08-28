@@ -18,7 +18,6 @@ import com.malhaebom.malhaebom.global.exception.ErrorCode;
 
 @Component
 public class JwtProvider {
-
 	public String createToken(Long userId, Duration duration, SecretKey secretKey) {
 		Instant now = Instant.now();
 

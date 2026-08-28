@@ -24,9 +24,7 @@ import com.malhaebom.malhaebom.infra.observability.OpenAiAnswerAssessmentMetrics
 import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 
 @Component
-public class OpenAiAnswerAssessmentGenerator
-	implements AnswerAssessmentGenerator {
-
+public class OpenAiAnswerAssessmentGenerator implements AnswerAssessmentGenerator {
 	private static final ObjectMapper SCHEMA_MAPPER = new ObjectMapper();
 
 	private static final String COMMON_SYSTEM_PROMPT = """
@@ -318,16 +316,12 @@ public class OpenAiAnswerAssessmentGenerator
 	}
 
 	@Override
-	public AnswerAssessmentTask generateAsync(
-		AnswerAssessmentInput input
-	) {
+	public AnswerAssessmentTask generateAsync(AnswerAssessmentInput input) {
 		Objects.requireNonNull(input, "채점 입력은 null일 수 없습니다.");
 		return rateLimitQueue.execute(() -> generate(input));
 	}
 
-	private AnswerAssessmentTask generate(
-		AnswerAssessmentInput input
-	) {
+	private AnswerAssessmentTask generate(AnswerAssessmentInput input) {
 		CompletableFuture<ChatCompletion> request = openAiClient.chat()
 			.completions()
 			.create(createParams(input));
@@ -344,9 +338,7 @@ public class OpenAiAnswerAssessmentGenerator
 		);
 	}
 
-	private ChatCompletionCreateParams createParams(
-		AnswerAssessmentInput input
-	) {
+	private ChatCompletionCreateParams createParams(AnswerAssessmentInput input) {
 		OpenAiAnswerAssessmentProperties.Chat chat = properties.getChat();
 		ChatCompletionCreateParams.Builder builder =
 			ChatCompletionCreateParams.builder()
@@ -418,9 +410,7 @@ public class OpenAiAnswerAssessmentGenerator
 		return COMMON_SYSTEM_PROMPT + "\n\n" + difficultyPrompt;
 	}
 
-	private AnswerAssessment extractAssessment(
-		ChatCompletion completion
-	) {
+	private AnswerAssessment extractAssessment(ChatCompletion completion) {
 		try {
 			return extractValidAssessment(completion);
 		} catch (OpenAIInvalidDataException exception) {
@@ -429,9 +419,7 @@ public class OpenAiAnswerAssessmentGenerator
 		}
 	}
 
-	private AnswerAssessment extractValidAssessment(
-		ChatCompletion completion
-	) {
+	private AnswerAssessment extractValidAssessment(ChatCompletion completion) {
 		completion.usage().ifPresent(this::recordTokenUsage);
 		if (completion.choices().isEmpty()) {
 			metricsRecorder.recordFailure(FailureReason.EMPTY_RESPONSE);
@@ -472,5 +460,4 @@ public class OpenAiAnswerAssessmentGenerator
 			reasoningTokens
 		);
 	}
-
 }

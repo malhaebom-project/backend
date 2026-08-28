@@ -14,13 +14,11 @@ import com.malhaebom.malhaebom.presentation.dto.LearningTopicResponse;
 @RestController
 @RequestMapping("/api/v1/learning-topics")
 public class LearningTopicController {
-
 	@GetMapping
 	public ApiResponse<List<LearningTopicResponse>> getLearningTopics() {
 		List<LearningTopicResponse> response = Stream.of(LearningTopic.values())
 			.map(LearningTopicResponse::from)
 			.toList();
-
 		return ApiResponse.success(response);
 	}
 }

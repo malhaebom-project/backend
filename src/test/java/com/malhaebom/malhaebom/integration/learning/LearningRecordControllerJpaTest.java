@@ -69,7 +69,6 @@ import com.malhaebom.malhaebom.service.port.QuestionImageUrlResolver;
 	LearningRecordControllerJpaTest.RecordTestConfiguration.class
 })
 class LearningRecordControllerJpaTest {
-
 	private static final String IMAGE_BASE_URL = "https://cdn.test";
 	private static final String IMAGE_PATH = "questions/boy-running.png";
 
@@ -496,10 +495,7 @@ class LearningRecordControllerJpaTest {
 		));
 	}
 
-	private void saveCanceledSession(
-		Long sessionChildId,
-		LocalDateTime completedAt
-	) {
+	private void saveCanceledSession(Long sessionChildId, LocalDateTime completedAt) {
 		LearningSession session = LearningSession.create(
 			sessionChildId,
 			LearningTopic.ANIMAL,
@@ -533,7 +529,6 @@ class LearningRecordControllerJpaTest {
 
 	@TestConfiguration
 	static class RecordTestConfiguration {
-
 		@Bean
 		Clock clock() {
 			return Clock.fixed(

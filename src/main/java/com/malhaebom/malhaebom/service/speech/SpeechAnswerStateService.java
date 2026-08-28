@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class SpeechAnswerStateService {
-
 	private final LearningSessionRepository learningSessionRepository;
 	private final SpeechAnswerRepository speechAnswerRepository;
 	private final SpeechProcessingLease processingLease;
@@ -190,10 +189,7 @@ public class SpeechAnswerStateService {
 		return claimedAt.plus(processingLease.value());
 	}
 
-	private boolean isSameQuestion(
-		LearningSessionQuestion first,
-		LearningSessionQuestion second
-	) {
+	private boolean isSameQuestion(LearningSessionQuestion first, LearningSessionQuestion second) {
 		if (first == second) {
 			return true;
 		}
@@ -204,13 +200,9 @@ public class SpeechAnswerStateService {
 			&& Objects.equals(first.getId(), second.getId());
 	}
 
-	private void validateCurrentQuestion(
-		LearningSessionQuestion currentQuestion,
-		Long sessionQuestionId
-	) {
+	private void validateCurrentQuestion(LearningSessionQuestion currentQuestion, Long sessionQuestionId) {
 		if (!Objects.equals(currentQuestion.getId(), sessionQuestionId)) {
 			throw new ApiException(ErrorCode.CURRENT_QUESTION_MISMATCH);
 		}
 	}
-
 }

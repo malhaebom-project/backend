@@ -3,32 +3,20 @@ package com.malhaebom.malhaebom.infra.observability;
 import java.util.function.LongSupplier;
 
 public interface ProviderRateLimitMetricsRecorder {
-
 	ProviderRateLimitMetricsRecorder NOOP = new ProviderRateLimitMetricsRecorder() {
 		@Override
-		public void bindCapacity(String provider, String quota, long capacity) {
-		}
+		public void bindCapacity(String provider, String quota, long capacity) {}
 
 		@Override
-		public void bindAvailable(
-			String provider,
-			String quota,
-			LongSupplier availableTokens
-		) {
-		}
+		public void bindAvailable(String provider, String quota, LongSupplier availableTokens) {}
 
 		@Override
-		public void record(String provider, Result result) {
-		}
+		public void record(String provider, Result result) {}
 	};
 
 	void bindCapacity(String provider, String quota, long capacity);
 
-	void bindAvailable(
-		String provider,
-		String quota,
-		LongSupplier availableTokens
-	);
+	void bindAvailable(String provider, String quota, LongSupplier availableTokens);
 
 	void record(String provider, Result result);
 

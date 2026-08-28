@@ -5,7 +5,6 @@ import org.springframework.http.HttpStatus;
 
 @Getter
 public enum ErrorCode {
-
 	INVALID_REQUEST(
 		HttpStatus.BAD_REQUEST,
 		"요청 값이 올바르지 않습니다."
@@ -126,5 +125,4 @@ public enum ErrorCode {
 		this.httpStatus = httpStatus;
 		this.message = message;
 	}
-
 }

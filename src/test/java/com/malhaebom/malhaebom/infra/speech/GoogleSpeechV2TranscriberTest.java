@@ -38,7 +38,6 @@ import io.grpc.Status;
 
 @ExtendWith(MockitoExtension.class)
 class GoogleSpeechV2TranscriberTest {
-
 	private static final byte[] AUDIO_CONTENT = {1, 2, 3};
 	private static final SpeechAudio AUDIO = new SpeechAudio(
 		AUDIO_CONTENT,
@@ -322,19 +321,14 @@ class GoogleSpeechV2TranscriberTest {
 		return response.build();
 	}
 
-	private SpeechRecognitionAlternative alternative(
-		String transcript,
-		float confidence
-	) {
+	private SpeechRecognitionAlternative alternative(String transcript, float confidence) {
 		return SpeechRecognitionAlternative.newBuilder()
 			.setTranscript(transcript)
 			.setConfidence(confidence)
 			.build();
 	}
 
-	private com.google.api.gax.rpc.ApiException googleException(
-		Status.Code code
-	) {
+	private com.google.api.gax.rpc.ApiException googleException(Status.Code code) {
 		return ApiExceptionFactory.createException(
 			new RuntimeException("Google API error"),
 			GrpcStatusCode.of(code),

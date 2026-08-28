@@ -3,11 +3,9 @@ package com.malhaebom.malhaebom.domain.learning;
 import java.util.Objects;
 
 public final class AnswerAttemptPolicy {
-
 	private static final int MAX_ATTEMPT_COUNT = 2;
 
-	private AnswerAttemptPolicy() {
-	}
+	private AnswerAttemptPolicy() {}
 
 	public static boolean isAllowed(int attemptNo) {
 		return attemptNo >= 1 && attemptNo <= MAX_ATTEMPT_COUNT;

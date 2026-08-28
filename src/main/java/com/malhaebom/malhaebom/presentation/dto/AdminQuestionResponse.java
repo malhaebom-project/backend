@@ -25,11 +25,7 @@ public record AdminQuestionResponse(
 	Instant createdAt,
 	Instant updatedAt
 ) {
-
-	public static AdminQuestionResponse from(
-		Question question,
-		String imageUrl
-	) {
+	public static AdminQuestionResponse from(Question question, String imageUrl) {
 		return new AdminQuestionResponse(
 			question.getId(),
 			question.getTopic(),

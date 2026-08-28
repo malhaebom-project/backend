@@ -5,11 +5,7 @@ import java.time.Instant;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 
-public record JwtUserPayload(
-	Long userId,
-	Instant expiresAt
-) {
-
+public record JwtUserPayload(Long userId, Instant expiresAt) {
 	private static final String USER_ID_KEY = "userId";
 
 	public static JwtUserPayload from(Claims claims) {

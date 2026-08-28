@@ -11,10 +11,7 @@ public record LearningStatisticsResponse(
 	int consecutiveStudyDays,
 	List<TopicStatisticsResponse> topicStatistics
 ) {
-
-	public static LearningStatisticsResponse from(
-		LearningStatistics statistics
-	) {
+	public static LearningStatisticsResponse from(LearningStatistics statistics) {
 		return new LearningStatisticsResponse(
 			statistics.totalSessionCount(),
 			statistics.totalStudySeconds(),

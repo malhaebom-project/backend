@@ -49,19 +49,14 @@ public class AuthLoginUserArgumentResolver
 		);
 
 		if (jwtProvider.isTokenExpired(
-			accessToken,
-			properties.access().signingKey()
+			accessToken, properties.access().signingKey()
 		)) {
-			throw new ApiException(
-				ErrorCode.UNAUTHORIZED,
-				"만료된 액세스 토큰입니다."
-			);
+			throw new ApiException(ErrorCode.UNAUTHORIZED, "만료된 액세스 토큰입니다.");
 		}
 
 		JwtUserPayload payload =
 			jwtProvider.parsePayload(
-				accessToken,
-				properties.access().signingKey()
+				accessToken, properties.access().signingKey()
 			);
 		return new LoginUser(payload.userId());
 	}

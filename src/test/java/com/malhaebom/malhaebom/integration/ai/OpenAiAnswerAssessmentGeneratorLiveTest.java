@@ -45,10 +45,8 @@ import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 @ActiveProfiles("test")
 @Import(OpenAiAnswerAssessmentGeneratorLiveTest.SpeechTestConfiguration.class)
 class OpenAiAnswerAssessmentGeneratorLiveTest {
-
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-	private static final String CASES_RESOURCE =
-		"answer-assessment-live-cases.json";
+	private static final String CASES_RESOURCE = "answer-assessment-live-cases.json";
 	private static final List<String> STT_FORMATTING_ADVICE_TERMS = List.of(
 		"대문자",
 		"소문자",
@@ -254,7 +252,6 @@ class OpenAiAnswerAssessmentGeneratorLiveTest {
 
 	@TestConfiguration(proxyBeanMethods = false)
 	static class SpeechTestConfiguration {
-
 		@Bean
 		SpeechTranscriber speechTranscriber() {
 			return mock(SpeechTranscriber.class);

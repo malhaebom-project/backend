@@ -47,7 +47,6 @@ import com.malhaebom.malhaebom.domain.BaseEntity;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AnswerSubmission extends BaseEntity {
-
 	private static final int MAX_PROCESSING_TOKEN_LENGTH = 36;
 	private static final int MAX_FAILURE_MESSAGE_LENGTH = 1000;
 
@@ -83,11 +82,7 @@ public class AnswerSubmission extends BaseEntity {
 	@Column(name = "failure_message", length = 1000)
 	private String failureMessage;
 
-	static AnswerSubmission reserve(
-		LearningSessionQuestion sessionQuestion,
-		SpeechAnswer speechAnswer,
-		int attemptNo
-	) {
+	static AnswerSubmission reserve(LearningSessionQuestion sessionQuestion, SpeechAnswer speechAnswer, int attemptNo) {
 		validateReservation(sessionQuestion, speechAnswer, attemptNo);
 
 		AnswerSubmission submission = new AnswerSubmission();
@@ -98,11 +93,7 @@ public class AnswerSubmission extends BaseEntity {
 		return submission;
 	}
 
-	public void claim(
-		String processingToken,
-		Instant claimedAt,
-		Instant leaseExpiresAt
-	) {
+	public void claim(String processingToken, Instant claimedAt, Instant leaseExpiresAt) {
 		validateClaim(processingToken, claimedAt, leaseExpiresAt);
 
 		status = AnswerSubmissionStatus.PROCESSING;
@@ -111,11 +102,7 @@ public class AnswerSubmission extends BaseEntity {
 		failureMessage = null;
 	}
 
-	public Answer complete(
-		String processingToken,
-		AnswerEvaluation evaluation,
-		String feedbackText
-	) {
+	public Answer complete(String processingToken, AnswerEvaluation evaluation, String feedbackText) {
 		validateProcessingToken(processingToken);
 		Answer completedAnswer = Answer.create(
 			this,
@@ -193,11 +180,7 @@ public class AnswerSubmission extends BaseEntity {
 			&& !leaseExpiresAt.isAfter(instant);
 	}
 
-	private void validateClaim(
-		String processingToken,
-		Instant claimedAt,
-		Instant leaseExpiresAt
-	) {
+	private void validateClaim(String processingToken, Instant claimedAt, Instant leaseExpiresAt) {
 		validateText(
 			processingToken,
 			MAX_PROCESSING_TOKEN_LENGTH,
@@ -242,11 +225,7 @@ public class AnswerSubmission extends BaseEntity {
 		}
 	}
 
-	private static void validateReservation(
-		LearningSessionQuestion sessionQuestion,
-		SpeechAnswer speechAnswer,
-		int attemptNo
-	) {
+	private static void validateReservation(LearningSessionQuestion sessionQuestion, SpeechAnswer speechAnswer, int attemptNo) {
 		if (sessionQuestion == null) {
 			throw new IllegalArgumentException("세션 문제는 null일 수 없습니다.");
 		}
@@ -277,11 +256,7 @@ public class AnswerSubmission extends BaseEntity {
 		}
 	}
 
-	private static void validateText(
-		String value,
-		int maximumLength,
-		String fieldName
-	) {
+	private static void validateText(String value, int maximumLength, String fieldName) {
 		if (value == null || value.isBlank()) {
 			throw new IllegalArgumentException(fieldName + "은/는 비어 있을 수 없습니다.");
 		}

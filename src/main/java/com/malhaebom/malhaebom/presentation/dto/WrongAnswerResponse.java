@@ -15,7 +15,6 @@ public record WrongAnswerResponse(
 	String feedbackText,
 	OffsetDateTime answeredAt
 ) {
-
 	public static WrongAnswerResponse from(WrongAnswer wrongAnswer) {
 		return new WrongAnswerResponse(
 			wrongAnswer.answerId(),

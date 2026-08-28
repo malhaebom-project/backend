@@ -25,17 +25,14 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class SpeechAnswerLifecycle implements SpeechAnswerLifecycleOperations {
-
 	private static final long MAX_SHUTDOWN_CLEANUP_MILLIS = 5_000L;
 	private static final long MIN_SHUTDOWN_CLEANUP_MILLIS = 100L;
 
 	private final InFlightSpeechAnswerRegistry inFlightRegistry;
 	private final SpeechTranscriptionConcurrencyPolicy concurrencyPolicy;
 	private final SpeechShutdownPolicy shutdownPolicy;
-	private final ReentrantReadWriteLock lifecycleLock =
-		new ReentrantReadWriteLock();
-	private final CompletableFuture<Void> shutdownCompletion =
-		new CompletableFuture<>();
+	private final ReentrantReadWriteLock lifecycleLock = new ReentrantReadWriteLock();
+	private final CompletableFuture<Void> shutdownCompletion = new CompletableFuture<>();
 	private volatile boolean running = true;
 
 	public <T> T whileAcceptingRequests(Supplier<T> operation) {
@@ -69,8 +66,7 @@ public class SpeechAnswerLifecycle implements SpeechAnswerLifecycleOperations {
 
 	@Override
 	public void stop() {
-		stop(() -> {
-		});
+		stop(() -> {});
 	}
 
 	@Override

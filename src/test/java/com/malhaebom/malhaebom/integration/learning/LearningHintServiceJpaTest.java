@@ -23,7 +23,6 @@ import com.malhaebom.malhaebom.service.ChildProfileService;
 @DataJpaTest
 @Import({LearningHintService.class, JpaAuditingConfiguration.class})
 class LearningHintServiceJpaTest {
-
 	@Autowired
 	private LearningHintService learningHintService;
 	@Autowired

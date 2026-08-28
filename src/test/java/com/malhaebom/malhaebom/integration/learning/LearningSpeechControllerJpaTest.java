@@ -78,13 +78,10 @@ import jakarta.servlet.AsyncListener;
 	JpaAuditingConfiguration.class
 })
 class LearningSpeechControllerJpaTest {
-
-	private static final String REQUEST_KEY =
-		"e23b37e7-d7d4-407e-9f54-dcdaee508799";
+	private static final String REQUEST_KEY = "e23b37e7-d7d4-407e-9f54-dcdaee508799";
 	private static final String STT_PROVIDER = "TEST_STT";
 	private static final String ENDPOINT =
-		"/api/v1/learning-sessions/{sessionId}/questions/"
-			+ "{sessionQuestionId}/speech";
+		"/api/v1/learning-sessions/{sessionId}/questions/{sessionQuestionId}/speech";
 
 	@Autowired
 	private SpeechAnswerStateService stateService;
@@ -576,10 +573,7 @@ class LearningSpeechControllerJpaTest {
 		}
 
 		@Override
-		public SpeechTranscriptionTask transcribeAsync(
-			SpeechAudio audio,
-			List<String> adaptationPhrases
-		) {
+		public SpeechTranscriptionTask transcribeAsync(SpeechAudio audio, List<String> adaptationPhrases) {
 			callCount++;
 			this.audio = audio;
 			this.adaptationPhrases = List.copyOf(adaptationPhrases);

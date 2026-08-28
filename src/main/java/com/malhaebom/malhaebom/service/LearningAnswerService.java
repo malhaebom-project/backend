@@ -31,38 +31,25 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class LearningAnswerService {
-
 	private final AnswerAssessmentGenerator answerAssessmentGenerator;
 	private final AnswerSubmissionTransactionService submissionTransactionService;
 	private final Clock clock;
 
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
-	public AnswerSubmissionTask submitAsync(
-		Long userId,
-		Long sessionId,
-		Long sessionQuestionId,
-		Long speechAnswerId
-	) {
+	public AnswerSubmissionTask submitAsync(Long userId, Long sessionId, Long sessionQuestionId, Long speechAnswerId) {
 		AnswerSubmissionPreparation preparation = submissionTransactionService
 			.prepare(userId, sessionId, sessionQuestionId, speechAnswerId);
 		return switch (preparation) {
-			case Completed completed -> AnswerSubmissionTask.completed(
-				completed.result()
-			);
+			case Completed completed -> AnswerSubmissionTask.completed(completed.result());
 			case Processing processing -> assessAndComplete(processing);
 		};
 	}
 
-	private AnswerSubmissionTask assessAndComplete(
-		Processing processing
-	) {
+	private AnswerSubmissionTask assessAndComplete(Processing processing) {
 		AnswerAssessmentTask task = assessAsync(processing);
 
 		AtomicReference<ApiException> cancellation = new AtomicReference<>();
-		CompletionStage<AnswerSubmissionResult> result = withinDeadline(
-			processing,
-			task
-		)
+		CompletionStage<AnswerSubmissionResult> result = withinDeadline(processing, task)
 			.exceptionallyCompose(exception -> handleAssessmentFailure(
 				processing,
 				task,
@@ -146,20 +133,13 @@ public class LearningAnswerService {
 		);
 	}
 
-	private CompletionStage<AnswerAssessment> failAssessment(
-		Processing processing,
-		Throwable cause,
-		ErrorCode errorCode
-	) {
+	private CompletionStage<AnswerAssessment> failAssessment(Processing processing, Throwable cause, ErrorCode errorCode) {
 		ApiException exception = new ApiException(errorCode, cause);
 		fail(processing, cause);
 		return CompletableFuture.failedFuture(exception);
 	}
 
-	private CompletionStage<AnswerAssessment> timeout(
-		Processing processing,
-		AnswerAssessmentTask task
-	) {
+	private CompletionStage<AnswerAssessment> timeout(Processing processing, AnswerAssessmentTask task) {
 		ApiException timeout = new ApiException(
 			ErrorCode.ANSWER_SUBMISSION_TIMEOUT
 		);
@@ -172,11 +152,7 @@ public class LearningAnswerService {
 		return CompletableFuture.failedFuture(timeout);
 	}
 
-	private boolean cancel(
-		Processing processing,
-		AnswerAssessmentTask task,
-		AtomicReference<ApiException> cancellation
-	) {
+	private boolean cancel(Processing processing, AnswerAssessmentTask task, AtomicReference<ApiException> cancellation) {
 		ApiException timeout = new ApiException(
 			ErrorCode.ANSWER_SUBMISSION_TIMEOUT
 		);
@@ -197,10 +173,7 @@ public class LearningAnswerService {
 		return true;
 	}
 
-	private AnswerSubmissionResult complete(
-		Processing processing,
-		AnswerAssessment assessment
-	) {
+	private AnswerSubmissionResult complete(Processing processing, AnswerAssessment assessment) {
 		try {
 			return submissionTransactionService.complete(
 				processing.submissionId(),
@@ -233,5 +206,4 @@ public class LearningAnswerService {
 			exception
 		);
 	}
-
 }

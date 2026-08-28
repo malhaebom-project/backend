@@ -6,7 +6,6 @@ import java.util.Arrays;
 
 @Getter
 public enum LearningTopic {
-
 	ANIMAL(1L, "동물"),
 	FOOD(2L, "음식"),
 	DAILY_LIFE(3L, "일상생활");

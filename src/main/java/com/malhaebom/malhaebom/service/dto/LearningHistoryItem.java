@@ -13,5 +13,4 @@ public record LearningHistoryItem(
 	double correctRate,
 	long studySeconds,
 	LocalDateTime completedAt
-) {
-}
+) {}

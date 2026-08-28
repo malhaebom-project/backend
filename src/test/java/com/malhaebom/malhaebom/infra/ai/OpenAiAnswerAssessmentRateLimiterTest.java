@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import com.malhaebom.malhaebom.infra.observability.MicrometerProviderRateLimitMetricsRecorder;
 
 class OpenAiAnswerAssessmentRateLimiterTest {
-
 	@Test
 	void 요청마다_고정_토큰을_차감하고_greedy_refill_후_다시_허용한다() {
 		Fixture fixture = fixture(2, 6_000, 3_000);
@@ -91,8 +90,7 @@ class OpenAiAnswerAssessmentRateLimiterTest {
 		OpenAiAnswerAssessmentRateLimiter limiter,
 		SimpleMeterRegistry registry,
 		ManualTimeMeter time
-	) {
-	}
+	) {}
 
 	static final class ManualTimeMeter implements TimeMeter {
 

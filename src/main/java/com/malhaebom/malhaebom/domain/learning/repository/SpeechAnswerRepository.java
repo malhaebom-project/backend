@@ -12,21 +12,16 @@ import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import jakarta.persistence.LockModeType;
 
 public interface SpeechAnswerRepository extends JpaRepository<SpeechAnswer, Long> {
-
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query(
 		"select speechAnswer from SpeechAnswer speechAnswer "
 			+ "where speechAnswer.requestKey = :requestKey"
 	)
-	Optional<SpeechAnswer> findForUpdateByRequestKey(
-		@Param("requestKey") String requestKey
-	);
+	Optional<SpeechAnswer> findForUpdateByRequestKey(@Param("requestKey") String requestKey);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select speechAnswer from SpeechAnswer speechAnswer where speechAnswer.id = :id")
 	Optional<SpeechAnswer> findForUpdateById(@Param("id") Long id);
 
-	Optional<SpeechAnswer> findFirstBySessionQuestion_IdOrderByRecordingNoDesc(
-		Long sessionQuestionId
-	);
+	Optional<SpeechAnswer> findFirstBySessionQuestion_IdOrderByRecordingNoDesc(Long sessionQuestionId);
 }

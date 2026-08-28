@@ -20,7 +20,6 @@ import org.springframework.context.annotation.Configuration;
 	OpenAiAnswerAssessmentRateLimitProperties.class
 })
 public class OpenAiAnswerAssessmentConfiguration {
-
 	@Bean(destroyMethod = "close")
 	ExecutorAnswerAssessmentQueueTimeoutScheduler
 	answerAssessmentQueueTimeoutScheduler() {
@@ -34,8 +33,7 @@ public class OpenAiAnswerAssessmentConfiguration {
 		ObjectProvider<MeterRegistry> meterRegistries,
 		ObjectProvider<OpenAiHttpClientBuilderCustomizer> customizers
 	) {
-		MeterRegistry meterRegistry = properties
-			.isConnectionPoolMetricsEnabled()
+		MeterRegistry meterRegistry = properties.isConnectionPoolMetricsEnabled()
 			? meterRegistries.getIfAvailable()
 			: null;
 		List<OpenAiHttpClientBuilderCustomizer> httpClientCustomizers =

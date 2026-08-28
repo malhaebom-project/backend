@@ -10,11 +10,9 @@ import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 
 public final class LearningSessionTestActions {
-
 	private static final AtomicLong REQUEST_SEQUENCE = new AtomicLong();
 
-	private LearningSessionTestActions() {
-	}
+	private LearningSessionTestActions() {}
 
 	public static void completeCurrentQuestion(
 		LearningSession session,

@@ -1,11 +1,6 @@
 package com.malhaebom.malhaebom.service.dto;
 
-public record ChildStatistics(
-	long totalStudyCount,
-	long correctCount,
-	long questionCount
-) {
-
+public record ChildStatistics(long totalStudyCount, long correctCount, long questionCount) {
 	public static ChildStatistics empty() {
 		return new ChildStatistics(0, 0, 0);
 	}

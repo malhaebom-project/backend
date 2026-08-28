@@ -27,7 +27,6 @@ import com.malhaebom.malhaebom.domain.BaseEntity;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class LearningSession extends BaseEntity {
-
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -227,11 +226,7 @@ public class LearningSession extends BaseEntity {
 		}
 	}
 
-	private static void validateCreationValues(
-		Long childId,
-		LearningTopic topic,
-		Difficulty difficulty
-	) {
+	private static void validateCreationValues(Long childId, LearningTopic topic, Difficulty difficulty) {
 		if (childId == null) {
 			throw new IllegalArgumentException("어린이 ID는 null일 수 없습니다.");
 		}

@@ -8,5 +8,4 @@ public record LearningStatistics(
 	double averageCorrectRate,
 	int consecutiveStudyDays,
 	List<TopicStatistics> topicStatistics
-) {
-}
+) {}

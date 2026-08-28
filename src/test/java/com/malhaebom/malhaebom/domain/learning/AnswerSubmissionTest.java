@@ -15,12 +15,9 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class AnswerSubmissionTest {
-	private static final String PROCESSING_TOKEN =
-		"215bf1ca-03dc-4a7a-af56-09ad0cc26a24";
-	private static final Instant CLAIMED_AT =
-		Instant.parse("2026-08-13T07:00:00Z");
-	private static final Instant LEASE_EXPIRES_AT =
-		Instant.parse("2026-08-13T07:01:00Z");
+	private static final String PROCESSING_TOKEN = "215bf1ca-03dc-4a7a-af56-09ad0cc26a24";
+	private static final Instant CLAIMED_AT = Instant.parse("2026-08-13T07:00:00Z");
+	private static final Instant LEASE_EXPIRES_AT = Instant.parse("2026-08-13T07:01:00Z");
 
 	@Test
 	void 완료된_음성_답변의_제출을_예약한다() {

@@ -1,7 +1,6 @@
 package com.malhaebom.malhaebom.domain.learning;
 
 public final class AnswerSubmissionTarget {
-
 	private final LearningSessionQuestion sessionQuestion;
 
 	AnswerSubmissionTarget(LearningSessionQuestion sessionQuestion) {
@@ -9,10 +8,6 @@ public final class AnswerSubmissionTarget {
 	}
 
 	public AnswerSubmission reserve(SpeechAnswer speechAnswer, int attemptNo) {
-		return AnswerSubmission.reserve(
-			sessionQuestion,
-			speechAnswer,
-			attemptNo
-		);
+		return AnswerSubmission.reserve(sessionQuestion, speechAnswer, attemptNo);
 	}
 }

@@ -20,7 +20,6 @@ public record AnswerAssessmentInput(
 	Set<String> acceptedAnswers,
 	String answerText
 ) {
-
 	public AnswerAssessmentInput {
 		if (difficulty == null) {
 			throw new IllegalArgumentException("난이도는 null일 수 없습니다.");

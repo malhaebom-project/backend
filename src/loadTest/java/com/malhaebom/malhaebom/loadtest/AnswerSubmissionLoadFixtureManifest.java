@@ -8,7 +8,6 @@ public record AnswerSubmissionLoadFixtureManifest(
 	Long questionId,
 	List<StageFixtures> stages
 ) {
-
 	public AnswerSubmissionLoadFixtureManifest {
 		stages = List.copyOf(stages);
 	}
@@ -19,20 +18,11 @@ public record AnswerSubmissionLoadFixtureManifest(
 			.toList();
 	}
 
-	public record StageFixtures(
-		int concurrency,
-		List<Fixture> fixtures
-	) {
-
+	public record StageFixtures(int concurrency, List<Fixture> fixtures) {
 		public StageFixtures {
 			fixtures = List.copyOf(fixtures);
 		}
 	}
 
-	public record Fixture(
-		Long sessionId,
-		Long sessionQuestionId,
-		Long speechAnswerId
-	) {
-	}
+	public record Fixture(Long sessionId, Long sessionQuestionId, Long speechAnswerId) {}
 }

@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 @Configuration
 @RequiredArgsConstructor
 public class WebMvcConfiguration implements WebMvcConfigurer {
-
 	private final AuthLoginUserArgumentResolver authLoginUserArgumentResolver;
 
 	@Value("${malhaebom.cors.allowed-origins:http://localhost:3000}")
@@ -31,9 +30,7 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
 	}
 
 	@Override
-	public void addArgumentResolvers(
-		List<HandlerMethodArgumentResolver> resolvers
-	) {
+	public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
 		resolvers.add(authLoginUserArgumentResolver);
 	}
 }

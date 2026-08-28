@@ -12,34 +12,25 @@ import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPoli
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(SpeechAnswerAsyncProperties.class)
 public class SpeechAnswerPolicyConfiguration {
-
 	@Bean
-	SpeechRequestTimeout speechRequestTimeout(
-		SpeechAnswerAsyncProperties properties
-	) {
+	SpeechRequestTimeout speechRequestTimeout(SpeechAnswerAsyncProperties properties) {
 		return new SpeechRequestTimeout(properties.requestTimeout());
 	}
 
 	@Bean
-	SpeechProcessingLease speechProcessingLease(
-		SpeechAnswerAsyncProperties properties
-	) {
+	SpeechProcessingLease speechProcessingLease(SpeechAnswerAsyncProperties properties) {
 		return new SpeechProcessingLease(properties.processingLease());
 	}
 
 	@Bean
-	SpeechShutdownPolicy speechShutdownPolicy(
-		SpeechAnswerAsyncProperties properties
-	) {
+	SpeechShutdownPolicy speechShutdownPolicy(SpeechAnswerAsyncProperties properties) {
 		return new SpeechShutdownPolicy(
 			properties.shutdownDrainTimeout()
 		);
 	}
 
 	@Bean
-	SpeechTranscriptionConcurrencyPolicy speechTranscriptionConcurrencyPolicy(
-		SpeechAnswerAsyncProperties properties
-	) {
+	SpeechTranscriptionConcurrencyPolicy speechTranscriptionConcurrencyPolicy(SpeechAnswerAsyncProperties properties) {
 		return new SpeechTranscriptionConcurrencyPolicy(
 			properties.maxConcurrentRequests()
 		);

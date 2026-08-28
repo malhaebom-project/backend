@@ -51,8 +51,7 @@ public final class AnswerAssessmentEvaluationTool {
 	private static final double VALID_RESPONSE_THRESHOLD = 0.99;
 	private static final double MACRO_F1_THRESHOLD = 0.85;
 
-	private AnswerAssessmentEvaluationTool() {
-	}
+	private AnswerAssessmentEvaluationTool() {}
 
 	public static void main(String[] args) throws Exception {
 		Settings settings = Settings.fromSystemProperties();

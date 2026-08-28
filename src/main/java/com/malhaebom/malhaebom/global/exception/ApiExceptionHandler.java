@@ -10,11 +10,8 @@ import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
-
 	@ExceptionHandler(ApiException.class)
-	public ResponseEntity<ApiResponse<Void>> handleApiException(
-		ApiException exception
-	) {
+	public ResponseEntity<ApiResponse<Void>> handleApiException(ApiException exception) {
 		ErrorCode errorCode = exception.getErrorCode();
 		return ResponseEntity.status(errorCode.getHttpStatus())
 			.body(ApiResponse.error(
@@ -24,9 +21,7 @@ public class ApiExceptionHandler {
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
-	public ResponseEntity<ApiResponse<Void>> handleValidation(
-		MethodArgumentNotValidException exception
-	) {
+	public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException exception) {
 		String message = exception.getBindingResult()
 			.getFieldErrors()
 			.getFirst()

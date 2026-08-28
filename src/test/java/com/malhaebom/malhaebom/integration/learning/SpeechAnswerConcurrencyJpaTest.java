@@ -97,11 +97,9 @@ import com.malhaebom.malhaebom.support.StubLoginUserArgumentResolver;
 	SpeechAnswerConcurrencyJpaTest.SpeechTestConfiguration.class
 })
 class SpeechAnswerConcurrencyJpaTest {
-
 	private static final int MAX_CONCURRENT_REQUESTS = 8;
 	private static final String ENDPOINT =
-		"/api/v1/learning-sessions/{sessionId}/questions/"
-			+ "{sessionQuestionId}/speech";
+		"/api/v1/learning-sessions/{sessionId}/questions/{sessionQuestionId}/speech";
 	private static final SpeechAudio AUDIO = new SpeechAudio(
 		new byte[] {1, 2, 3},
 		"audio/webm"
@@ -692,16 +690,12 @@ class SpeechAnswerConcurrencyJpaTest {
 		}
 	}
 
-	private static final class ControllableSpeechTranscriber
-		implements SpeechTranscriber {
+	private static final class ControllableSpeechTranscriber implements SpeechTranscriber {
 
-		private final List<CompletableFuture<SpeechTranscriptionResult>> requests =
-			new CopyOnWriteArrayList<>();
+		private final List<CompletableFuture<SpeechTranscriptionResult>> requests = new CopyOnWriteArrayList<>();
 		private final AtomicInteger cancellations = new AtomicInteger();
-		private volatile CountDownLatch cancellationStarted =
-			new CountDownLatch(0);
-		private volatile CountDownLatch allowCancellation =
-			new CountDownLatch(0);
+		private volatile CountDownLatch cancellationStarted = new CountDownLatch(0);
+		private volatile CountDownLatch allowCancellation = new CountDownLatch(0);
 
 		void reset() {
 			releaseCancellation();
@@ -754,12 +748,8 @@ class SpeechAnswerConcurrencyJpaTest {
 		}
 
 		@Override
-		public SpeechTranscriptionTask transcribeAsync(
-			SpeechAudio audio,
-			List<String> adaptationPhrases
-		) {
-			CompletableFuture<SpeechTranscriptionResult> result =
-				new CompletableFuture<>();
+		public SpeechTranscriptionTask transcribeAsync(SpeechAudio audio, List<String> adaptationPhrases) {
+			CompletableFuture<SpeechTranscriptionResult> result = new CompletableFuture<>();
 			requests.add(result);
 			return new SpeechTranscriptionTask(
 				result,

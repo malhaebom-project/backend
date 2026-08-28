@@ -17,7 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class LearningSessionTest {
-
 	@Test
 	void 학습_세션을_생성하면_첫_번째_문제가_현재_문제가_된다() {
 		List<Question> questions = createQuestions();

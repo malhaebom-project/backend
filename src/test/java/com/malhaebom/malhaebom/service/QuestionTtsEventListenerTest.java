@@ -21,7 +21,6 @@ import com.malhaebom.malhaebom.service.port.TtsClient;
 
 @ExtendWith(MockitoExtension.class)
 class QuestionTtsEventListenerTest {
-
 	@Mock
 	private QuestionRepository questionRepository;
 	@Mock
@@ -41,9 +40,6 @@ class QuestionTtsEventListenerTest {
 		listener.handle(event);
 
 		verify(ttsClient, never()).generate(event.questionText());
-		verify(questionTtsStorage, never()).upload(
-			anyLong(),
-			any()
-		);
+		verify(questionTtsStorage, never()).upload(anyLong(), any());
 	}
 }

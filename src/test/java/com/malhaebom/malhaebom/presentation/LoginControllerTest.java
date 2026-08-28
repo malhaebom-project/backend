@@ -28,7 +28,6 @@ import com.malhaebom.malhaebom.service.UserService;
 
 @ExtendWith(MockitoExtension.class)
 class LoginControllerTest {
-
 	private static final String SIGNUP_ENDPOINT = "/api/v1/auth/signup";
 	private static final String LOGOUT_ENDPOINT = "/api/v1/auth/logout";
 

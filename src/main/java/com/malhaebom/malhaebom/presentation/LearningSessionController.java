@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/learning-sessions")
 @RequiredArgsConstructor
 public class LearningSessionController {
-
 	private final LearningSessionService learningSessionService;
 	private final QuestionImageUrlResolver questionImageUrlResolver;
 

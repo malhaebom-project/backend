@@ -32,7 +32,6 @@ import com.malhaebom.malhaebom.service.ChildProfileService;
 @DataJpaTest
 @Import({ChildProfileService.class, JpaAuditingConfiguration.class})
 class ChildProfileServiceJpaTest {
-
 	@Autowired
 	private ChildProfileService childProfileService;
 	@Autowired

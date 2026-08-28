@@ -14,13 +14,11 @@ import com.malhaebom.malhaebom.presentation.dto.QuestionTypeResponse;
 @RestController
 @RequestMapping("/api/v1/question-types")
 public class QuestionTypeController {
-
 	@GetMapping
 	public ApiResponse<List<QuestionTypeResponse>> getQuestionTypes() {
 		List<QuestionTypeResponse> response = Stream.of(QuestionType.values())
 			.map(QuestionTypeResponse::from)
 			.toList();
-
 		return ApiResponse.success(response);
 	}
 }

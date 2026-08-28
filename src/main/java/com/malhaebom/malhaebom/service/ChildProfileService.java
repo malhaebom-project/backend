@@ -24,7 +24,6 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class ChildProfileService {
-
 	private final UserRepository userRepository;
 	private final ChildProfileRepository childProfileRepository;
 	private final LearningSessionRepository learningSessionRepository;

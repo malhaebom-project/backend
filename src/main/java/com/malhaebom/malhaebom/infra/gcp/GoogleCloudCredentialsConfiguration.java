@@ -16,15 +16,10 @@ import com.google.auth.oauth2.GoogleCredentials;
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(GcpCredentialsProperties.class)
 public class GoogleCloudCredentialsConfiguration {
-
-	private static final List<String> CLOUD_PLATFORM_SCOPE = List.of(
-		"https://www.googleapis.com/auth/cloud-platform"
-	);
+	private static final List<String> CLOUD_PLATFORM_SCOPE = List.of("https://www.googleapis.com/auth/cloud-platform");
 
 	@Bean
-	CredentialsProvider googleCloudCredentialsProvider(
-		GcpCredentialsProperties properties
-	) throws IOException {
+	CredentialsProvider googleCloudCredentialsProvider(GcpCredentialsProperties properties) throws IOException {
 		if (properties.credentials() == null) {
 			return GoogleCredentialsProvider.newBuilder()
 				.setScopesToApply(CLOUD_PLATFORM_SCOPE)

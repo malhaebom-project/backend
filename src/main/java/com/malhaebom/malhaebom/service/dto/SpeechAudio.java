@@ -2,11 +2,7 @@ package com.malhaebom.malhaebom.service.dto;
 
 import java.util.Arrays;
 
-public record SpeechAudio(
-	byte[] content,
-	String contentType
-) {
-
+public record SpeechAudio(byte[] content, String contentType) {
 	public SpeechAudio {
 		if (content == null) {
 			throw new IllegalArgumentException("음성 파일 내용은 null일 수 없습니다.");

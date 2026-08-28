@@ -23,5 +23,4 @@ public record CreateChildProfileRequest(
 
 	@NotNull(message = "영어 단계는 필수입니다.")
 	ChildLevel level
-) {
-}
+) {}

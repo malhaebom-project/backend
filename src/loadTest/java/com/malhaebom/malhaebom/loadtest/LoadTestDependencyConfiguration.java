@@ -9,7 +9,6 @@ import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 
 @Configuration(proxyBeanMethods = false)
 public class LoadTestDependencyConfiguration {
-
 	@Bean
 	SpeechTranscriber loadTestSpeechTranscriber() {
 		return new SpeechTranscriber() {

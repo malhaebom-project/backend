@@ -59,9 +59,7 @@ import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 
 @DataJpaTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@TestPropertySource(properties =
-	"malhaebom.answer-submission.processing-timeout=1s"
-)
+@TestPropertySource(properties = "malhaebom.answer-submission.processing-timeout=1s")
 @Import({
 	JpaAuditingConfiguration.class,
 	LearningAnswerService.class,
@@ -70,7 +68,6 @@ import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 	LearningAnswerTransactionBoundaryJpaTest.AssessmentTestConfiguration.class
 })
 class LearningAnswerTransactionBoundaryJpaTest {
-
 	@Autowired
 	private LearningSessionRepository learningSessionRepository;
 	@Autowired
@@ -458,9 +455,7 @@ class LearningAnswerTransactionBoundaryJpaTest {
 		}
 	}
 
-	private static final class TestAnswerAssessmentGenerator
-		implements AnswerAssessmentGenerator {
-
+	private static final class TestAnswerAssessmentGenerator implements AnswerAssessmentGenerator {
 		private final List<Boolean> transactionStates = new ArrayList<>();
 		private AnswerAssessment assessment;
 		private RuntimeException exception;
@@ -530,7 +525,6 @@ class LearningAnswerTransactionBoundaryJpaTest {
 	}
 
 	private static final class TestClock extends Clock {
-
 		private Instant current;
 		private final ZoneId zone;
 		private int checksBeforeAdvance = -1;

@@ -44,7 +44,6 @@ public record AdminQuestionRequest(
 	@Size(max = 500)
 	String hintText
 ) {
-
 	public AdminQuestionCommand toCommand() {
 		return new AdminQuestionCommand(
 			topic,

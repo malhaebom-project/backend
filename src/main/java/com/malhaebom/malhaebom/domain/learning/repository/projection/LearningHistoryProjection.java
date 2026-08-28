@@ -6,7 +6,6 @@ import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningTopic;
 
 public interface LearningHistoryProjection {
-
 	Long getSessionId();
 
 	LearningTopic getTopic();

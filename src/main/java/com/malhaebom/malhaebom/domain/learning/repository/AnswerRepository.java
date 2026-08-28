@@ -13,10 +13,7 @@ import com.malhaebom.malhaebom.domain.learning.AnswerResult;
 import com.malhaebom.malhaebom.domain.learning.repository.projection.WrongAnswerProjection;
 
 public interface AnswerRepository extends JpaRepository<Answer, Long> {
-
-	Optional<Answer> findFirstBySessionQuestion_IdOrderByAttemptNoDesc(
-		Long sessionQuestionId
-	);
+	Optional<Answer> findFirstBySessionQuestion_IdOrderByAttemptNoDesc(Long sessionQuestionId);
 
 	boolean existsBySpeechAnswer_Id(Long speechAnswerId);
 

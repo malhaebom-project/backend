@@ -33,7 +33,6 @@ import com.malhaebom.malhaebom.domain.BaseEntity;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class LearningSessionQuestion extends BaseEntity {
-
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;

@@ -31,10 +31,8 @@ import com.malhaebom.malhaebom.loadtest.AnswerSubmissionLoadFixtureManifest.Stag
 
 @Service
 public class AnswerSubmissionLoadFixtureService {
-
 	private static final String TRANSCRIPT = "He is running.";
-	private static final String OWNER_EMAIL =
-		"loadtest-answer@malhaebom.invalid";
+	private static final String OWNER_EMAIL = "loadtest-answer@malhaebom.invalid";
 	private static final String CHILD_NICKNAME = "load-test";
 
 	private final UserRepository userRepository;
@@ -67,10 +65,7 @@ public class AnswerSubmissionLoadFixtureService {
 	}
 
 	@Transactional
-	public AnswerSubmissionLoadFixtureManifest seed(
-		String runId,
-		List<Integer> stages
-	) {
+	public AnswerSubmissionLoadFixtureManifest seed(String runId, List<Integer> stages) {
 		validateRunId(runId);
 		validateStages(stages);
 		User owner = userRepository.findByEmail(OWNER_EMAIL)

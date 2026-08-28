@@ -23,7 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @Slf4j
 public class InFlightSpeechAnswerRegistry {
-
 	private static final int REQUEST_LOCK_COUNT = 64;
 
 	private final ConcurrentMap<String, InFlightSpeechAnswerTask> tasks =
@@ -41,10 +40,7 @@ public class InFlightSpeechAnswerRegistry {
 		}
 	}
 
-	public SpeechAnswerTask join(
-		SpeechAnswerStartResult startResult,
-		String requestKey
-	) {
+	public SpeechAnswerTask join(SpeechAnswerStartResult startResult, String requestKey) {
 		InFlightSpeechAnswerTask inFlight = tasks.get(requestKey);
 		if (inFlight == null || !inFlight.matches(
 			startResult.speechAnswer().getId(),
@@ -61,11 +57,7 @@ public class InFlightSpeechAnswerRegistry {
 		return inFlight.subscribe();
 	}
 
-	public SpeechAnswerTask register(
-		String requestKey,
-		SpeechAnswerStartResult startResult,
-		SpeechAnswerTask sharedTask
-	) {
+	public SpeechAnswerTask register(String requestKey, SpeechAnswerStartResult startResult, SpeechAnswerTask sharedTask) {
 		InFlightSpeechAnswerTask inFlight = new InFlightSpeechAnswerTask(
 			startResult.speechAnswer().getId(),
 			startResult.processingToken(),

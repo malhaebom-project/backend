@@ -2,15 +2,8 @@ package com.malhaebom.malhaebom.presentation.dto;
 
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 
-public record QuestionTypeResponse(
-	String code,
-	String name
-) {
-
+public record QuestionTypeResponse(String code, String name) {
 	public static QuestionTypeResponse from(QuestionType questionType) {
-		return new QuestionTypeResponse(
-			questionType.getCode(),
-			questionType.getName()
-		);
+		return new QuestionTypeResponse(questionType.getCode(), questionType.getName());
 	}
 }

@@ -4,7 +4,6 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SpeechTranscriptionConcurrencyPolicy {
-
 	private final Semaphore permits;
 	private final int maxConcurrentRequests;
 

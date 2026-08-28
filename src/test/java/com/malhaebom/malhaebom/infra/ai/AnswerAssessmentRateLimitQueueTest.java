@@ -31,7 +31,6 @@ import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 import com.malhaebom.malhaebom.service.exception.AnswerAssessmentOverloadedException;
 
 class AnswerAssessmentRateLimitQueueTest {
-
 	@Test
 	void rate_token이_있으면_기존_active_수와_무관하게_모든_요청을_시작한다() {
 		QueueFixture fixture = fixture(64);
@@ -376,7 +375,6 @@ class AnswerAssessmentRateLimitQueueTest {
 		}
 
 		private static final class ScheduledTask {
-
 			private final Runnable task;
 			private final Duration delay;
 			private boolean cancelled;

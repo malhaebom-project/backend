@@ -15,5 +15,4 @@ public record CreateLearningSessionRequest(
 	@NotNull Difficulty difficulty,
 	@NotEmpty List<@NotNull QuestionType> questionTypes,
 	@Min(1) int questionCount
-) {
-}
+) {}

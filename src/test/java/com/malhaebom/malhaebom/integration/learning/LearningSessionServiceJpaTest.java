@@ -36,7 +36,6 @@ import com.malhaebom.malhaebom.service.ChildProfileService;
 	JpaAuditingConfiguration.class
 })
 class LearningSessionServiceJpaTest {
-
 	@Autowired
 	private LearningSessionService learningSessionService;
 	@Autowired
@@ -209,11 +208,7 @@ class LearningSessionServiceJpaTest {
 		);
 	}
 
-	private Question question(
-		String questionText,
-		Difficulty difficulty,
-		QuestionType type
-	) {
+	private Question question(String questionText, Difficulty difficulty, QuestionType type) {
 		return Question.create(
 			LearningTopic.ANIMAL,
 			difficulty,

@@ -93,7 +93,6 @@ import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 	LearningAnswerConcurrencyJpaTest.AssessmentTestConfiguration.class
 })
 class LearningAnswerConcurrencyJpaTest {
-
 	private static final AnswerAssessment CORRECT_ASSESSMENT =
 		new AnswerAssessment(
 			true,
@@ -776,7 +775,6 @@ class LearningAnswerConcurrencyJpaTest {
 	}
 
 	private static final class ManualRateTimeMeter implements TimeMeter {
-
 		private final AtomicLong nanos = new AtomicLong();
 
 		@Override
@@ -795,7 +793,6 @@ class LearningAnswerConcurrencyJpaTest {
 	}
 
 	private static final class TestClock extends Clock {
-
 		private static final Instant INITIAL_INSTANT = Instant.parse(
 			"2026-08-23T00:00:00Z"
 		);

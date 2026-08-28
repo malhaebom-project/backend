@@ -19,7 +19,6 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class LearningAnswerRetryService {
-
 	private final LearningSessionRepository learningSessionRepository;
 	private final AnswerRepository answerRepository;
 	private final AnswerSubmissionRepository answerSubmissionRepository;
@@ -54,10 +53,7 @@ public class LearningAnswerRetryService {
 		session.skipRetry(latestAnswer);
 	}
 
-	private LearningSessionQuestion getRetrySkipTarget(
-		LearningSession session,
-		Long sessionQuestionId
-	) {
+	private LearningSessionQuestion getRetrySkipTarget(LearningSession session, Long sessionQuestionId) {
 		try {
 			return session.retrySkipTarget(sessionQuestionId);
 		} catch (LearningSessionAnswerSubmissionException exception) {
@@ -72,9 +68,7 @@ public class LearningAnswerRetryService {
 		}
 	}
 
-	private ApiException toApiException(
-		LearningSessionAnswerSubmissionException exception
-	) {
+	private ApiException toApiException(LearningSessionAnswerSubmissionException exception) {
 		return switch (exception.getReason()) {
 			case SESSION_NOT_IN_PROGRESS -> new ApiException(
 				ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS,

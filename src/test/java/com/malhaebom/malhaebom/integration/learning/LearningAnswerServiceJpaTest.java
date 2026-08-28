@@ -61,10 +61,8 @@ import com.malhaebom.malhaebom.service.policy.AnswerSubmissionPolicyProperties;
 @DataJpaTest
 @Import(JpaAuditingConfiguration.class)
 class LearningAnswerServiceJpaTest {
-
 	private static final String ANSWER_TEXT = "He is running.";
-	private static final String PREPARE_METRIC =
-		"malhaebom.answer.submission.prepare";
+	private static final String PREPARE_METRIC = "malhaebom.answer.submission.prepare";
 
 	@Autowired
 	private LearningSessionRepository learningSessionRepository;
@@ -755,8 +753,7 @@ class LearningAnswerServiceJpaTest {
 		);
 	}
 
-	private static final class TestAnswerAssessmentGenerator
-		implements AnswerAssessmentGenerator {
+	private static final class TestAnswerAssessmentGenerator implements AnswerAssessmentGenerator {
 
 		private CompletionStage<AnswerAssessment> stage;
 		private String answerText;

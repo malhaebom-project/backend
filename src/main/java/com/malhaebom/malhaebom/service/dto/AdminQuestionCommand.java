@@ -17,5 +17,4 @@ public record AdminQuestionCommand(
 	String modelAnswer,
 	Set<String> acceptedAnswers,
 	String hintText
-) {
-}
+) {}

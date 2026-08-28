@@ -13,7 +13,6 @@ public record LearningSessionResultResponse(
 	long studySeconds,
 	OffsetDateTime completedAt
 ) {
-
 	public static LearningSessionResultResponse from(LearningSession session) {
 		int questionCount = session.getQuestionCount();
 		int correctCount = session.getCorrectCount();

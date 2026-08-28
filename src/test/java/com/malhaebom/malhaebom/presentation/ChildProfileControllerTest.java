@@ -25,7 +25,6 @@ import com.malhaebom.malhaebom.service.dto.LoginUser;
 
 @ExtendWith(MockitoExtension.class)
 class ChildProfileControllerTest {
-
 	private static final Long USER_ID = 1L;
 
 	@Mock

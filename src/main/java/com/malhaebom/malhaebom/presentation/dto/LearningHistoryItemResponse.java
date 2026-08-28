@@ -16,7 +16,6 @@ public record LearningHistoryItemResponse(
 	long studySeconds,
 	OffsetDateTime completedAt
 ) {
-
 	public static LearningHistoryItemResponse from(LearningHistoryItem item) {
 		return new LearningHistoryItemResponse(
 			item.sessionId(),

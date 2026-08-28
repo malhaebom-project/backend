@@ -11,7 +11,6 @@ public record SpeechAnswerStartResult(
 	SpeechAnswerStartStatus status,
 	String processingToken
 ) {
-
 	public SpeechAnswerStartResult {
 		Objects.requireNonNull(
 			speechAnswer,

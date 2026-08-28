@@ -29,7 +29,6 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/children")
 @RequiredArgsConstructor
 public class ChildProfileController {
-
 	private final ChildProfileService childProfileService;
 
 	@PostMapping
@@ -52,9 +51,7 @@ public class ChildProfileController {
 	}
 
 	@GetMapping
-	public ApiResponse<List<ChildProfileResponse>> getAll(
-		@Auth LoginUser loginUser
-	) {
+	public ApiResponse<List<ChildProfileResponse>> getAll(@Auth LoginUser loginUser) {
 		return ApiResponse.success(
 			childProfileService.getAll(loginUser.userId()).stream()
 				.map(this::toResponse)
@@ -63,10 +60,7 @@ public class ChildProfileController {
 	}
 
 	@GetMapping("/{childId}")
-	public ApiResponse<ChildProfileResponse> get(
-		@Auth LoginUser loginUser,
-		@PathVariable Long childId
-	) {
+	public ApiResponse<ChildProfileResponse> get(@Auth LoginUser loginUser, @PathVariable Long childId) {
 		return ApiResponse.success(
 			toResponse(childProfileService.get(loginUser.userId(), childId))
 		);
@@ -92,10 +86,7 @@ public class ChildProfileController {
 	}
 
 	@DeleteMapping("/{childId}")
-	public ApiResponse<Void> delete(
-		@Auth LoginUser loginUser,
-		@PathVariable Long childId
-	) {
+	public ApiResponse<Void> delete(@Auth LoginUser loginUser, @PathVariable Long childId) {
 		childProfileService.delete(loginUser.userId(), childId);
 		return ApiResponse.success(null, "어린이 프로필이 삭제되었습니다.");
 	}

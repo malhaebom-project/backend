@@ -40,7 +40,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @EnableConfigurationProperties(AnswerSubmissionPolicyProperties.class)
 public class AnswerSubmissionTransactionService {
-
 	private final LearningSessionRepository learningSessionRepository;
 	private final SpeechAnswerRepository speechAnswerRepository;
 	private final AnswerRepository answerRepository;

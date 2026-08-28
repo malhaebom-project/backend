@@ -43,14 +43,12 @@ import jakarta.servlet.AsyncListener;
 
 @ExtendWith(MockitoExtension.class)
 class LearningAnswerControllerTest {
-
 	private static final Long SESSION_ID = 1L;
 	private static final Long SESSION_QUESTION_ID = 2L;
 	private static final Long SPEECH_ANSWER_ID = 3L;
 	private static final Long USER_ID = 4L;
 	private static final String ENDPOINT =
-		"/api/v1/learning-sessions/{sessionId}/questions/"
-			+ "{sessionQuestionId}/answers";
+		"/api/v1/learning-sessions/{sessionId}/questions/{sessionQuestionId}/answers";
 
 	@Mock
 	private LearningAnswerService learningAnswerService;
@@ -218,9 +216,7 @@ class LearningAnswerControllerTest {
 		);
 	}
 
-	private AnswerSubmissionTask submissionTask(
-		CompletableFuture<AnswerSubmissionResult> result
-	) {
+	private AnswerSubmissionTask submissionTask(CompletableFuture<AnswerSubmissionResult> result) {
 		return new AnswerSubmissionTask(result, () -> result.cancel(true));
 	}
 }

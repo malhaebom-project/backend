@@ -23,7 +23,6 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChildProfile extends BaseEntity {
-
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -48,13 +47,7 @@ public class ChildProfile extends BaseEntity {
 	@Column(nullable = false)
 	private boolean active;
 
-	public static ChildProfile create(
-		User user,
-		String nickname,
-		int age,
-		int grade,
-		ChildLevel level
-	) {
+	public static ChildProfile create(User user, String nickname, int age, int grade, ChildLevel level) {
 		ChildProfile profile = new ChildProfile();
 		profile.user = user;
 		profile.nickname = normalizeNickname(nickname);
@@ -65,12 +58,7 @@ public class ChildProfile extends BaseEntity {
 		return profile;
 	}
 
-	public void update(
-		String nickname,
-		Integer age,
-		Integer grade,
-		ChildLevel level
-	) {
+	public void update(String nickname, Integer age, Integer grade, ChildLevel level) {
 		if (nickname != null) {
 			this.nickname = normalizeNickname(nickname);
 		}

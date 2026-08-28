@@ -10,9 +10,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @EnableAsync
 @EnableConfigurationProperties(AnswerSubmissionAsyncProperties.class)
 public class AsyncConfiguration {
-
-	public static final String SPEECH_COMPLETION_EXECUTOR =
-		"speechCompletionExecutor";
+	public static final String SPEECH_COMPLETION_EXECUTOR = "speechCompletionExecutor";
 
 	@Bean(name = SPEECH_COMPLETION_EXECUTOR)
 	ThreadPoolTaskExecutor speechCompletionExecutor() {

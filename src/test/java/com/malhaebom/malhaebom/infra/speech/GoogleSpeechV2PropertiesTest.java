@@ -10,7 +10,6 @@ import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 
 class GoogleSpeechV2PropertiesTest {
-
 	private final Validator validator = Validation
 		.buildDefaultValidatorFactory()
 		.getValidator();

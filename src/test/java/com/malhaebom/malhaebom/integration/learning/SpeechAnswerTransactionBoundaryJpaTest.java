@@ -79,9 +79,7 @@ import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
 	SpeechAnswerTransactionBoundaryJpaTest.SpeechTestConfiguration.class
 })
 class SpeechAnswerTransactionBoundaryJpaTest {
-
-	private static final String REQUEST_KEY =
-		"speech-transaction-boundary-request";
+	private static final String REQUEST_KEY = "speech-transaction-boundary-request";
 	private static final SpeechAudio AUDIO = new SpeechAudio(
 		new byte[] {1, 2, 3},
 		"audio/webm"
@@ -220,8 +218,7 @@ class SpeechAnswerTransactionBoundaryJpaTest {
 		}
 	}
 
-	private static final class TestSpeechTranscriber
-		implements SpeechTranscriber {
+	private static final class TestSpeechTranscriber implements SpeechTranscriber {
 
 		private final List<Boolean> transactionStates = new ArrayList<>();
 		private CompletableFuture<SpeechTranscriptionResult> result;
@@ -245,10 +242,7 @@ class SpeechAnswerTransactionBoundaryJpaTest {
 		}
 
 		@Override
-		public SpeechTranscriptionTask transcribeAsync(
-			SpeechAudio audio,
-			List<String> adaptationPhrases
-		) {
+		public SpeechTranscriptionTask transcribeAsync(SpeechAudio audio, List<String> adaptationPhrases) {
 			transactionStates.add(TransactionSynchronizationManager
 				.isActualTransactionActive());
 			return new SpeechTranscriptionTask(

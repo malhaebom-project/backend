@@ -23,7 +23,6 @@ public record UpdateChildProfileRequest(
 
 	ChildLevel level
 ) {
-
 	@AssertTrue(message = "수정할 프로필 정보를 하나 이상 입력해야 합니다.")
 	public boolean isAnyFieldPresent() {
 		return nickname != null || age != null || grade != null || level != null;

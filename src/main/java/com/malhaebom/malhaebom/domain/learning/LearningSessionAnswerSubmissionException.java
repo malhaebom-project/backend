@@ -8,16 +8,10 @@ public class LearningSessionAnswerSubmissionException
 
 	private final Reason reason;
 
-	public LearningSessionAnswerSubmissionException(
-		Reason reason,
-		String message
-	) {
+	public LearningSessionAnswerSubmissionException(Reason reason, String message) {
 		super(message);
 		this.reason = reason;
 	}
 
-	public enum Reason {
-		SESSION_NOT_IN_PROGRESS,
-		CURRENT_QUESTION_MISMATCH
-	}
+	public enum Reason { SESSION_NOT_IN_PROGRESS, CURRENT_QUESTION_MISMATCH }
 }

@@ -36,7 +36,6 @@ import com.malhaebom.malhaebom.domain.BaseEntity;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Answer extends BaseEntity {
-
 	private static final int MAX_FEEDBACK_LENGTH = 300;
 
 	@Id

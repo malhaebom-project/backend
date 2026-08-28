@@ -24,7 +24,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @EnableConfigurationProperties(JwtProperties.class)
 public class LoginService {
-
 	private final UserRepository userRepository;
 	private final LoginSessionRepository loginSessionRepository;
 	private final JwtProvider jwtProvider;
@@ -122,15 +121,13 @@ public class LoginService {
 		return jwtProvider.parsePayload(
 			token,
 			jwtProperties.access().signingKey()
-		)
-			.expiresAt();
+		).expiresAt();
 	}
 
 	private Instant parseRefreshExpiresAt(String token) {
 		return jwtProvider.parsePayload(
 			token,
 			jwtProperties.refresh().signingKey()
-		)
-			.expiresAt();
+		).expiresAt();
 	}
 }

@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class LearningHintService {
-
 	private final LearningSessionRepository learningSessionRepository;
 	private final ChildProfileService childProfileService;
 
@@ -47,10 +46,7 @@ public class LearningHintService {
 		}
 	}
 
-	private void validateCurrentQuestion(
-		LearningSessionQuestion currentQuestion,
-		Long questionId
-	) {
+	private void validateCurrentQuestion(LearningSessionQuestion currentQuestion, Long questionId) {
 		if (!Objects.equals(currentQuestion.getQuestion().getId(), questionId)) {
 			throw new ApiException(ErrorCode.CURRENT_QUESTION_MISMATCH);
 		}

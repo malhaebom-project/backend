@@ -24,7 +24,6 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/children")
 @RequiredArgsConstructor
 public class LearningRecordController {
-
 	private final LearningRecordQueryService learningRecordQueryService;
 
 	@GetMapping("/{childId}/learning-history")

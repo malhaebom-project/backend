@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import com.malhaebom.malhaebom.domain.learning.AnswerResult;
 
 class AnswerAssessmentTest {
-
 	@Test
 	void 세부_점수의_합계와_정답_결과를_계산한다() {
 		AnswerAssessment assessment = new AnswerAssessment(

@@ -11,7 +11,6 @@ public record LearningHistoryResponse(
 	long totalElements,
 	int totalPages
 ) {
-
 	public static LearningHistoryResponse from(LearningHistory history) {
 		return new LearningHistoryResponse(
 			history.content().stream()

@@ -25,7 +25,6 @@ import com.malhaebom.malhaebom.service.exception.AnswerAssessmentOverloadedExcep
 
 @Component
 public class AnswerAssessmentRateLimitQueue {
-
 	private final Object lock = new Object();
 	private final int queueCapacity;
 	private final Duration maxQueueWait;
@@ -61,9 +60,7 @@ public class AnswerAssessmentRateLimitQueue {
 		metrics.bind(queuedRequests::get, queueCapacity);
 	}
 
-	public AnswerAssessmentTask execute(
-		Supplier<AnswerAssessmentTask> taskSupplier
-	) {
+	public AnswerAssessmentTask execute(Supplier<AnswerAssessmentTask> taskSupplier) {
 		Objects.requireNonNull(taskSupplier, "제한할 작업은 null일 수 없습니다.");
 		QueueEntry entry = new QueueEntry(taskSupplier, nanoTime.getAsLong());
 		Admission admission;
@@ -403,21 +400,14 @@ public class AnswerAssessmentRateLimitQueue {
 		return new IllegalStateException("답안 평가 rate limit 대기열이 종료되었습니다.");
 	}
 
-	private enum Admission {
-		START, QUEUE, FULL, RATE_REJECTED, SHUTDOWN, SCHEDULER_FAILURE
-	}
+	private enum Admission { START, QUEUE, FULL, RATE_REJECTED, SHUTDOWN, SCHEDULER_FAILURE }
 
-	private enum State {
-		QUEUED, STARTING, ACTIVE, TERMINAL
-	}
+	private enum State { QUEUED, STARTING, ACTIVE, TERMINAL }
 
 	private final class QueueEntry {
-
 		private final Supplier<AnswerAssessmentTask> taskSupplier;
-		private final CompletableFuture<AnswerAssessment> result =
-			new CompletableFuture<>();
-		private final AnswerAssessmentTask task = new AnswerAssessmentTask(
-			result, () -> cancel(this));
+		private final CompletableFuture<AnswerAssessment> result = new CompletableFuture<>();
+		private final AnswerAssessmentTask task = new AnswerAssessmentTask(result, () -> cancel(this));
 		private final long enqueuedAtNanos;
 		private State state = State.QUEUED;
 		private AnswerAssessmentQueueTimeoutScheduler.TimeoutHandle timeoutHandle;
@@ -426,10 +416,7 @@ public class AnswerAssessmentRateLimitQueue {
 		private boolean cancelRequested;
 		private boolean rateDelayed;
 
-		private QueueEntry(
-			Supplier<AnswerAssessmentTask> taskSupplier,
-			long enqueuedAtNanos
-		) {
+		private QueueEntry(Supplier<AnswerAssessmentTask> taskSupplier, long enqueuedAtNanos) {
 			this.taskSupplier = taskSupplier;
 			this.enqueuedAtNanos = enqueuedAtNanos;
 		}

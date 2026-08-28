@@ -16,7 +16,6 @@ import lombok.NoArgsConstructor;
 @Embeddable
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class LearningSessionQuestions {
-
 	@OneToMany(
 		mappedBy = "learningSession",
 		cascade = CascadeType.ALL,

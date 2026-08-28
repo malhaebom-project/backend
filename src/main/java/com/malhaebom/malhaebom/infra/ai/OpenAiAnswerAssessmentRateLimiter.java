@@ -15,7 +15,6 @@ import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecor
 
 @Component
 public class OpenAiAnswerAssessmentRateLimiter {
-
 	static final String PROVIDER = "openai";
 
 	private final Bucket requestBucket;
@@ -84,7 +83,6 @@ public class OpenAiAnswerAssessmentRateLimiter {
 	}
 
 	record AcquireResult(boolean allowed, Duration retryAfter) {
-
 		static AcquireResult admitted() {
 			return new AcquireResult(true, Duration.ZERO);
 		}

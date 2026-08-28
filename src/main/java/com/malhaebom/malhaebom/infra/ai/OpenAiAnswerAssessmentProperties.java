@@ -14,7 +14,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Setter
 @ConfigurationProperties(prefix = "spring.ai.openai")
 public class OpenAiAnswerAssessmentProperties {
-
 	private String baseUrl;
 	private String apiKey;
 	private String organizationId;
@@ -27,7 +26,6 @@ public class OpenAiAnswerAssessmentProperties {
 	@Getter
 	@Setter
 	public static class Chat {
-
 		private String model = OpenAiChatOptions.DEFAULT_CHAT_MODEL;
 		private String reasoningEffort;
 		private String verbosity;

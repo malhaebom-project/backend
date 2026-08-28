@@ -22,7 +22,6 @@ import lombok.RequiredArgsConstructor;
 	havingValue = "true"
 )
 public class GoogleTextToSpeechClient implements TtsClient {
-
 	private static final String MP3_CONTENT_TYPE = "audio/mpeg";
 
 	private final TextToSpeechClient client;

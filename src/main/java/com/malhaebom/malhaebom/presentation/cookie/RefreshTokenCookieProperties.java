@@ -8,7 +8,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Getter
 @ConfigurationProperties(prefix = "cookie.refresh-token")
 public class RefreshTokenCookieProperties extends CookieProperties {
-
 	private final Duration ttl;
 
 	public RefreshTokenCookieProperties(
@@ -22,5 +21,4 @@ public class RefreshTokenCookieProperties extends CookieProperties {
 		super(path, domain, sameSite, secure, httpOnly);
 		this.ttl = ttl;
 	}
-
 }

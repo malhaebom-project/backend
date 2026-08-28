@@ -14,7 +14,6 @@ public record LearningSessionResponse(
 	int correctCount,
 	OffsetDateTime startedAt
 ) {
-
 	public static LearningSessionResponse from(LearningSession session) {
 		return new LearningSessionResponse(
 			session.getId(),

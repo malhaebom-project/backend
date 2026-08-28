@@ -14,9 +14,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class AnswerTest {
-
-	private static final String FEEDBACK_TEXT =
-		"현재진행형을 정확하게 사용했어요!";
+	private static final String FEEDBACK_TEXT = "현재진행형을 정확하게 사용했어요!";
 
 	@Test
 	void 정답_평가_결과로_답변_시도를_생성한다() {

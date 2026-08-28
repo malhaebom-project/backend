@@ -8,5 +8,4 @@ public record LearningHistory(
 	int size,
 	long totalElements,
 	int totalPages
-) {
-}
+) {}

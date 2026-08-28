@@ -28,7 +28,6 @@ import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 @DataJpaTest
 @Import(JpaAuditingConfiguration.class)
 class LearningHistoryRepositoryJpaTest {
-
 	private static final Long CHILD_ID = 10L;
 	private static final Long OTHER_CHILD_ID = 20L;
 

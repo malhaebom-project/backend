@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/learning-sessions")
 @RequiredArgsConstructor
 public class LearningAnswerController {
-
 	private final LearningAnswerService learningAnswerService;
 	private final LearningAnswerRetryService learningAnswerRetryService;
 	private final AnswerSubmissionAsyncProperties asyncProperties;
@@ -71,11 +70,7 @@ public class LearningAnswerController {
 		@PathVariable Long sessionId,
 		@PathVariable Long sessionQuestionId
 	) {
-		learningAnswerRetryService.skipRetry(
-			loginUser.userId(),
-			sessionId,
-			sessionQuestionId
-		);
+		learningAnswerRetryService.skipRetry(loginUser.userId(), sessionId, sessionQuestionId);
 		return ApiResponse.success(null);
 	}
 }

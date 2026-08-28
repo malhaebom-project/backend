@@ -20,7 +20,6 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class AdminQuestionService {
-
 	private final UserRepository userRepository;
 	private final QuestionRepository questionRepository;
 	private final ApplicationEventPublisher eventPublisher;

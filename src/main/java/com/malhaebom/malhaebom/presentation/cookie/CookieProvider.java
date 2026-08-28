@@ -8,13 +8,7 @@ import org.springframework.util.StringUtils;
 
 @Component
 public class CookieProvider {
-
-	public ResponseCookie create(
-		String name,
-		String value,
-		CookieProperties properties,
-		Duration ttl
-	) {
+	public ResponseCookie create(String name, String value, CookieProperties properties, Duration ttl) {
 		ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(name, value)
 			.maxAge(ttl)
 			.sameSite(properties.getSameSite())

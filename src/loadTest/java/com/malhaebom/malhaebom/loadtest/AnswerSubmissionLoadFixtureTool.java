@@ -16,14 +16,12 @@ import org.springframework.context.ConfigurableApplicationContext;
 import com.malhaebom.malhaebom.MalhaebomApplication;
 
 public final class AnswerSubmissionLoadFixtureTool {
-
 	private static final String ACTION_PROPERTY = "load.test.action";
 	private static final String RUN_ID_PROPERTY = "load.test.run-id";
 	private static final String STAGES_PROPERTY = "load.test.stages";
 	private static final String MANIFEST_PROPERTY = "load.test.manifest";
 
-	private AnswerSubmissionLoadFixtureTool() {
-	}
+	private AnswerSubmissionLoadFixtureTool() {}
 
 	public static void main(String[] args) throws Exception {
 		configureNonWebDependencies();

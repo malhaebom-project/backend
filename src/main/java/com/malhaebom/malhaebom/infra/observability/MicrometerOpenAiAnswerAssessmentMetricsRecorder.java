@@ -19,15 +19,11 @@ import com.malhaebom.malhaebom.global.concurrent.CompletionFailures;
 public class MicrometerOpenAiAnswerAssessmentMetricsRecorder
 	implements OpenAiAnswerAssessmentMetricsRecorder {
 
-	private static final String TOKEN_METRIC =
-		"malhaebom.openai.answer.assessment.tokens";
-	private static final String FAILURE_METRIC =
-		"malhaebom.openai.answer.assessment.failures";
+	private static final String TOKEN_METRIC = "malhaebom.openai.answer.assessment.tokens";
+	private static final String FAILURE_METRIC = "malhaebom.openai.answer.assessment.failures";
 
-	private final Map<TokenType, Counter> tokenCounters =
-		new EnumMap<>(TokenType.class);
-	private final Map<FailureReason, Counter> failureCounters =
-		new EnumMap<>(FailureReason.class);
+	private final Map<TokenType, Counter> tokenCounters = new EnumMap<>(TokenType.class);
+	private final Map<FailureReason, Counter> failureCounters = new EnumMap<>(FailureReason.class);
 
 	public MicrometerOpenAiAnswerAssessmentMetricsRecorder(
 		MeterRegistry meterRegistry

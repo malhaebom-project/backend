@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import com.malhaebom.malhaebom.infra.observability.MicrometerProviderRateLimitMetricsRecorder;
 
 class SpeechTranscriptionRateLimiterTest {
-
 	@Test
 	void RPM_240을_초과하면_fail_fast로_거절하고_refill_후_허용한다() {
 		SimpleMeterRegistry registry = new SimpleMeterRegistry();
@@ -58,7 +57,6 @@ class SpeechTranscriptionRateLimiterTest {
 	}
 
 	private static final class ManualTimeMeter implements TimeMeter {
-
 		private final AtomicLong nanos = new AtomicLong();
 
 		@Override

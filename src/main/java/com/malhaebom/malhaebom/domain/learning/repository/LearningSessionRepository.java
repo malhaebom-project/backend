@@ -21,7 +21,6 @@ import com.malhaebom.malhaebom.domain.learning.repository.projection.TopicStatis
 import jakarta.persistence.LockModeType;
 
 public interface LearningSessionRepository extends JpaRepository<LearningSession, Long> {
-
 	@Query("""
 		select distinct session
 		from LearningSession session

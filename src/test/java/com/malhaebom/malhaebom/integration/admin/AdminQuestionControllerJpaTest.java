@@ -45,7 +45,6 @@ import com.malhaebom.malhaebom.service.dto.LoginUser;
 })
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class AdminQuestionControllerJpaTest {
-
 	@Autowired
 	private AdminQuestionService adminQuestionService;
 	@Autowired

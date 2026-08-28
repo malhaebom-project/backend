@@ -8,16 +8,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.malhaebom.malhaebom.domain.child.ChildProfile;
 
 public interface ChildProfileRepository extends JpaRepository<ChildProfile, Long> {
-
 	List<ChildProfile> findAllByUserIdAndActiveTrueOrderByCreatedAtAsc(Long userId);
 
 	Optional<ChildProfile> findByIdAndActiveTrue(Long childId);
 
 	boolean existsByUserIdAndNicknameAndActiveTrue(Long userId, String nickname);
 
-	boolean existsByUserIdAndNicknameAndActiveTrueAndIdNot(
-		Long userId,
-		String nickname,
-		Long childId
-	);
+	boolean existsByUserIdAndNicknameAndActiveTrueAndIdNot(Long userId, String nickname, Long childId);
 }

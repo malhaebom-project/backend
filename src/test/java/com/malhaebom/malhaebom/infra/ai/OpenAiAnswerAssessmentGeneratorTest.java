@@ -50,7 +50,6 @@ import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 
 class OpenAiAnswerAssessmentGeneratorTest {
-
 	@Test
 	void 비동기_HTTP_응답에서_채점과_피드백을_구조화해서_반환한다() {
 		AsyncClientFixture fixture = asyncClientFixture();
@@ -431,10 +430,7 @@ class OpenAiAnswerAssessmentGeneratorTest {
 		return assessmentInput(Difficulty.EASY, answerText);
 	}
 
-	private AnswerAssessmentInput assessmentInput(
-		Difficulty difficulty,
-		String answerText
-	) {
+	private AnswerAssessmentInput assessmentInput(Difficulty difficulty, String answerText) {
 		Question question = createQuestion(difficulty);
 		return new AnswerAssessmentInput(
 			question.getDifficulty(),
@@ -468,6 +464,5 @@ class OpenAiAnswerAssessmentGeneratorTest {
 		OpenAIClientAsync client,
 		ChatCompletionServiceAsync completions,
 		CompletableFuture<ChatCompletion> response
-	) {
-	}
+	) {}
 }

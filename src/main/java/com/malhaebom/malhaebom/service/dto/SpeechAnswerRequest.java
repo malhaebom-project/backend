@@ -12,7 +12,6 @@ public record SpeechAnswerRequest(
 	String requestKey,
 	SpeechAudio audio
 ) {
-
 	private static final int MAX_REQUEST_KEY_LENGTH = 100;
 
 	public SpeechAnswerRequest {

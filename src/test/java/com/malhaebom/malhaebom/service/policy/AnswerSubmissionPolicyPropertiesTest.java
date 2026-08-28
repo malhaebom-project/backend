@@ -7,7 +7,6 @@ import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
 class AnswerSubmissionPolicyPropertiesTest {
-
 	@Test
 	void 시간_설정은_1초_이상이어야_한다() {
 		assertThatThrownBy(() -> new AnswerSubmissionPolicyProperties(

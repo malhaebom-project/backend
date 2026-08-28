@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class SpeechAnswerLifecycleComponent implements SmartLifecycle {
-
 	private final SpeechAnswerLifecycleOperations lifecycle;
 
 	@Override

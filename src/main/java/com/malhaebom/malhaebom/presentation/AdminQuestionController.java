@@ -29,7 +29,6 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/admin/questions")
 @RequiredArgsConstructor
 public class AdminQuestionController {
-
 	private final AdminQuestionService adminQuestionService;
 	private final QuestionImageUrlResolver questionImageUrlResolver;
 
@@ -50,9 +49,7 @@ public class AdminQuestionController {
 	}
 
 	@GetMapping
-	public ApiResponse<List<AdminQuestionResponse>> getAll(
-		@Auth LoginUser loginUser
-	) {
+	public ApiResponse<List<AdminQuestionResponse>> getAll(@Auth LoginUser loginUser) {
 		List<AdminQuestionResponse> questions =
 			adminQuestionService.getAll(loginUser.userId())
 				.stream()
@@ -62,10 +59,7 @@ public class AdminQuestionController {
 	}
 
 	@GetMapping("/{questionId}")
-	public ApiResponse<AdminQuestionResponse> get(
-		@Auth LoginUser loginUser,
-		@PathVariable Long questionId
-	) {
+	public ApiResponse<AdminQuestionResponse> get(@Auth LoginUser loginUser, @PathVariable Long questionId) {
 		return ApiResponse.success(
 			toResponse(
 				adminQuestionService.get(
@@ -94,10 +88,7 @@ public class AdminQuestionController {
 	}
 
 	@DeleteMapping("/{questionId}")
-	public ApiResponse<Void> delete(
-		@Auth LoginUser loginUser,
-		@PathVariable Long questionId
-	) {
+	public ApiResponse<Void> delete(@Auth LoginUser loginUser, @PathVariable Long questionId) {
 		adminQuestionService.delete(loginUser.userId(), questionId);
 		return ApiResponse.success(null, "문제를 삭제했습니다.");
 	}

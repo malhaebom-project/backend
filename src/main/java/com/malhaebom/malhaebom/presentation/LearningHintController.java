@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/learning-sessions")
 @RequiredArgsConstructor
 public class LearningHintController {
-
 	private final LearningHintService learningHintService;
 
 	@PostMapping("/{sessionId}/questions/{questionId}/hint")
@@ -27,13 +26,9 @@ public class LearningHintController {
 		@PathVariable Long questionId
 	) {
 		return ApiResponse.success(
-			HintResponse.from(
-				learningHintService.request(
-					loginUser.userId(),
-					sessionId,
-					questionId
+				HintResponse.from(
+						learningHintService.request(loginUser.userId(), sessionId, questionId)
 				)
-			)
 		);
 	}
 }

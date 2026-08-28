@@ -6,7 +6,6 @@ import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 
 public interface SpeechTranscriber {
-
 	String provider();
 
 	SpeechTranscriptionTask transcribeAsync(

@@ -18,17 +18,13 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/questions")
 @RequiredArgsConstructor
 public class QuestionController {
-
 	private final QuestionRepository questionRepository;
 
 	@GetMapping("/{questionId}/tts")
-	public ApiResponse<QuestionTtsResponse> getTts(
-		@PathVariable Long questionId
-	) {
+	public ApiResponse<QuestionTtsResponse> getTts(@PathVariable Long questionId) {
 		Question question = questionRepository
 			.findByIdAndActiveTrue(questionId)
 			.orElseThrow(() -> new ApiException(ErrorCode.QUESTION_NOT_FOUND));
-
 		return ApiResponse.success(QuestionTtsResponse.from(question));
 	}
 }

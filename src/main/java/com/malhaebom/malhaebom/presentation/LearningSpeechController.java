@@ -32,7 +32,6 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/learning-sessions")
 @RequiredArgsConstructor
 public class LearningSpeechController {
-
 	private static final long MAX_AUDIO_FILE_SIZE = 5L * 1024 * 1024;
 	private final SpeechAnswerCoordinator speechAnswerCoordinator;
 	private final SpeechRequestTimeout requestTimeout;
@@ -139,11 +138,7 @@ public class LearningSpeechController {
 		}
 	}
 
-	private boolean hasTypeAndSubtype(
-		MediaType mediaType,
-		String type,
-		String subtype
-	) {
+	private boolean hasTypeAndSubtype(MediaType mediaType, String type, String subtype) {
 		return type.equalsIgnoreCase(mediaType.getType())
 			&& subtype.equalsIgnoreCase(mediaType.getSubtype());
 	}
@@ -157,5 +152,4 @@ public class LearningSpeechController {
 			.toLowerCase(Locale.ROOT)
 			.replace(" ", "");
 	}
-
 }

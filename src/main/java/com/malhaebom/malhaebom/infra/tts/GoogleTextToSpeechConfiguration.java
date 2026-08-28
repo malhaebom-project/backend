@@ -19,11 +19,8 @@ import com.google.cloud.texttospeech.v1.TextToSpeechSettings;
 	havingValue = "true"
 )
 public class GoogleTextToSpeechConfiguration {
-
 	@Bean(destroyMethod = "close")
-	public TextToSpeechClient googleCloudTextToSpeechClient(
-		CredentialsProvider credentialsProvider
-	) throws IOException {
+	public TextToSpeechClient googleCloudTextToSpeechClient(CredentialsProvider credentialsProvider) throws IOException {
 		TextToSpeechSettings settings =
 			TextToSpeechSettings.newBuilder()
 				.setCredentialsProvider(credentialsProvider)

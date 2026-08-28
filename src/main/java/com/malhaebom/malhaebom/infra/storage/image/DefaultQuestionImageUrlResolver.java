@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class DefaultQuestionImageUrlResolver implements QuestionImageUrlResolver {
-
 	private static final String HTTP_SCHEME = "http://";
 	private static final String HTTPS_SCHEME = "https://";
 
@@ -38,8 +37,7 @@ public class DefaultQuestionImageUrlResolver implements QuestionImageUrlResolver
 	}
 
 	private boolean isAbsoluteUrl(String imagePath) {
-		return imagePath.startsWith(HTTP_SCHEME)
-			|| imagePath.startsWith(HTTPS_SCHEME);
+		return imagePath.startsWith(HTTP_SCHEME) || imagePath.startsWith(HTTPS_SCHEME);
 	}
 
 	private String removeTrailingSlashes(String value) {

@@ -5,5 +5,4 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(GoogleSpeechRateLimitProperties.class)
-class SpeechRateLimitConfiguration {
-}
+class SpeechRateLimitConfiguration {}

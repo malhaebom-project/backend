@@ -4,7 +4,6 @@ import lombok.Getter;
 
 @Getter
 public class AnswerSubmissionReservationException extends IllegalStateException {
-
 	private final Reason reason;
 
 	public AnswerSubmissionReservationException(Reason reason, String message) {

@@ -8,7 +8,6 @@ import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
 class AnswerAssessmentQueuePropertiesTest {
-
 	@Test
 	void queue_capacity는_0_이상이어야_한다() {
 		assertThrows(IllegalArgumentException.class,

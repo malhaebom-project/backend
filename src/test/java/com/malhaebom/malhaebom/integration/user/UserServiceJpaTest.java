@@ -26,7 +26,6 @@ import com.malhaebom.malhaebom.service.UserService;
 	JpaAuditingConfiguration.class
 })
 class UserServiceJpaTest {
-
 	@Autowired
 	private UserService userService;
 	@Autowired

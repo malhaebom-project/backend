@@ -1,7 +1,6 @@
 package com.malhaebom.malhaebom.domain.learning.repository.projection;
 
 public interface ChildStatisticsProjection {
-
 	Long getChildId();
 
 	Long getTotalStudyCount();

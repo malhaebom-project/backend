@@ -25,7 +25,6 @@ import lombok.extern.slf4j.Slf4j;
 	havingValue = "true"
 )
 public class QuestionTtsEventListener {
-
 	private final QuestionRepository questionRepository;
 	private final TtsClient ttsClient;
 	private final QuestionTtsStorage questionTtsStorage;
@@ -44,13 +43,8 @@ public class QuestionTtsEventListener {
 				);
 				return;
 			}
-			TtsAudio audio = ttsClient.generate(
-				event.questionText()
-			);
-			String audioUrl = questionTtsStorage.upload(
-				event.questionId(),
-				audio
-			);
+			TtsAudio audio = ttsClient.generate(event.questionText());
+			String audioUrl = questionTtsStorage.upload(event.questionId(), audio);
 			question.updateTtsUrl(audioUrl);
 			questionRepository.save(question);
 		} catch (RuntimeException exception) {

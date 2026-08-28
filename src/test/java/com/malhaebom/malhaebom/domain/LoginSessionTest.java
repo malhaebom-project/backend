@@ -7,7 +7,6 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 class LoginSessionTest {
-
 	@Test
 	void 로그인_세션을_생성하고_토큰을_회전한다() {
 		User user = User.create(

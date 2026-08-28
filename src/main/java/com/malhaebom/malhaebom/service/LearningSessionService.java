@@ -23,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class LearningSessionService {
-
 	private final LearningSessionRepository learningSessionRepository;
 	private final QuestionRepository questionRepository;
 	private final ChildProfileService childProfileService;

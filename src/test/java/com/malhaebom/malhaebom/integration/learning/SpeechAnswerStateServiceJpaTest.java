@@ -43,9 +43,7 @@ import jakarta.persistence.EntityManager;
 	JpaAuditingConfiguration.class
 })
 class SpeechAnswerStateServiceJpaTest {
-
-	private static final String REQUEST_KEY =
-		"e23b37e7-d7d4-407e-9f54-dcdaee508799";
+	private static final String REQUEST_KEY = "e23b37e7-d7d4-407e-9f54-dcdaee508799";
 	private static final String STT_PROVIDER = "TEST_STT";
 
 	@Autowired

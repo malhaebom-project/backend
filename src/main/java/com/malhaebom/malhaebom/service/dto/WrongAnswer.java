@@ -11,5 +11,4 @@ public record WrongAnswer(
 	String modelAnswer,
 	String feedbackText,
 	LocalDateTime answeredAt
-) {
-}
+) {}

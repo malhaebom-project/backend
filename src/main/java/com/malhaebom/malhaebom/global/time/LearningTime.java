@@ -7,12 +7,10 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 
 public final class LearningTime {
-
 	private static final ZoneId STUDY_ZONE = ZoneId.of("Asia/Seoul");
 	private static final ZoneId STORAGE_ZONE = ZoneOffset.UTC;
 
-	private LearningTime() {
-	}
+	private LearningTime() {}
 
 	public static LocalDateTime toStorageStartOfDay(LocalDate date) {
 		return date.atStartOfDay(STUDY_ZONE)

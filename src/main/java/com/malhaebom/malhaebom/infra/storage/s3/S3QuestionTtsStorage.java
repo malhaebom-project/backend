@@ -19,7 +19,6 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 	havingValue = "true"
 )
 public class S3QuestionTtsStorage implements QuestionTtsStorage {
-
 	private static final String MP3_EXTENSION = ".mp3";
 
 	private final S3Client s3Client;

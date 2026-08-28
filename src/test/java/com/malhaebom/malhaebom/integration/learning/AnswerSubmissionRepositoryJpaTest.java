@@ -25,7 +25,6 @@ import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 @DataJpaTest
 @Import(JpaAuditingConfiguration.class)
 class AnswerSubmissionRepositoryJpaTest {
-
 	@Autowired
 	private AnswerSubmissionRepository answerSubmissionRepository;
 	@Autowired
@@ -109,10 +108,7 @@ class AnswerSubmissionRepositoryJpaTest {
 		);
 	}
 
-	private SpeechAnswer saveCompletedSpeechAnswer(
-		LearningSessionQuestion question,
-		int recordingNo
-	) {
+	private SpeechAnswer saveCompletedSpeechAnswer(LearningSessionQuestion question, int recordingNo) {
 		SpeechAnswer speechAnswer = SpeechAnswer.start(
 			question,
 			"request-key-" + recordingNo,

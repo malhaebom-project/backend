@@ -37,7 +37,6 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class LearningRecordQueryService {
-
 	private static final int RECENT_WRONG_ANSWER_LIMIT = 10;
 	private static final List<AnswerResult> WRONG_ANSWER_RESULTS = List.of(
 		AnswerResult.PARTIALLY_CORRECT,
@@ -99,9 +98,7 @@ public class LearningRecordQueryService {
 		List<TopicStatistics> topicStatistics = learningSessionRepository
 			.findTopicStatistics(childId, LearningSessionStatus.COMPLETED)
 			.stream()
-			.sorted(Comparator.comparing(
-				projection -> projection.getTopic().getTopicId()
-			))
+			.sorted(Comparator.comparing(projection -> projection.getTopic().getTopicId()))
 			.map(this::toTopicStatistics)
 			.toList();
 
@@ -115,10 +112,7 @@ public class LearningRecordQueryService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<WrongAnswer> getRecentWrongAnswers(
-		Long userId,
-		Long childId
-	) {
+	public List<WrongAnswer> getRecentWrongAnswers(Long userId, Long childId) {
 		childProfileService.getOwnedActive(userId, childId);
 
 		return answerRepository.findRecentWrongAnswers(
@@ -130,9 +124,7 @@ public class LearningRecordQueryService {
 			.toList();
 	}
 
-	private LearningHistoryItem toHistoryItem(
-		LearningHistoryProjection projection
-	) {
+	private LearningHistoryItem toHistoryItem(LearningHistoryProjection projection) {
 		int questionCount = Math.toIntExact(projection.getQuestionCount());
 		int correctCount = Math.toIntExact(projection.getCorrectCount());
 
@@ -151,9 +143,7 @@ public class LearningRecordQueryService {
 		);
 	}
 
-	private ChildStatistics toChildStatistics(
-		ChildStatisticsProjection projection
-	) {
+	private ChildStatistics toChildStatistics(ChildStatisticsProjection projection) {
 		return new ChildStatistics(
 			projection.getTotalStudyCount(),
 			projection.getCorrectCount(),
@@ -161,9 +151,7 @@ public class LearningRecordQueryService {
 		);
 	}
 
-	private TopicStatistics toTopicStatistics(
-		TopicStatisticsProjection projection
-	) {
+	private TopicStatistics toTopicStatistics(TopicStatisticsProjection projection) {
 		long questionCount = projection.getQuestionCount();
 		long correctCount = projection.getCorrectCount();
 		return new TopicStatistics(
@@ -186,9 +174,7 @@ public class LearningRecordQueryService {
 		);
 	}
 
-	private long calculateTotalStudySeconds(
-		List<LearningSessionPeriodProjection> periods
-	) {
+	private long calculateTotalStudySeconds(List<LearningSessionPeriodProjection> periods) {
 		return periods.stream()
 			.mapToLong(period -> calculateStudySeconds(
 				period.getStartedAt(),
@@ -197,9 +183,7 @@ public class LearningRecordQueryService {
 			.sum();
 	}
 
-	private int calculateConsecutiveStudyDays(
-		List<LearningSessionPeriodProjection> periods
-	) {
+	private int calculateConsecutiveStudyDays(List<LearningSessionPeriodProjection> periods) {
 		Set<LocalDate> studyDates = new HashSet<>();
 		for (LearningSessionPeriodProjection period : periods) {
 			if (period.getCompletedAt() != null) {
@@ -230,11 +214,7 @@ public class LearningRecordQueryService {
 		return Math.round(correctCount * 1000.0 / questionCount) / 10.0;
 	}
 
-	private long calculateStudySeconds(
-		LocalDateTime startedAt,
-		LocalDateTime completedAt
-	) {
+	private long calculateStudySeconds(LocalDateTime startedAt, LocalDateTime completedAt) {
 		return Duration.between(startedAt, completedAt).getSeconds();
 	}
-
 }

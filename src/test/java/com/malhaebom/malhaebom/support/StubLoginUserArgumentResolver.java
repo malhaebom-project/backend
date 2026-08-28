@@ -9,9 +9,7 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.service.dto.LoginUser;
 
-public class StubLoginUserArgumentResolver
-	implements HandlerMethodArgumentResolver {
-
+public class StubLoginUserArgumentResolver implements HandlerMethodArgumentResolver {
 	private final Long userId;
 
 	public StubLoginUserArgumentResolver(Long userId) {
