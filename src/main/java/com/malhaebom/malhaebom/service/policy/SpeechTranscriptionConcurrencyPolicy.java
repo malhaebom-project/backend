@@ -46,12 +46,11 @@ public class SpeechTranscriptionConcurrencyPolicy {
 			this.policy = policy;
 		}
 
-		public boolean release() {
+		public void release() {
 			if (!released.compareAndSet(false, true)) {
-				return false;
+				return;
 			}
 			policy.release();
-			return true;
 		}
 	}
 }
