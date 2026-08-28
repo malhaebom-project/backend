@@ -20,8 +20,9 @@ public final class AnswerAttemptPolicy {
 	}
 
 	public static int remainingAttempts(Answer answer) {
-		return canRetry(answer)
-			? MAX_ATTEMPT_COUNT - answer.getAttemptNo()
-			: 0;
+		if (canRetry(answer)) {
+			return MAX_ATTEMPT_COUNT - answer.getAttemptNo();
+		}
+		return 0;
 	}
 }
