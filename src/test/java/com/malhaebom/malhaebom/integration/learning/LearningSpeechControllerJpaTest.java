@@ -53,10 +53,10 @@ import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPoli
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.presentation.LearningSpeechController;
 import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
-import com.malhaebom.malhaebom.service.InFlightSpeechAnswerRegistry;
-import com.malhaebom.malhaebom.service.SpeechAnswerLifecycle;
-import com.malhaebom.malhaebom.service.SpeechAnswerService;
-import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
+import com.malhaebom.malhaebom.service.speech.InFlightSpeechAnswerRegistry;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerLifecycle;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerCoordinator;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
@@ -119,7 +119,8 @@ class LearningSpeechControllerJpaTest {
 		);
 		InFlightSpeechAnswerRegistry inFlightRegistry =
 			new InFlightSpeechAnswerRegistry();
-		SpeechAnswerService speechAnswerService = new SpeechAnswerService(
+		SpeechAnswerCoordinator speechAnswerCoordinator =
+			new SpeechAnswerCoordinator(
 			stateService,
 			transcriber,
 			Runnable::run,
@@ -134,7 +135,7 @@ class LearningSpeechControllerJpaTest {
 		);
 		mockMvc = MockMvcBuilders.standaloneSetup(
 			new LearningSpeechController(
-				speechAnswerService,
+				speechAnswerCoordinator,
 				new SpeechRequestTimeout(asyncProperties.requestTimeout())
 			)
 		)

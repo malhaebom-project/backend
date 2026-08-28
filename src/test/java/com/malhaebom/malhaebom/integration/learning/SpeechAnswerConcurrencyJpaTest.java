@@ -64,10 +64,10 @@ import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPoli
 import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionRateLimiter;
 import com.malhaebom.malhaebom.presentation.LearningSpeechController;
 import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
-import com.malhaebom.malhaebom.service.InFlightSpeechAnswerRegistry;
-import com.malhaebom.malhaebom.service.SpeechAnswerLifecycle;
-import com.malhaebom.malhaebom.service.SpeechAnswerService;
-import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
+import com.malhaebom.malhaebom.service.speech.InFlightSpeechAnswerRegistry;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerLifecycle;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerCoordinator;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
@@ -87,7 +87,7 @@ import com.malhaebom.malhaebom.support.StubLoginUserArgumentResolver;
 @Import({
 	JpaAuditingConfiguration.class,
 	SpeechAnswerStateService.class,
-	SpeechAnswerService.class,
+	SpeechAnswerCoordinator.class,
 	InFlightSpeechAnswerRegistry.class,
 	SpeechAnswerLifecycle.class,
 	SpeechAnswerConcurrencyJpaTest.SpeechTestConfiguration.class
@@ -110,7 +110,7 @@ class SpeechAnswerConcurrencyJpaTest {
 	@Autowired
 	private SpeechAnswerRepository speechAnswerRepository;
 	@Autowired
-	private SpeechAnswerService speechAnswerService;
+	private SpeechAnswerCoordinator speechAnswerCoordinator;
 	@Autowired
 	private SpeechAnswerStateService stateService;
 	@Autowired
@@ -133,7 +133,7 @@ class SpeechAnswerConcurrencyJpaTest {
 		transcriber.reset();
 		mockMvc = MockMvcBuilders.standaloneSetup(
 			new LearningSpeechController(
-				speechAnswerService,
+				speechAnswerCoordinator,
 				new SpeechRequestTimeout(asyncProperties.requestTimeout())
 			)
 		)
@@ -258,7 +258,8 @@ class SpeechAnswerConcurrencyJpaTest {
 		);
 		InFlightSpeechAnswerRegistry inFlightRegistry =
 			new InFlightSpeechAnswerRegistry();
-		SpeechAnswerService rateLimitedService = new SpeechAnswerService(
+		SpeechAnswerCoordinator rateLimitedCoordinator =
+			new SpeechAnswerCoordinator(
 			stateService,
 			transcriber,
 			Runnable::run,
@@ -276,14 +277,14 @@ class SpeechAnswerConcurrencyJpaTest {
 		);
 		LearningSession session = saveSession();
 		Long sessionQuestionId = session.getCurrentQuestion().getId();
-		SpeechAnswerTask first = rateLimitedService.uploadAsync(
+		SpeechAnswerTask first = rateLimitedCoordinator.uploadAsync(
 			speechRequest(session, sessionQuestionId, requestKey("rate-first"))
 		);
 		assertTrue(transcriber.complete(0));
 		await(first);
 
 		String rejectedKey = requestKey("rate-rejected");
-		SpeechAnswerTask rejected = rateLimitedService.uploadAsync(
+		SpeechAnswerTask rejected = rateLimitedCoordinator.uploadAsync(
 			speechRequest(session, sessionQuestionId, rejectedKey)
 		);
 
@@ -439,10 +440,10 @@ class SpeechAnswerConcurrencyJpaTest {
 		SpeechServiceFixture draining = newService(
 			Duration.ofSeconds(1)
 		);
-		SpeechAnswerService drainingService = draining.service();
+		SpeechAnswerCoordinator drainingCoordinator = draining.coordinator();
 		LearningSession session = saveSession();
 		Long sessionQuestionId = session.getCurrentQuestion().getId();
-		SpeechAnswerTask active = drainingService.uploadAsync(
+		SpeechAnswerTask active = drainingCoordinator.uploadAsync(
 			speechRequest(session, sessionQuestionId, requestKey("shutdown-active"))
 		);
 		CountDownLatch shutdown = new CountDownLatch(1);
@@ -452,7 +453,7 @@ class SpeechAnswerConcurrencyJpaTest {
 		assertEquals(1L, shutdown.getCount());
 		ApiException rejected = assertThrows(
 			ApiException.class,
-			() -> drainingService.uploadAsync(
+			() -> drainingCoordinator.uploadAsync(
 				speechRequest(
 					session,
 					sessionQuestionId,
@@ -484,11 +485,11 @@ class SpeechAnswerConcurrencyJpaTest {
 		SpeechServiceFixture draining = newService(
 			Duration.ofMillis(50)
 		);
-		SpeechAnswerService drainingService = draining.service();
+		SpeechAnswerCoordinator drainingCoordinator = draining.coordinator();
 		LearningSession session = saveSession();
 		Long sessionQuestionId = session.getCurrentQuestion().getId();
 		String requestKey = requestKey("shutdown-timeout");
-		SpeechAnswerTask active = drainingService.uploadAsync(
+		SpeechAnswerTask active = drainingCoordinator.uploadAsync(
 			speechRequest(session, sessionQuestionId, requestKey)
 		);
 		CountDownLatch shutdown = new CountDownLatch(1);
@@ -540,7 +541,7 @@ class SpeechAnswerConcurrencyJpaTest {
 			concurrencyPolicy,
 			shutdownPolicy
 		);
-		SpeechAnswerService service = new SpeechAnswerService(
+		SpeechAnswerCoordinator coordinator = new SpeechAnswerCoordinator(
 			stateService,
 			transcriber,
 			Runnable::run,
@@ -549,11 +550,11 @@ class SpeechAnswerConcurrencyJpaTest {
 			inFlightRegistry,
 			lifecycle
 		);
-		return new SpeechServiceFixture(service, lifecycle);
+		return new SpeechServiceFixture(coordinator, lifecycle);
 	}
 
 	private record SpeechServiceFixture(
-		SpeechAnswerService service,
+		SpeechAnswerCoordinator coordinator,
 		SpeechAnswerLifecycle lifecycle
 	) {
 	}
@@ -571,7 +572,7 @@ class SpeechAnswerConcurrencyJpaTest {
 		Long sessionQuestionId,
 		String requestSuffix
 	) {
-		return speechAnswerService.uploadAsync(
+		return speechAnswerCoordinator.uploadAsync(
 			speechRequest(session, sessionQuestionId, requestKey(requestSuffix))
 		);
 	}

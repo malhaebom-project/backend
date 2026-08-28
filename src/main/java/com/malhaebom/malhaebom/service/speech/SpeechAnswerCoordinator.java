@@ -1,4 +1,4 @@
-package com.malhaebom.malhaebom.service;
+package com.malhaebom.malhaebom.service.speech;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -32,7 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
-public class SpeechAnswerService {
+public class SpeechAnswerCoordinator {
 
 	private final SpeechAnswerStateService stateService;
 	private final SpeechTranscriber transcriber;
@@ -43,7 +43,7 @@ public class SpeechAnswerService {
 	private final SpeechAnswerLifecycle lifecycle;
 
 	@Autowired
-	public SpeechAnswerService(
+	public SpeechAnswerCoordinator(
 		SpeechAnswerStateService stateService,
 		SpeechTranscriber transcriber,
 		@Qualifier("speechCompletionExecutor")

@@ -1,4 +1,4 @@
-package com.malhaebom.malhaebom.service;
+package com.malhaebom.malhaebom.service.speech;
 
 import java.time.Instant;
 import java.util.List;
@@ -19,6 +19,7 @@ import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
 import com.malhaebom.malhaebom.service.policy.SpeechProcessingLease;
+import com.malhaebom.malhaebom.service.ChildProfileService;
 
 import lombok.RequiredArgsConstructor;
 

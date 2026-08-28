@@ -1,4 +1,4 @@
-package com.malhaebom.malhaebom.service;
+package com.malhaebom.malhaebom.service.speech;
 
 import java.util.List;
 import java.util.Objects;
