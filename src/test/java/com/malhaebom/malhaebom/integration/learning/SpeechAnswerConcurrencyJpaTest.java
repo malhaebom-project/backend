@@ -65,6 +65,7 @@ import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionRateLimiter;
 import com.malhaebom.malhaebom.presentation.LearningSpeechController;
 import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
 import com.malhaebom.malhaebom.service.InFlightSpeechAnswerRegistry;
+import com.malhaebom.malhaebom.service.SpeechAnswerLifecycle;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
@@ -88,6 +89,7 @@ import com.malhaebom.malhaebom.support.StubLoginUserArgumentResolver;
 	SpeechAnswerStateService.class,
 	SpeechAnswerService.class,
 	InFlightSpeechAnswerRegistry.class,
+	SpeechAnswerLifecycle.class,
 	SpeechAnswerConcurrencyJpaTest.SpeechTestConfiguration.class
 })
 class SpeechAnswerConcurrencyJpaTest {
@@ -251,6 +253,11 @@ class SpeechAnswerConcurrencyJpaTest {
 			new SpeechTranscriptionConcurrencyPolicy(
 				properties.maxConcurrentRequests()
 			);
+		SpeechShutdownPolicy shutdownPolicy = new SpeechShutdownPolicy(
+			properties.shutdownDrainTimeout()
+		);
+		InFlightSpeechAnswerRegistry inFlightRegistry =
+			new InFlightSpeechAnswerRegistry();
 		SpeechAnswerService rateLimitedService = new SpeechAnswerService(
 			stateService,
 			transcriber,
@@ -260,10 +267,12 @@ class SpeechAnswerConcurrencyJpaTest {
 				new GoogleSpeechRateLimitProperties(1),
 				ProviderRateLimitMetricsRecorder.NOOP
 			),
-			new SpeechShutdownPolicy(
-				properties.shutdownDrainTimeout()
-			),
-			new InFlightSpeechAnswerRegistry()
+			inFlightRegistry,
+			new SpeechAnswerLifecycle(
+				inFlightRegistry,
+				concurrencyPolicy,
+				shutdownPolicy
+			)
 		);
 		LearningSession session = saveSession();
 		Long sessionQuestionId = session.getCurrentQuestion().getId();
@@ -427,9 +436,10 @@ class SpeechAnswerConcurrencyJpaTest {
 	@Test
 	void 종료는_진행_STT를_drain하고_신규_요청을_거절한다()
 		throws Exception {
-		SpeechAnswerService drainingService = newService(
+		SpeechServiceFixture draining = newService(
 			Duration.ofSeconds(1)
 		);
+		SpeechAnswerService drainingService = draining.service();
 		LearningSession session = saveSession();
 		Long sessionQuestionId = session.getCurrentQuestion().getId();
 		SpeechAnswerTask active = drainingService.uploadAsync(
@@ -437,7 +447,7 @@ class SpeechAnswerConcurrencyJpaTest {
 		);
 		CountDownLatch shutdown = new CountDownLatch(1);
 
-		drainingService.stop(shutdown::countDown);
+		draining.lifecycle().stop(shutdown::countDown);
 
 		assertEquals(1L, shutdown.getCount());
 		ApiException rejected = assertThrows(
@@ -471,9 +481,10 @@ class SpeechAnswerConcurrencyJpaTest {
 	@Test
 	void 종료_drain_제한시간을_넘기면_STT를_취소하고_FAILED로_저장한다()
 		throws Exception {
-		SpeechAnswerService drainingService = newService(
+		SpeechServiceFixture draining = newService(
 			Duration.ofMillis(50)
 		);
+		SpeechAnswerService drainingService = draining.service();
 		LearningSession session = saveSession();
 		Long sessionQuestionId = session.getCurrentQuestion().getId();
 		String requestKey = requestKey("shutdown-timeout");
@@ -482,7 +493,7 @@ class SpeechAnswerConcurrencyJpaTest {
 		);
 		CountDownLatch shutdown = new CountDownLatch(1);
 
-		drainingService.stop(shutdown::countDown);
+		draining.lifecycle().stop(shutdown::countDown);
 
 		assertTrue(shutdown.await(2, TimeUnit.SECONDS));
 		ApiException timeout = assertThrows(
@@ -507,7 +518,7 @@ class SpeechAnswerConcurrencyJpaTest {
 		);
 	}
 
-	private SpeechAnswerService newService(Duration shutdownDrainTimeout) {
+	private SpeechServiceFixture newService(Duration shutdownDrainTimeout) {
 		SpeechAnswerAsyncProperties properties =
 			new SpeechAnswerAsyncProperties(
 				Duration.ofSeconds(20),
@@ -515,19 +526,36 @@ class SpeechAnswerConcurrencyJpaTest {
 				Duration.ofSeconds(60),
 				shutdownDrainTimeout
 			);
-		return new SpeechAnswerService(
+		SpeechTranscriptionConcurrencyPolicy concurrencyPolicy =
+			new SpeechTranscriptionConcurrencyPolicy(
+				properties.maxConcurrentRequests()
+			);
+		SpeechShutdownPolicy shutdownPolicy = new SpeechShutdownPolicy(
+			properties.shutdownDrainTimeout()
+		);
+		InFlightSpeechAnswerRegistry inFlightRegistry =
+			new InFlightSpeechAnswerRegistry();
+		SpeechAnswerLifecycle lifecycle = new SpeechAnswerLifecycle(
+			inFlightRegistry,
+			concurrencyPolicy,
+			shutdownPolicy
+		);
+		SpeechAnswerService service = new SpeechAnswerService(
 			stateService,
 			transcriber,
 			Runnable::run,
-			new SpeechTranscriptionConcurrencyPolicy(
-				properties.maxConcurrentRequests()
-			),
+			concurrencyPolicy,
 			SpeechTranscriptionRateLimit.UNLIMITED,
-			new SpeechShutdownPolicy(
-				properties.shutdownDrainTimeout()
-			),
-			new InFlightSpeechAnswerRegistry()
+			inFlightRegistry,
+			lifecycle
 		);
+		return new SpeechServiceFixture(service, lifecycle);
+	}
+
+	private record SpeechServiceFixture(
+		SpeechAnswerService service,
+		SpeechAnswerLifecycle lifecycle
+	) {
 	}
 
 	private LearningSession saveSession() {

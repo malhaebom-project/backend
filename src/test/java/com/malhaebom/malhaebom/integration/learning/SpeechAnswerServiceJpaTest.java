@@ -32,6 +32,7 @@ import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPoli
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.InFlightSpeechAnswerRegistry;
+import com.malhaebom.malhaebom.service.SpeechAnswerLifecycle;
 import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerRequest;
@@ -84,18 +85,27 @@ class SpeechAnswerServiceJpaTest {
 				Duration.ofSeconds(60),
 				Duration.ofSeconds(20)
 			);
+		SpeechTranscriptionConcurrencyPolicy concurrencyPolicy =
+			new SpeechTranscriptionConcurrencyPolicy(
+				asyncProperties.maxConcurrentRequests()
+			);
+		SpeechShutdownPolicy shutdownPolicy = new SpeechShutdownPolicy(
+			asyncProperties.shutdownDrainTimeout()
+		);
+		InFlightSpeechAnswerRegistry inFlightRegistry =
+			new InFlightSpeechAnswerRegistry();
 		speechAnswerService = new SpeechAnswerService(
 			stateService,
 			transcriber,
 			Runnable::run,
-			new SpeechTranscriptionConcurrencyPolicy(
-				asyncProperties.maxConcurrentRequests()
-			),
+			concurrencyPolicy,
 			SpeechTranscriptionRateLimit.UNLIMITED,
-			new SpeechShutdownPolicy(
-				asyncProperties.shutdownDrainTimeout()
-			),
-			new InFlightSpeechAnswerRegistry()
+			inFlightRegistry,
+			new SpeechAnswerLifecycle(
+				inFlightRegistry,
+				concurrencyPolicy,
+				shutdownPolicy
+			)
 		);
 		session = LearningJpaTestFixture.saveSession(
 			questionRepository,

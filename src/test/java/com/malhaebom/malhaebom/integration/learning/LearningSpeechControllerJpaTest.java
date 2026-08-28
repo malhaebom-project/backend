@@ -54,6 +54,7 @@ import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.presentation.LearningSpeechController;
 import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
 import com.malhaebom.malhaebom.service.InFlightSpeechAnswerRegistry;
+import com.malhaebom.malhaebom.service.SpeechAnswerLifecycle;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
@@ -113,16 +114,23 @@ class LearningSpeechControllerJpaTest {
 		concurrencyPolicy = new SpeechTranscriptionConcurrencyPolicy(
 			asyncProperties.maxConcurrentRequests()
 		);
+		SpeechShutdownPolicy shutdownPolicy = new SpeechShutdownPolicy(
+			asyncProperties.shutdownDrainTimeout()
+		);
+		InFlightSpeechAnswerRegistry inFlightRegistry =
+			new InFlightSpeechAnswerRegistry();
 		SpeechAnswerService speechAnswerService = new SpeechAnswerService(
 			stateService,
 			transcriber,
 			Runnable::run,
 			concurrencyPolicy,
 			SpeechTranscriptionRateLimit.UNLIMITED,
-			new SpeechShutdownPolicy(
-				asyncProperties.shutdownDrainTimeout()
-			),
-			new InFlightSpeechAnswerRegistry()
+			inFlightRegistry,
+			new SpeechAnswerLifecycle(
+				inFlightRegistry,
+				concurrencyPolicy,
+				shutdownPolicy
+			)
 		);
 		mockMvc = MockMvcBuilders.standaloneSetup(
 			new LearningSpeechController(
