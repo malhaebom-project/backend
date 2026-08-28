@@ -1,5 +1,6 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
+import static com.malhaebom.malhaebom.support.LearningSessionTestActions.completeCurrentQuestion;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.LocalDateTime;
@@ -26,9 +27,9 @@ class LearningSessionResultResponseTest {
 			Difficulty.EASY,
 			List.of(createQuestion(), createQuestion(), createQuestion())
 		);
-		session.completeCurrentQuestion(true);
-		session.completeCurrentQuestion(false);
-		session.completeCurrentQuestion(true);
+		completeCurrentQuestion(session, true);
+		completeCurrentQuestion(session, false);
+		completeCurrentQuestion(session, true);
 		LocalDateTime startedAt = LocalDateTime.of(2026, 8, 27, 1, 0);
 		LocalDateTime completedAt = startedAt.plusMinutes(5).plusSeconds(12);
 		ReflectionTestUtils.setField(session, "startedAt", startedAt);

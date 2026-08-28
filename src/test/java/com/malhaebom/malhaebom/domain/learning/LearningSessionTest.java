@@ -1,5 +1,6 @@
 package com.malhaebom.malhaebom.domain.learning;
 
+import static com.malhaebom.malhaebom.support.LearningSessionTestActions.completeCurrentQuestion;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -33,7 +34,7 @@ class LearningSessionTest {
 		List<Question> questions = createQuestions();
 		LearningSession session = createSession(questions);
 
-		session.completeCurrentQuestion(true);
+		completeCurrentQuestion(session, true);
 
 		assertEquals(1, session.getCurrentQuestionIndex());
 		assertSame(questions.get(1), session.getCurrentQuestion().getQuestion());
@@ -58,7 +59,7 @@ class LearningSessionTest {
 		LearningSession session = createSession(createQuestions());
 		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
 
-		session.completeCurrentQuestion(false);
+		completeCurrentQuestion(session, false);
 
 		assertEquals(1, currentQuestion.getWrongAnswerCount());
 		assertEquals(0, session.getCorrectCount());
@@ -110,9 +111,9 @@ class LearningSessionTest {
 	void 마지막_문제를_완료하면_세션이_완료된다() {
 		LearningSession session = createSession(createQuestions());
 
-		session.completeCurrentQuestion(true);
-		session.completeCurrentQuestion(false);
-		session.completeCurrentQuestion(true);
+		completeCurrentQuestion(session, true);
+		completeCurrentQuestion(session, false);
+		completeCurrentQuestion(session, true);
 
 		assertEquals(LearningSessionStatus.COMPLETED, session.getStatus());
 		assertEquals(3, session.getCurrentQuestionIndex());
@@ -124,9 +125,9 @@ class LearningSessionTest {
 	@Test
 	void 완료된_세션은_기록된_시각으로_학습_시간을_계산한다() {
 		LearningSession session = createSession(createQuestions());
-		session.completeCurrentQuestion(true);
-		session.completeCurrentQuestion(false);
-		session.completeCurrentQuestion(true);
+		completeCurrentQuestion(session, true);
+		completeCurrentQuestion(session, false);
+		completeCurrentQuestion(session, true);
 		LocalDateTime startedAt = LocalDateTime.of(2026, 8, 27, 1, 0);
 		ReflectionTestUtils.setField(session, "startedAt", startedAt);
 		ReflectionTestUtils.setField(
@@ -148,9 +149,9 @@ class LearningSessionTest {
 	@Test
 	void 완료_시각이_시작_시각보다_빠르면_학습_시간을_계산할_수_없다() {
 		LearningSession session = createSession(createQuestions());
-		session.completeCurrentQuestion(true);
-		session.completeCurrentQuestion(false);
-		session.completeCurrentQuestion(true);
+		completeCurrentQuestion(session, true);
+		completeCurrentQuestion(session, false);
+		completeCurrentQuestion(session, true);
 		ReflectionTestUtils.setField(
 			session,
 			"completedAt",

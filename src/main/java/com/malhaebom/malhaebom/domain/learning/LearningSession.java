@@ -109,15 +109,6 @@ public class LearningSession extends BaseEntity {
 		validateAnswerSubmissionTarget(submission.getSessionQuestion().getId());
 	}
 
-	public void completeCurrentQuestion(boolean correct) {
-		validateInProgress();
-		questions.completeCurrent(correct);
-
-		if (questions.isCompleted()) {
-			complete();
-		}
-	}
-
 	public void recordWrongAnswerAttempt() {
 		validateInProgress();
 		questions.recordWrongAnswerAttempt();

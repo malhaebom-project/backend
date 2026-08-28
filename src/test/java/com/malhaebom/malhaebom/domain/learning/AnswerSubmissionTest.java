@@ -1,5 +1,6 @@
 package com.malhaebom.malhaebom.domain.learning;
 
+import static com.malhaebom.malhaebom.support.LearningSessionTestActions.completeCurrentQuestion;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -72,7 +73,7 @@ class AnswerSubmissionTest {
 	void 완료된_문제는_제출을_예약할_수_없다() {
 		LearningSessionQuestion sessionQuestion = createSessionQuestion();
 		SpeechAnswer speechAnswer = completedSpeechAnswer(sessionQuestion);
-		sessionQuestion.getLearningSession().completeCurrentQuestion(true);
+		completeCurrentQuestion(sessionQuestion.getLearningSession(), true);
 
 		assertThrows(
 			LearningSessionAnswerSubmissionException.class,

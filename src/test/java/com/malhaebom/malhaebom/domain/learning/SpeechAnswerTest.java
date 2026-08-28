@@ -1,5 +1,6 @@
 package com.malhaebom.malhaebom.domain.learning;
 
+import static com.malhaebom.malhaebom.support.LearningSessionTestActions.completeCurrentQuestion;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -65,7 +66,7 @@ class SpeechAnswerTest {
 	@Test
 	void 완료한_문제에는_음성_답변을_생성할_수_없다() {
 		LearningSessionQuestion sessionQuestion = createSessionQuestion();
-		sessionQuestion.getLearningSession().completeCurrentQuestion(true);
+		completeCurrentQuestion(sessionQuestion.getLearningSession(), true);
 
 		assertThrows(
 			IllegalStateException.class,

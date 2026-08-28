@@ -1,5 +1,6 @@
 package com.malhaebom.malhaebom.domain.learning;
 
+import static com.malhaebom.malhaebom.support.LearningSessionTestActions.completeCurrentQuestion;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -112,7 +113,7 @@ class AnswerTest {
 			sessionQuestion,
 			"The boy is running."
 		);
-		sessionQuestion.getLearningSession().completeCurrentQuestion(true);
+		completeCurrentQuestion(sessionQuestion.getLearningSession(), true);
 
 		assertThrows(
 			IllegalStateException.class,
