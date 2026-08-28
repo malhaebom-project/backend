@@ -21,6 +21,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+import io.github.bucket4j.TimeMeter;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -33,6 +35,7 @@ import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.infra.observability.AnswerAssessmentMetricsRecorder;
 import com.malhaebom.malhaebom.infra.observability.OpenAiAnswerAssessmentMetricsRecorder;
+import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
@@ -66,6 +69,7 @@ public final class AnswerAssessmentEvaluationTool {
 			observations = execute(harness.generator(), harness.tokenUsage(), cases, settings, rawResults);
 		} finally {
 			harness.queue().shutdown();
+			harness.timeoutScheduler().close();
 			client.close();
 		}
 
@@ -112,9 +116,20 @@ public final class AnswerAssessmentEvaluationTool {
 		OpenAiAnswerAssessmentProperties properties = new OpenAiAnswerAssessmentProperties();
 		configureChat(properties, settings.model());
 		AnswerAssessmentMetricsRecorder queueMetrics = new NoOpQueueMetrics();
+		ExecutorAnswerAssessmentQueueTimeoutScheduler timeoutScheduler =
+			new ExecutorAnswerAssessmentQueueTimeoutScheduler();
 		AnswerAssessmentRateLimitQueue queue = new AnswerAssessmentRateLimitQueue(
 			new AnswerAssessmentQueueProperties(1, Duration.ofSeconds(90)),
-			queueMetrics
+			queueMetrics,
+			new OpenAiAnswerAssessmentRateLimiter(
+				new OpenAiAnswerAssessmentRateLimitProperties(
+					400, 400_000, 3_000
+				),
+				ProviderRateLimitMetricsRecorder.NOOP,
+				TimeMeter.SYSTEM_NANOTIME
+			),
+			timeoutScheduler,
+			System::nanoTime
 		);
 		TokenUsageCollector tokenUsage = new TokenUsageCollector();
 		return new GeneratorHarness(
@@ -122,6 +137,7 @@ public final class AnswerAssessmentEvaluationTool {
 				client, properties, queue, tokenUsage
 			),
 			queue,
+			timeoutScheduler,
 			tokenUsage
 		);
 	}
@@ -575,8 +591,12 @@ public final class AnswerAssessmentEvaluationTool {
 			return new TokenUsageSummary(calls, prompt, completion, total, cached, reasoning, min, max, calls == 0 ? 0 : (double)total / calls);
 		}
 	}
-	record GeneratorHarness(OpenAiAnswerAssessmentGenerator generator,
-		AnswerAssessmentRateLimitQueue queue, TokenUsageCollector tokenUsage) {}
+	record GeneratorHarness(
+		OpenAiAnswerAssessmentGenerator generator,
+		AnswerAssessmentRateLimitQueue queue,
+		ExecutorAnswerAssessmentQueueTimeoutScheduler timeoutScheduler,
+		TokenUsageCollector tokenUsage
+	) {}
 
 	private static final class NoOpQueueMetrics implements AnswerAssessmentMetricsRecorder {
 		public void bind(java.util.function.IntSupplier value, int capacity) {}

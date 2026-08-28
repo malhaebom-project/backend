@@ -30,6 +30,7 @@ import com.openai.models.chat.completions.ChatCompletionMessage;
 import com.openai.models.completions.CompletionUsage;
 import com.openai.services.async.ChatServiceAsync;
 import com.openai.services.async.chat.ChatCompletionServiceAsync;
+import io.github.bucket4j.TimeMeter;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -43,6 +44,7 @@ import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerAssessmentMetricsRecorder;
 import com.malhaebom.malhaebom.infra.observability.MicrometerOpenAiAnswerAssessmentMetricsRecorder;
+import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
@@ -333,6 +335,13 @@ class OpenAiAnswerAssessmentGeneratorTest {
 				),
 				new MicrometerAnswerAssessmentMetricsRecorder(
 					meterRegistry
+				),
+				new OpenAiAnswerAssessmentRateLimiter(
+					new OpenAiAnswerAssessmentRateLimitProperties(
+						400, 400_000, 3_000
+					),
+					ProviderRateLimitMetricsRecorder.NOOP,
+					TimeMeter.SYSTEM_NANOTIME
 				),
 				(task, delay) -> () -> {
 				},
