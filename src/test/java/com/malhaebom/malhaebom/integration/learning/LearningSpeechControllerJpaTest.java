@@ -1,5 +1,7 @@
 package com.malhaebom.malhaebom.integration.learning;
 
+import static com.malhaebom.malhaebom.support.SpeechAnswerTestQueries.findByRequestKey;
+
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -165,7 +167,7 @@ class LearningSpeechControllerJpaTest {
 		);
 		assertEquals(
 			SpeechProcessingStatus.PROCESSING,
-			speechAnswerRepository.findByRequestKey(REQUEST_KEY)
+			findByRequestKey(speechAnswerRepository, REQUEST_KEY)
 				.orElseThrow()
 				.getProcessingStatus()
 		);
@@ -186,8 +188,7 @@ class LearningSpeechControllerJpaTest {
 				"음성 변환이 완료되었습니다."
 			));
 
-		SpeechAnswer saved = speechAnswerRepository
-			.findByRequestKey(REQUEST_KEY)
+		SpeechAnswer saved = findByRequestKey(speechAnswerRepository, REQUEST_KEY)
 			.orElseThrow();
 		assertEquals(SpeechProcessingStatus.COMPLETED, saved.getProcessingStatus());
 		assertEquals("He is running.", saved.getTranscript());
@@ -258,7 +259,7 @@ class LearningSpeechControllerJpaTest {
 			.andExpect(status().isOk());
 		assertEquals(
 			SpeechProcessingStatus.COMPLETED,
-			speechAnswerRepository.findByRequestKey(REQUEST_KEY)
+			findByRequestKey(speechAnswerRepository, REQUEST_KEY)
 				.orElseThrow()
 				.getProcessingStatus()
 		);
@@ -283,8 +284,7 @@ class LearningSpeechControllerJpaTest {
 			.andExpect(jsonPath("$.errorCode")
 				.value("STT_PROCESSING_FAILED"));
 
-		SpeechAnswer failed = speechAnswerRepository
-			.findByRequestKey(REQUEST_KEY)
+		SpeechAnswer failed = findByRequestKey(speechAnswerRepository, REQUEST_KEY)
 			.orElseThrow();
 		assertEquals(SpeechProcessingStatus.FAILED, failed.getProcessingStatus());
 		assertEquals(
@@ -317,8 +317,7 @@ class LearningSpeechControllerJpaTest {
 			.andExpect(jsonPath("$.errorCode")
 				.value("STT_PROCESSING_TIMEOUT"));
 
-		SpeechAnswer failed = speechAnswerRepository
-			.findByRequestKey(REQUEST_KEY)
+		SpeechAnswer failed = findByRequestKey(speechAnswerRepository, REQUEST_KEY)
 			.orElseThrow();
 		assertEquals(1, transcriber.cancellationCount);
 		assertEquals(SpeechProcessingStatus.FAILED, failed.getProcessingStatus());
@@ -356,8 +355,7 @@ class LearningSpeechControllerJpaTest {
 			listener.onError(errorEvent);
 		}
 
-		SpeechAnswer failed = speechAnswerRepository
-			.findByRequestKey(REQUEST_KEY)
+		SpeechAnswer failed = findByRequestKey(speechAnswerRepository, REQUEST_KEY)
 			.orElseThrow();
 		assertEquals(1, transcriber.cancellationCount);
 		assertEquals(SpeechProcessingStatus.FAILED, failed.getProcessingStatus());

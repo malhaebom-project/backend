@@ -1,5 +1,7 @@
 package com.malhaebom.malhaebom.integration.learning;
 
+import static com.malhaebom.malhaebom.support.SpeechAnswerTestQueries.findByRequestKey;
+
 import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -187,8 +189,7 @@ class SpeechAnswerCoordinatorJpaTest {
 	}
 
 	private void assertFailed(String expectedMessage) {
-		SpeechAnswer saved = speechAnswerRepository
-			.findByRequestKey(REQUEST_KEY)
+		SpeechAnswer saved = findByRequestKey(speechAnswerRepository, REQUEST_KEY)
 			.orElseThrow();
 		assertEquals(SpeechProcessingStatus.FAILED, saved.getProcessingStatus());
 		assertEquals(expectedMessage, saved.getFailureMessage());

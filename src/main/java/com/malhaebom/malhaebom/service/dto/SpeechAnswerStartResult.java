@@ -67,10 +67,6 @@ public record SpeechAnswerStartResult(
 		);
 	}
 
-	public boolean isClaimed() {
-		return status == SpeechAnswerStartStatus.CLAIMED;
-	}
-
 	public boolean isProcessing() {
 		return status == SpeechAnswerStartStatus.PROCESSING;
 	}
