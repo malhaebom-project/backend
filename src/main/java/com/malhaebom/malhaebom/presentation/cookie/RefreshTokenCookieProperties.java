@@ -2,8 +2,10 @@ package com.malhaebom.malhaebom.presentation.cookie;
 
 import java.time.Duration;
 
+import lombok.Getter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+@Getter
 @ConfigurationProperties(prefix = "cookie.refresh-token")
 public class RefreshTokenCookieProperties extends CookieProperties {
 
@@ -21,7 +23,4 @@ public class RefreshTokenCookieProperties extends CookieProperties {
 		this.ttl = ttl;
 	}
 
-	public Duration getTtl() {
-		return ttl;
-	}
 }

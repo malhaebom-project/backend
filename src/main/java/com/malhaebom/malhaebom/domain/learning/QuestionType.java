@@ -1,5 +1,8 @@
 package com.malhaebom.malhaebom.domain.learning;
 
+import lombok.Getter;
+
+@Getter
 public enum QuestionType {
 
 	SHORT_ANSWER("단어 말하기"),
@@ -16,7 +19,4 @@ public enum QuestionType {
 		return name();
 	}
 
-	public String getName() {
-		return name;
-	}
 }

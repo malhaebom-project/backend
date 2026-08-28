@@ -1,5 +1,8 @@
 package com.malhaebom.malhaebom.presentation.cookie;
 
+import lombok.Getter;
+
+@Getter
 public class CookieProperties {
 
 	private final String path;
@@ -22,23 +25,4 @@ public class CookieProperties {
 		this.httpOnly = httpOnly;
 	}
 
-	public String getPath() {
-		return path;
-	}
-
-	public String getDomain() {
-		return domain;
-	}
-
-	public String getSameSite() {
-		return sameSite;
-	}
-
-	public boolean isSecure() {
-		return secure;
-	}
-
-	public boolean isHttpOnly() {
-		return httpOnly;
-	}
 }
