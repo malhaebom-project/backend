@@ -105,10 +105,6 @@ public record AnswerAssessment(
 		if (text == null || text.isBlank()) {
 			return null;
 		}
-
-		String normalized = text.strip();
-		return normalized.length() <= maximumLength
-			? normalized
-			: normalized.substring(0, maximumLength);
+		return text.strip().substring(0, maximumLength);
 	}
 }

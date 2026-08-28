@@ -383,8 +383,6 @@ public class AnswerSubmissionTransactionService {
 		if (message == null || message.isBlank()) {
 			message = exception.getClass().getSimpleName();
 		}
-		return message.length() <= 1000
-			? message
-			: message.substring(0, 1000);
+		return message.substring(0, 1000);
 	}
 }
