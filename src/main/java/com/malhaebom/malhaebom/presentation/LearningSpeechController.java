@@ -1,38 +1,30 @@
 package com.malhaebom.malhaebom.presentation;
 
-import java.io.IOException;
-import java.util.Locale;
-
-import org.springframework.http.InvalidMediaTypeException;
-import org.springframework.http.MediaType;
-import org.springframework.web.context.request.async.DeferredResult;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
-
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
+import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.SpeechAnswerResponse;
-import com.malhaebom.malhaebom.service.speech.SpeechAnswerCoordinator;
+import com.malhaebom.malhaebom.service.dto.LoginUser;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerRequest;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
-import com.malhaebom.malhaebom.service.dto.LoginUser;
-
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerCoordinator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.InvalidMediaTypeException;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.async.DeferredResult;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.Locale;
 
 @RestController
 @RequestMapping("/api/v1/learning-sessions")
 @RequiredArgsConstructor
 public class LearningSpeechController {
-
 	private static final long MAX_AUDIO_FILE_SIZE = 5L * 1024 * 1024;
 	private final SpeechAnswerCoordinator speechAnswerCoordinator;
 	private final SpeechRequestTimeout requestTimeout;
@@ -139,11 +131,7 @@ public class LearningSpeechController {
 		}
 	}
 
-	private boolean hasTypeAndSubtype(
-		MediaType mediaType,
-		String type,
-		String subtype
-	) {
+	private boolean hasTypeAndSubtype(MediaType mediaType, String type, String subtype) {
 		return type.equalsIgnoreCase(mediaType.getType())
 			&& subtype.equalsIgnoreCase(mediaType.getSubtype());
 	}
@@ -157,5 +145,4 @@ public class LearningSpeechController {
 			.toLowerCase(Locale.ROOT)
 			.replace(" ", "");
 	}
-
 }

@@ -1,32 +1,19 @@
 package com.malhaebom.malhaebom.presentation;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
-import com.malhaebom.malhaebom.service.port.QuestionImageUrlResolver;
-import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
-import com.malhaebom.malhaebom.presentation.dto.CreateLearningSessionRequest;
-import com.malhaebom.malhaebom.presentation.dto.CreateLearningSessionResponse;
-import com.malhaebom.malhaebom.presentation.dto.LearningSessionResponse;
-import com.malhaebom.malhaebom.presentation.dto.LearningSessionResultResponse;
-import com.malhaebom.malhaebom.presentation.dto.NextQuestionResponse;
+import com.malhaebom.malhaebom.presentation.dto.*;
 import com.malhaebom.malhaebom.service.LearningSessionService;
 import com.malhaebom.malhaebom.service.dto.LoginUser;
-
+import com.malhaebom.malhaebom.service.port.QuestionImageUrlResolver;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/learning-sessions")
 @RequiredArgsConstructor
 public class LearningSessionController {
-
 	private final LearningSessionService learningSessionService;
 	private final QuestionImageUrlResolver questionImageUrlResolver;
 

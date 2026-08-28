@@ -17,11 +17,7 @@ public record NextQuestionResponse(
 	String hintText,
 	String ttsUrl
 ) {
-
-	public static NextQuestionResponse from(
-		LearningSessionQuestion sessionQuestion,
-		String imageUrl
-	) {
+	public static NextQuestionResponse from(LearningSessionQuestion sessionQuestion, String imageUrl) {
 		LearningSession session = sessionQuestion.getLearningSession();
 		Question question = sessionQuestion.getQuestion();
 

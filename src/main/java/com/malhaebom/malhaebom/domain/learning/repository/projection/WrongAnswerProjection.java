@@ -3,7 +3,6 @@ package com.malhaebom.malhaebom.domain.learning.repository.projection;
 import java.time.LocalDateTime;
 
 public interface WrongAnswerProjection {
-
 	Long getAnswerId();
 
 	Long getQuestionId();

@@ -1,18 +1,25 @@
 package com.malhaebom.malhaebom.integration.learning;
 
-import static com.malhaebom.malhaebom.support.LearningSessionTestActions.completeCurrentQuestion;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.time.Clock;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
+import com.malhaebom.malhaebom.domain.User;
+import com.malhaebom.malhaebom.domain.child.ChildLevel;
+import com.malhaebom.malhaebom.domain.child.ChildProfile;
+import com.malhaebom.malhaebom.domain.child.repository.ChildProfileRepository;
+import com.malhaebom.malhaebom.domain.learning.*;
+import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
+import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
+import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
+import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
+import com.malhaebom.malhaebom.domain.repository.UserRepository;
+import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
+import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
+import com.malhaebom.malhaebom.infra.storage.image.DefaultQuestionImageUrlResolver;
+import com.malhaebom.malhaebom.infra.storage.image.QuestionImageProperties;
+import com.malhaebom.malhaebom.presentation.LearningRecordController;
+import com.malhaebom.malhaebom.presentation.auth.Auth;
+import com.malhaebom.malhaebom.service.ChildProfileService;
+import com.malhaebom.malhaebom.service.LearningRecordQueryService;
+import com.malhaebom.malhaebom.service.dto.LoginUser;
+import com.malhaebom.malhaebom.service.port.QuestionImageUrlResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -31,35 +38,18 @@ import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
-import com.malhaebom.malhaebom.domain.User;
-import com.malhaebom.malhaebom.domain.child.ChildLevel;
-import com.malhaebom.malhaebom.domain.child.ChildProfile;
-import com.malhaebom.malhaebom.domain.child.repository.ChildProfileRepository;
-import com.malhaebom.malhaebom.domain.learning.Answer;
-import com.malhaebom.malhaebom.domain.learning.AnswerEvaluation;
-import com.malhaebom.malhaebom.domain.learning.AnswerResult;
-import com.malhaebom.malhaebom.domain.learning.Difficulty;
-import com.malhaebom.malhaebom.domain.learning.LearningSession;
-import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
-import com.malhaebom.malhaebom.domain.learning.LearningTopic;
-import com.malhaebom.malhaebom.domain.learning.Question;
-import com.malhaebom.malhaebom.domain.learning.QuestionType;
-import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
-import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
-import com.malhaebom.malhaebom.domain.repository.UserRepository;
-import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
-import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
-import com.malhaebom.malhaebom.infra.storage.image.DefaultQuestionImageUrlResolver;
-import com.malhaebom.malhaebom.infra.storage.image.QuestionImageProperties;
-import com.malhaebom.malhaebom.presentation.LearningRecordController;
-import com.malhaebom.malhaebom.presentation.auth.Auth;
-import com.malhaebom.malhaebom.service.ChildProfileService;
-import com.malhaebom.malhaebom.service.LearningRecordQueryService;
-import com.malhaebom.malhaebom.service.dto.LoginUser;
-import com.malhaebom.malhaebom.service.port.QuestionImageUrlResolver;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+import static com.malhaebom.malhaebom.support.LearningSessionTestActions.completeCurrentQuestion;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @DataJpaTest
 @Import({
@@ -69,7 +59,6 @@ import com.malhaebom.malhaebom.service.port.QuestionImageUrlResolver;
 	LearningRecordControllerJpaTest.RecordTestConfiguration.class
 })
 class LearningRecordControllerJpaTest {
-
 	private static final String IMAGE_BASE_URL = "https://cdn.test";
 	private static final String IMAGE_PATH = "questions/boy-running.png";
 
@@ -496,10 +485,7 @@ class LearningRecordControllerJpaTest {
 		));
 	}
 
-	private void saveCanceledSession(
-		Long sessionChildId,
-		LocalDateTime completedAt
-	) {
+	private void saveCanceledSession(Long sessionChildId, LocalDateTime completedAt) {
 		LearningSession session = LearningSession.create(
 			sessionChildId,
 			LearningTopic.ANIMAL,
@@ -533,7 +519,6 @@ class LearningRecordControllerJpaTest {
 
 	@TestConfiguration
 	static class RecordTestConfiguration {
-
 		@Bean
 		Clock clock() {
 			return Clock.fixed(

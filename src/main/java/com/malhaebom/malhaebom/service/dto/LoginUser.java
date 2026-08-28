@@ -1,6 +1,3 @@
 package com.malhaebom.malhaebom.service.dto;
 
-public record LoginUser(
-	Long userId
-) {
-}
+public record LoginUser(Long userId) {}

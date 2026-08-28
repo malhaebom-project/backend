@@ -1,47 +1,7 @@
 package com.malhaebom.malhaebom.integration.learning;
 
-import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.doThrow;
-
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import jakarta.persistence.EntityManager;
-
-import com.malhaebom.malhaebom.domain.learning.Answer;
-import com.malhaebom.malhaebom.domain.learning.AnswerEvaluation;
-import com.malhaebom.malhaebom.domain.learning.AnswerResult;
-import com.malhaebom.malhaebom.domain.learning.AnswerSubmission;
-import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionStatus;
-import com.malhaebom.malhaebom.domain.learning.Difficulty;
-import com.malhaebom.malhaebom.domain.learning.LearningSession;
-import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
-import com.malhaebom.malhaebom.domain.learning.LearningTopic;
-import com.malhaebom.malhaebom.domain.learning.Question;
-import com.malhaebom.malhaebom.domain.learning.QuestionType;
-import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
-import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.AnswerSubmissionRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
+import com.malhaebom.malhaebom.domain.learning.*;
+import com.malhaebom.malhaebom.domain.learning.repository.*;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerSubmissionMetricsRecorder;
@@ -55,16 +15,35 @@ import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
 import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 import com.malhaebom.malhaebom.service.exception.AnswerAssessmentOverloadedException;
-import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 import com.malhaebom.malhaebom.service.policy.AnswerSubmissionPolicyProperties;
+import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
+
+import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.doThrow;
 
 @DataJpaTest
 @Import(JpaAuditingConfiguration.class)
 class LearningAnswerServiceJpaTest {
-
 	private static final String ANSWER_TEXT = "He is running.";
-	private static final String PREPARE_METRIC =
-		"malhaebom.answer.submission.prepare";
+	private static final String PREPARE_METRIC = "malhaebom.answer.submission.prepare";
 
 	@Autowired
 	private LearningSessionRepository learningSessionRepository;
@@ -755,8 +734,7 @@ class LearningAnswerServiceJpaTest {
 		);
 	}
 
-	private static final class TestAnswerAssessmentGenerator
-		implements AnswerAssessmentGenerator {
+	private static final class TestAnswerAssessmentGenerator implements AnswerAssessmentGenerator {
 
 		private CompletionStage<AnswerAssessment> stage;
 		private String answerText;

@@ -1,5 +1,12 @@
 package com.malhaebom.malhaebom.infra.observability;
 
+import com.malhaebom.malhaebom.global.concurrent.CompletionFailures;
+import com.openai.errors.OpenAIIoException;
+import com.openai.errors.OpenAIServiceException;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.stereotype.Component;
+
 import java.net.SocketTimeoutException;
 import java.net.http.HttpTimeoutException;
 import java.util.EnumMap;
@@ -7,27 +14,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
 
-import com.openai.errors.OpenAIIoException;
-import com.openai.errors.OpenAIServiceException;
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
-import org.springframework.stereotype.Component;
-
-import com.malhaebom.malhaebom.global.concurrent.CompletionFailures;
-
 @Component
 public class MicrometerOpenAiAnswerAssessmentMetricsRecorder
 	implements OpenAiAnswerAssessmentMetricsRecorder {
 
-	private static final String TOKEN_METRIC =
-		"malhaebom.openai.answer.assessment.tokens";
-	private static final String FAILURE_METRIC =
-		"malhaebom.openai.answer.assessment.failures";
+	private static final String TOKEN_METRIC = "malhaebom.openai.answer.assessment.tokens";
+	private static final String FAILURE_METRIC = "malhaebom.openai.answer.assessment.failures";
 
-	private final Map<TokenType, Counter> tokenCounters =
-		new EnumMap<>(TokenType.class);
-	private final Map<FailureReason, Counter> failureCounters =
-		new EnumMap<>(FailureReason.class);
+	private final Map<TokenType, Counter> tokenCounters = new EnumMap<>(TokenType.class);
+	private final Map<FailureReason, Counter> failureCounters = new EnumMap<>(FailureReason.class);
 
 	public MicrometerOpenAiAnswerAssessmentMetricsRecorder(
 		MeterRegistry meterRegistry

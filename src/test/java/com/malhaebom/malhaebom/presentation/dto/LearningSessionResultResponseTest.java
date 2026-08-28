@@ -1,24 +1,18 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
-import static com.malhaebom.malhaebom.support.LearningSessionTestActions.completeCurrentQuestion;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.malhaebom.malhaebom.domain.learning.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import com.malhaebom.malhaebom.domain.learning.Difficulty;
-import com.malhaebom.malhaebom.domain.learning.LearningSession;
-import com.malhaebom.malhaebom.domain.learning.LearningTopic;
-import com.malhaebom.malhaebom.domain.learning.Question;
-import com.malhaebom.malhaebom.domain.learning.QuestionType;
+import static com.malhaebom.malhaebom.support.LearningSessionTestActions.completeCurrentQuestion;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class LearningSessionResultResponseTest {
-
 	@Test
 	void 완료_응답은_기록된_시작과_완료_시각으로_학습_시간을_계산한다() {
 		LearningSession session = LearningSession.create(

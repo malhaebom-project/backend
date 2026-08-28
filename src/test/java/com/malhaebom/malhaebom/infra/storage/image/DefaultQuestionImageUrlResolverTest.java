@@ -1,14 +1,12 @@
 package com.malhaebom.malhaebom.infra.storage.image;
 
+import org.junit.jupiter.api.Test;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.jupiter.api.Test;
-
 class DefaultQuestionImageUrlResolverTest {
-
-	private static final String BASE_URL =
-		"https://assets.example.com";
+	private static final String BASE_URL = "https://assets.example.com";
 
 	@Test
 	void 상대_경로에_base_url을_붙인다() {

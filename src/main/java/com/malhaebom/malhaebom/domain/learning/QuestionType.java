@@ -1,7 +1,9 @@
 package com.malhaebom.malhaebom.domain.learning;
 
-public enum QuestionType {
+import lombok.Getter;
 
+@Getter
+public enum QuestionType {
 	SHORT_ANSWER("단어 말하기"),
 	PICTURE_DESCRIPTION("그림 보고 말하기"),
 	OPEN_SPEAKING("말로 설명하기");
@@ -14,9 +16,5 @@ public enum QuestionType {
 
 	public String getCode() {
 		return name();
-	}
-
-	public String getName() {
-		return name;
 	}
 }

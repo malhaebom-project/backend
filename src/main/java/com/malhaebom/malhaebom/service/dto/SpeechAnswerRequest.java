@@ -1,9 +1,9 @@
 package com.malhaebom.malhaebom.service.dto;
 
-import java.util.Objects;
-
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+
+import java.util.Objects;
 
 public record SpeechAnswerRequest(
 	Long userId,
@@ -12,7 +12,6 @@ public record SpeechAnswerRequest(
 	String requestKey,
 	SpeechAudio audio
 ) {
-
 	private static final int MAX_REQUEST_KEY_LENGTH = 100;
 
 	public SpeechAnswerRequest {

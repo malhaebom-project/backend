@@ -1,18 +1,13 @@
 package com.malhaebom.malhaebom.infra.observability;
 
+import com.malhaebom.malhaebom.service.port.AnswerSubmissionMetricsRecorder;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-
 import org.springframework.stereotype.Component;
 
-import com.malhaebom.malhaebom.service.port.AnswerSubmissionMetricsRecorder;
-
 @Component
-public class MicrometerAnswerSubmissionMetricsRecorder
-	implements AnswerSubmissionMetricsRecorder {
-
-	private static final String PREPARE_METRIC =
-		"malhaebom.answer.submission.prepare";
+public class MicrometerAnswerSubmissionMetricsRecorder implements AnswerSubmissionMetricsRecorder {
+	private static final String PREPARE_METRIC = "malhaebom.answer.submission.prepare";
 
 	private final Counter newSubmissions;
 	private final Counter cachedSubmissions;
@@ -20,9 +15,7 @@ public class MicrometerAnswerSubmissionMetricsRecorder
 	private final Counter retriedSubmissions;
 	private final Counter reclaimedSubmissions;
 
-	public MicrometerAnswerSubmissionMetricsRecorder(
-		MeterRegistry meterRegistry
-	) {
+	public MicrometerAnswerSubmissionMetricsRecorder(MeterRegistry meterRegistry) {
 		newSubmissions = prepareCounter(meterRegistry, "new");
 		cachedSubmissions = prepareCounter(meterRegistry, "cached");
 		processingSubmissions = prepareCounter(meterRegistry, "processing");

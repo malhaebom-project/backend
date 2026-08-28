@@ -1,14 +1,12 @@
 package com.malhaebom.malhaebom.service.dto;
 
+import com.malhaebom.malhaebom.domain.learning.AnswerResult;
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.junit.jupiter.api.Test;
-
-import com.malhaebom.malhaebom.domain.learning.AnswerResult;
-
 class AnswerAssessmentTest {
-
 	@Test
 	void 세부_점수의_합계와_정답_결과를_계산한다() {
 		AnswerAssessment assessment = new AnswerAssessment(

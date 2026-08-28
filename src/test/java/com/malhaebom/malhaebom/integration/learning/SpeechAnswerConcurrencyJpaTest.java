@@ -1,55 +1,5 @@
 package com.malhaebom.malhaebom.integration.learning;
 
-import static com.malhaebom.malhaebom.support.SpeechAnswerTestQueries.findByRequestKey;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.sql.Timestamp;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import io.github.bucket4j.TimeMeter;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.http.HttpStatus;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
-
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 import com.malhaebom.malhaebom.domain.learning.SpeechProcessingStatus;
@@ -61,30 +11,59 @@ import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.async.AsyncConfiguration;
 import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
-import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
+import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.infra.speech.GoogleSpeechRateLimitProperties;
-import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
 import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionRateLimiter;
 import com.malhaebom.malhaebom.presentation.LearningSpeechController;
 import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
-import com.malhaebom.malhaebom.service.speech.InFlightSpeechAnswerRegistry;
-import com.malhaebom.malhaebom.service.speech.SpeechAnswerLifecycle;
-import com.malhaebom.malhaebom.service.speech.SpeechAnswerCoordinator;
-import com.malhaebom.malhaebom.service.speech.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerRequest;
-import com.malhaebom.malhaebom.service.dto.SpeechAudio;
-import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
-import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
-import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
-import com.malhaebom.malhaebom.service.port.SpeechTranscriptionRateLimit;
+import com.malhaebom.malhaebom.service.dto.*;
 import com.malhaebom.malhaebom.service.policy.SpeechProcessingLease;
 import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
+import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
+import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import com.malhaebom.malhaebom.service.port.SpeechTranscriptionRateLimit;
+import com.malhaebom.malhaebom.service.speech.InFlightSpeechAnswerRegistry;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerCoordinator;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerLifecycle;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.support.StubLoginUserArgumentResolver;
+import io.github.bucket4j.TimeMeter;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.malhaebom.malhaebom.support.SpeechAnswerTestQueries.findByRequestKey;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @DataJpaTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -97,11 +76,9 @@ import com.malhaebom.malhaebom.support.StubLoginUserArgumentResolver;
 	SpeechAnswerConcurrencyJpaTest.SpeechTestConfiguration.class
 })
 class SpeechAnswerConcurrencyJpaTest {
-
 	private static final int MAX_CONCURRENT_REQUESTS = 8;
 	private static final String ENDPOINT =
-		"/api/v1/learning-sessions/{sessionId}/questions/"
-			+ "{sessionQuestionId}/speech";
+		"/api/v1/learning-sessions/{sessionId}/questions/{sessionQuestionId}/speech";
 	private static final SpeechAudio AUDIO = new SpeechAudio(
 		new byte[] {1, 2, 3},
 		"audio/webm"
@@ -692,16 +669,12 @@ class SpeechAnswerConcurrencyJpaTest {
 		}
 	}
 
-	private static final class ControllableSpeechTranscriber
-		implements SpeechTranscriber {
+	private static final class ControllableSpeechTranscriber implements SpeechTranscriber {
 
-		private final List<CompletableFuture<SpeechTranscriptionResult>> requests =
-			new CopyOnWriteArrayList<>();
+		private final List<CompletableFuture<SpeechTranscriptionResult>> requests = new CopyOnWriteArrayList<>();
 		private final AtomicInteger cancellations = new AtomicInteger();
-		private volatile CountDownLatch cancellationStarted =
-			new CountDownLatch(0);
-		private volatile CountDownLatch allowCancellation =
-			new CountDownLatch(0);
+		private volatile CountDownLatch cancellationStarted = new CountDownLatch(0);
+		private volatile CountDownLatch allowCancellation = new CountDownLatch(0);
 
 		void reset() {
 			releaseCancellation();
@@ -754,12 +727,8 @@ class SpeechAnswerConcurrencyJpaTest {
 		}
 
 		@Override
-		public SpeechTranscriptionTask transcribeAsync(
-			SpeechAudio audio,
-			List<String> adaptationPhrases
-		) {
-			CompletableFuture<SpeechTranscriptionResult> result =
-				new CompletableFuture<>();
+		public SpeechTranscriptionTask transcribeAsync(SpeechAudio audio, List<String> adaptationPhrases) {
+			CompletableFuture<SpeechTranscriptionResult> result = new CompletableFuture<>();
 			requests.add(result);
 			return new SpeechTranscriptionTask(
 				result,

@@ -1,13 +1,7 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
 import com.malhaebom.malhaebom.domain.child.ChildLevel;
-
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
 public record CreateChildProfileRequest(
 	@NotBlank(message = "별명은 필수입니다.")
@@ -23,5 +17,4 @@ public record CreateChildProfileRequest(
 
 	@NotNull(message = "영어 단계는 필수입니다.")
 	ChildLevel level
-) {
-}
+) {}

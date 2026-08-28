@@ -13,11 +13,7 @@ public record ChildProfileResponse(
 	long totalStudyCount,
 	double totalCorrectRate
 ) {
-
-	public static ChildProfileResponse from(
-		ChildProfile profile,
-		ChildStatistics statistics
-	) {
+	public static ChildProfileResponse from(ChildProfile profile, ChildStatistics statistics) {
 		return new ChildProfileResponse(
 			profile.getId(),
 			profile.getNickname(),

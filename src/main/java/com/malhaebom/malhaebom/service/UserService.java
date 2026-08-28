@@ -1,20 +1,17 @@
 package com.malhaebom.malhaebom.service;
 
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.malhaebom.malhaebom.domain.User;
 import com.malhaebom.malhaebom.domain.repository.UserRepository;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
-
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
 

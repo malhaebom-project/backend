@@ -1,16 +1,14 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-
-import org.springframework.format.annotation.DateTimeFormat;
-
 import com.malhaebom.malhaebom.global.time.LearningTime;
-
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.PositiveOrZero;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public record LearningHistoryRequest(
 	@PositiveOrZero(message = "페이지 번호는 0 이상이어야 합니다.")

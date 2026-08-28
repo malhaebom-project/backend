@@ -2,12 +2,7 @@ package com.malhaebom.malhaebom.service.dto;
 
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 
-public record SpeechAnswerResult(
-	Long speechAnswerId,
-	String transcript,
-	Double confidence
-) {
-
+public record SpeechAnswerResult(Long speechAnswerId, String transcript, Double confidence) {
 	public static SpeechAnswerResult from(SpeechAnswer speechAnswer) {
 		return new SpeechAnswerResult(
 			speechAnswer.getId(),

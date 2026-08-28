@@ -1,25 +1,10 @@
 package com.malhaebom.malhaebom.loadtest;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.malhaebom.malhaebom.domain.User;
 import com.malhaebom.malhaebom.domain.child.ChildLevel;
 import com.malhaebom.malhaebom.domain.child.ChildProfile;
 import com.malhaebom.malhaebom.domain.child.repository.ChildProfileRepository;
-import com.malhaebom.malhaebom.domain.learning.Difficulty;
-import com.malhaebom.malhaebom.domain.learning.LearningSession;
-import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
-import com.malhaebom.malhaebom.domain.learning.LearningTopic;
-import com.malhaebom.malhaebom.domain.learning.Question;
-import com.malhaebom.malhaebom.domain.learning.QuestionType;
-import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
+import com.malhaebom.malhaebom.domain.learning.*;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
@@ -28,13 +13,19 @@ import com.malhaebom.malhaebom.infra.auth.jwt.JwtProperties;
 import com.malhaebom.malhaebom.infra.auth.jwt.JwtProvider;
 import com.malhaebom.malhaebom.loadtest.AnswerSubmissionLoadFixtureManifest.Fixture;
 import com.malhaebom.malhaebom.loadtest.AnswerSubmissionLoadFixtureManifest.StageFixtures;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 @Service
 public class AnswerSubmissionLoadFixtureService {
-
 	private static final String TRANSCRIPT = "He is running.";
-	private static final String OWNER_EMAIL =
-		"loadtest-answer@malhaebom.invalid";
+	private static final String OWNER_EMAIL = "loadtest-answer@malhaebom.invalid";
 	private static final String CHILD_NICKNAME = "load-test";
 
 	private final UserRepository userRepository;
@@ -67,10 +58,7 @@ public class AnswerSubmissionLoadFixtureService {
 	}
 
 	@Transactional
-	public AnswerSubmissionLoadFixtureManifest seed(
-		String runId,
-		List<Integer> stages
-	) {
+	public AnswerSubmissionLoadFixtureManifest seed(String runId, List<Integer> stages) {
 		validateRunId(runId);
 		validateStages(stages);
 		User owner = userRepository.findByEmail(OWNER_EMAIL)

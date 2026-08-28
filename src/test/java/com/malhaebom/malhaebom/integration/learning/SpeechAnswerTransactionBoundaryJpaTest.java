@@ -1,22 +1,29 @@
 package com.malhaebom.malhaebom.integration.learning;
 
-import static com.malhaebom.malhaebom.support.SpeechAnswerTestQueries.findByRequestKey;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-
-import javax.sql.DataSource;
-
+import com.malhaebom.malhaebom.domain.learning.LearningSession;
+import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
+import com.malhaebom.malhaebom.domain.learning.SpeechProcessingStatus;
+import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
+import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
+import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
+import com.malhaebom.malhaebom.infra.async.AsyncConfiguration;
+import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
+import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
+import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
+import com.malhaebom.malhaebom.infra.speech.GoogleSpeechRateLimitProperties;
+import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionRateLimiter;
+import com.malhaebom.malhaebom.service.ChildProfileService;
+import com.malhaebom.malhaebom.service.dto.*;
+import com.malhaebom.malhaebom.service.policy.SpeechProcessingLease;
+import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
+import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
+import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import com.malhaebom.malhaebom.service.speech.InFlightSpeechAnswerRegistry;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerCoordinator;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerLifecycle;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerStateService;
+import com.zaxxer.hikari.HikariDataSource;
 import io.github.bucket4j.TimeMeter;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,41 +33,22 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import com.zaxxer.hikari.HikariDataSource;
-import com.malhaebom.malhaebom.domain.learning.LearningSession;
-import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
-import com.malhaebom.malhaebom.domain.learning.SpeechProcessingStatus;
-import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
-import com.malhaebom.malhaebom.infra.async.AsyncConfiguration;
-import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
-import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
-import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
-import com.malhaebom.malhaebom.infra.speech.GoogleSpeechRateLimitProperties;
-import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
-import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionRateLimiter;
-import com.malhaebom.malhaebom.service.speech.InFlightSpeechAnswerRegistry;
-import com.malhaebom.malhaebom.service.speech.SpeechAnswerLifecycle;
-import com.malhaebom.malhaebom.service.speech.SpeechAnswerCoordinator;
-import com.malhaebom.malhaebom.service.speech.SpeechAnswerStateService;
-import com.malhaebom.malhaebom.service.ChildProfileService;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerRequest;
-import com.malhaebom.malhaebom.service.dto.SpeechAudio;
-import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
-import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
-import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
-import com.malhaebom.malhaebom.service.policy.SpeechProcessingLease;
-import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
+import javax.sql.DataSource;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+
+import static com.malhaebom.malhaebom.support.SpeechAnswerTestQueries.findByRequestKey;
+import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -79,9 +67,7 @@ import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
 	SpeechAnswerTransactionBoundaryJpaTest.SpeechTestConfiguration.class
 })
 class SpeechAnswerTransactionBoundaryJpaTest {
-
-	private static final String REQUEST_KEY =
-		"speech-transaction-boundary-request";
+	private static final String REQUEST_KEY = "speech-transaction-boundary-request";
 	private static final SpeechAudio AUDIO = new SpeechAudio(
 		new byte[] {1, 2, 3},
 		"audio/webm"
@@ -220,8 +206,7 @@ class SpeechAnswerTransactionBoundaryJpaTest {
 		}
 	}
 
-	private static final class TestSpeechTranscriber
-		implements SpeechTranscriber {
+	private static final class TestSpeechTranscriber implements SpeechTranscriber {
 
 		private final List<Boolean> transactionStates = new ArrayList<>();
 		private CompletableFuture<SpeechTranscriptionResult> result;
@@ -245,10 +230,7 @@ class SpeechAnswerTransactionBoundaryJpaTest {
 		}
 
 		@Override
-		public SpeechTranscriptionTask transcribeAsync(
-			SpeechAudio audio,
-			List<String> adaptationPhrases
-		) {
+		public SpeechTranscriptionTask transcribeAsync(SpeechAudio audio, List<String> adaptationPhrases) {
 			transactionStates.add(TransactionSynchronizationManager
 				.isActualTransactionActive());
 			return new SpeechTranscriptionTask(

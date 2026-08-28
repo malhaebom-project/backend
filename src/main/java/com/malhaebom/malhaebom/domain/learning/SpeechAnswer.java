@@ -1,27 +1,14 @@
 package com.malhaebom.malhaebom.domain.learning;
 
-import java.time.Instant;
-import java.util.Objects;
-import java.util.UUID;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
-
+import com.malhaebom.malhaebom.domain.BaseEntity;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import com.malhaebom.malhaebom.domain.BaseEntity;
+import java.time.Instant;
+import java.util.Objects;
+import java.util.UUID;
 
 @Entity
 @Table(
@@ -78,11 +65,7 @@ public class SpeechAnswer extends BaseEntity {
 	@Column(name = "lease_expires_at")
 	private Instant leaseExpiresAt;
 
-	public static SpeechAnswer start(
-		LearningSessionQuestion sessionQuestion,
-		String requestKey,
-		int recordingNo
-	) {
+	public static SpeechAnswer start(LearningSessionQuestion sessionQuestion, String requestKey, int recordingNo) {
 		Instant claimedAt = Instant.now();
 		return start(
 			sessionQuestion,
@@ -115,11 +98,7 @@ public class SpeechAnswer extends BaseEntity {
 		return speechAnswer;
 	}
 
-	public void reclaim(
-		String processingToken,
-		Instant claimedAt,
-		Instant leaseExpiresAt
-	) {
+	public void reclaim(String processingToken, Instant claimedAt, Instant leaseExpiresAt) {
 		validateLease(processingToken, claimedAt, leaseExpiresAt);
 		if (!isLeaseExpiredAt(claimedAt)) {
 			throw new IllegalStateException("처리 임대가 만료된 음성 답변만 회수할 수 있습니다.");
@@ -131,20 +110,11 @@ public class SpeechAnswer extends BaseEntity {
 		sttProvider = null;
 	}
 
-	public void complete(
-		String transcript,
-		Double confidence,
-		String sttProvider
-	) {
+	public void complete(String transcript, Double confidence, String sttProvider) {
 		complete(processingToken, transcript, confidence, sttProvider);
 	}
 
-	public void complete(
-		String processingToken,
-		String transcript,
-		Double confidence,
-		String sttProvider
-	) {
+	public void complete(String processingToken, String transcript, Double confidence, String sttProvider) {
 		validateProcessingToken(processingToken);
 		validateTranscript(transcript);
 		validateConfidence(confidence);
@@ -163,11 +133,7 @@ public class SpeechAnswer extends BaseEntity {
 		fail(processingToken, failureMessage, sttProvider);
 	}
 
-	public void fail(
-		String processingToken,
-		String failureMessage,
-		String sttProvider
-	) {
+	public void fail(String processingToken, String failureMessage, String sttProvider) {
 		validateProcessingToken(processingToken);
 
 		this.failureMessage = failureMessage;
@@ -223,33 +189,20 @@ public class SpeechAnswer extends BaseEntity {
 		}
 	}
 
-	private static void validateLease(
-		String processingToken,
-		Instant claimedAt,
-		Instant leaseExpiresAt
-	) {
+	private static void validateLease(String processingToken, Instant claimedAt, Instant leaseExpiresAt) {
 		validateText(
 			processingToken,
 			MAX_PROCESSING_TOKEN_LENGTH,
 			"처리 토큰"
 		);
 		Objects.requireNonNull(claimedAt, "선점 시각은 null일 수 없습니다.");
-		Objects.requireNonNull(
-			leaseExpiresAt,
-			"처리 임대 만료 시각은 null일 수 없습니다."
-		);
+		Objects.requireNonNull(leaseExpiresAt, "처리 임대 만료 시각은 null일 수 없습니다.");
 		if (!leaseExpiresAt.isAfter(claimedAt)) {
-			throw new IllegalArgumentException(
-				"처리 임대 만료 시각은 선점 시각보다 이후여야 합니다."
-			);
+			throw new IllegalArgumentException("처리 임대 만료 시각은 선점 시각보다 이후여야 합니다.");
 		}
 	}
 
-	private static void validateStart(
-		LearningSessionQuestion sessionQuestion,
-		String requestKey,
-		int recordingNo
-	) {
+	private static void validateStart(LearningSessionQuestion sessionQuestion, String requestKey, int recordingNo) {
 		if (sessionQuestion == null) {
 			throw new IllegalArgumentException("세션 문제는 null일 수 없습니다.");
 		}
@@ -285,11 +238,7 @@ public class SpeechAnswer extends BaseEntity {
 		validateText(sttProvider, 50, "STT 제공자");
 	}
 
-	private static void validateText(
-		String value,
-		int maximumLength,
-		String fieldName
-	) {
+	private static void validateText(String value, int maximumLength, String fieldName) {
 		if (value == null || value.isBlank()) {
 			throw new IllegalArgumentException(fieldName + "는 비어 있을 수 없습니다.");
 		}

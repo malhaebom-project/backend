@@ -1,5 +1,20 @@
 package com.malhaebom.malhaebom.service.speech;
 
+import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.service.dto.*;
+import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
+import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy.Permit;
+import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import com.malhaebom.malhaebom.service.port.SpeechTranscriptionRateLimit;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -7,33 +22,9 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-
-import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
-import com.malhaebom.malhaebom.global.exception.ApiException;
-import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerRequest;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
-import com.malhaebom.malhaebom.service.dto.SpeechAudio;
-import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
-import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
-import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
-import com.malhaebom.malhaebom.service.port.SpeechTranscriptionRateLimit;
-import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
-import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy.Permit;
-
-import lombok.extern.slf4j.Slf4j;
-
 @Service
 @Slf4j
 public class SpeechAnswerCoordinator {
-
 	private final SpeechAnswerStateService stateService;
 	private final SpeechTranscriber transcriber;
 	private final Executor completionExecutor;
@@ -102,11 +93,7 @@ public class SpeechAnswerCoordinator {
 		});
 	}
 
-	private SpeechAnswerTask startClaimed(
-		SpeechAnswerStartResult startResult,
-		SpeechAudio audio,
-		long startedAt
-	) {
+	private SpeechAnswerTask startClaimed(SpeechAnswerStartResult startResult, SpeechAudio audio, long startedAt) {
 		SpeechAnswer started = startResult.speechAnswer();
 		String provider = transcriber.provider();
 		Permit permit = concurrencyPolicy.tryAcquire();
@@ -160,10 +147,7 @@ public class SpeechAnswerCoordinator {
 		return task;
 	}
 
-	private SpeechAnswerTask completed(
-		SpeechAnswer speechAnswer,
-		long startedAt
-	) {
+	private SpeechAnswerTask completed(SpeechAnswer speechAnswer, long startedAt) {
 		log.info(
 			"event=stt_completed cached=true duration_ms={} active={} limit={}",
 			elapsedMillis(startedAt),
@@ -199,11 +183,7 @@ public class SpeechAnswerCoordinator {
 		return new SpeechAnswerTask(result, () -> false);
 	}
 
-	private SpeechAnswerTask transcribeAndComplete(
-		SpeechAnswerStartResult startResult,
-		SpeechAudio audio,
-		String provider
-	) {
+	private SpeechAnswerTask transcribeAndComplete(SpeechAnswerStartResult startResult, SpeechAudio audio, String provider) {
 		CompletableFuture<SpeechAnswerResult> result = new CompletableFuture<>();
 		AtomicBoolean terminal = new AtomicBoolean();
 		SpeechTranscriptionTask transcription = Objects.requireNonNull(
@@ -238,11 +218,7 @@ public class SpeechAnswerCoordinator {
 		);
 	}
 
-	private void failClaimed(
-		SpeechAnswerStartResult startResult,
-		String provider,
-		RuntimeException exception
-	) {
+	private void failClaimed(SpeechAnswerStartResult startResult, String provider, RuntimeException exception) {
 		try {
 			stateService.fail(
 				startResult.speechAnswer().getId(),

@@ -1,15 +1,14 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
-import java.util.Set;
-
 import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningTopic;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.service.dto.AdminQuestionCommand;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+
+import java.util.Set;
 
 public record AdminQuestionRequest(
 	@NotNull LearningTopic topic,
@@ -44,7 +43,6 @@ public record AdminQuestionRequest(
 	@Size(max = 500)
 	String hintText
 ) {
-
 	public AdminQuestionCommand toCommand() {
 		return new AdminQuestionCommand(
 			topic,

@@ -1,33 +1,28 @@
 package com.malhaebom.malhaebom.integration.learning;
 
-import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.util.List;
-import java.util.Set;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.context.annotation.Import;
-
 import com.malhaebom.malhaebom.domain.User;
 import com.malhaebom.malhaebom.domain.child.ChildLevel;
 import com.malhaebom.malhaebom.domain.child.ChildProfile;
 import com.malhaebom.malhaebom.domain.child.repository.ChildProfileRepository;
-import com.malhaebom.malhaebom.domain.learning.Difficulty;
-import com.malhaebom.malhaebom.domain.learning.LearningSession;
-import com.malhaebom.malhaebom.domain.learning.LearningTopic;
-import com.malhaebom.malhaebom.domain.learning.Question;
-import com.malhaebom.malhaebom.domain.learning.QuestionType;
+import com.malhaebom.malhaebom.domain.learning.*;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
 import com.malhaebom.malhaebom.domain.repository.UserRepository;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
-import com.malhaebom.malhaebom.service.LearningSessionService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
+import com.malhaebom.malhaebom.service.LearningSessionService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.context.annotation.Import;
+
+import java.util.List;
+import java.util.Set;
+
+import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @Import({
@@ -36,7 +31,6 @@ import com.malhaebom.malhaebom.service.ChildProfileService;
 	JpaAuditingConfiguration.class
 })
 class LearningSessionServiceJpaTest {
-
 	@Autowired
 	private LearningSessionService learningSessionService;
 	@Autowired
@@ -209,11 +203,7 @@ class LearningSessionServiceJpaTest {
 		);
 	}
 
-	private Question question(
-		String questionText,
-		Difficulty difficulty,
-		QuestionType type
-	) {
+	private Question question(String questionText, Difficulty difficulty, QuestionType type) {
 		return Question.create(
 			LearningTopic.ANIMAL,
 			difficulty,

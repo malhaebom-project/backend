@@ -1,17 +1,15 @@
 package com.malhaebom.malhaebom.infra.speech;
 
-import java.time.Duration;
-import java.util.Objects;
-
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
-import io.github.bucket4j.TimeMeter;
-
-import org.springframework.stereotype.Component;
-
 import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
 import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder.Result;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriptionRateLimit;
+import io.github.bucket4j.Bandwidth;
+import io.github.bucket4j.Bucket;
+import io.github.bucket4j.TimeMeter;
+import org.springframework.stereotype.Component;
+
+import java.time.Duration;
+import java.util.Objects;
 
 @Component
 public class SpeechTranscriptionRateLimiter

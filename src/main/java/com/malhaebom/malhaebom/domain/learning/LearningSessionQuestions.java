@@ -1,21 +1,16 @@
 package com.malhaebom.malhaebom.domain.learning;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Embeddable;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OrderBy;
-
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 @Embeddable
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class LearningSessionQuestions {
-
 	@OneToMany(
 		mappedBy = "learningSession",
 		cascade = CascadeType.ALL,
@@ -91,7 +86,7 @@ public class LearningSessionQuestions {
 			throw new IllegalArgumentException("학습 세션에는 문제가 한 개 이상 필요합니다.");
 		}
 
-		if (questions.stream().anyMatch(question -> question == null)) {
+		if (questions.stream().anyMatch(Objects::isNull)) {
 			throw new IllegalArgumentException("문제는 null일 수 없습니다.");
 		}
 

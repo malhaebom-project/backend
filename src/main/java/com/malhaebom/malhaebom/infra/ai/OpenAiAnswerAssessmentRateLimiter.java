@@ -1,21 +1,18 @@
 package com.malhaebom.malhaebom.infra.ai;
 
-import java.time.Duration;
-import java.util.Objects;
-
+import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
+import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder.Result;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.ConsumptionProbe;
 import io.github.bucket4j.TimeMeter;
-
 import org.springframework.stereotype.Component;
 
-import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
-import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder.Result;
+import java.time.Duration;
+import java.util.Objects;
 
 @Component
 public class OpenAiAnswerAssessmentRateLimiter {
-
 	static final String PROVIDER = "openai";
 
 	private final Bucket requestBucket;
@@ -84,7 +81,6 @@ public class OpenAiAnswerAssessmentRateLimiter {
 	}
 
 	record AcquireResult(boolean allowed, Duration retryAfter) {
-
 		static AcquireResult admitted() {
 			return new AcquireResult(true, Duration.ZERO);
 		}

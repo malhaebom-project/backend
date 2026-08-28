@@ -4,9 +4,7 @@ import java.time.Duration;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-final class ExecutorAnswerAssessmentQueueTimeoutScheduler
-	implements AnswerAssessmentQueueTimeoutScheduler, AutoCloseable {
-
+final class ExecutorAnswerAssessmentQueueTimeoutScheduler implements AnswerAssessmentQueueTimeoutScheduler, AutoCloseable {
 	private final ScheduledThreadPoolExecutor executor;
 
 	ExecutorAnswerAssessmentQueueTimeoutScheduler() {

@@ -1,13 +1,12 @@
 package com.malhaebom.malhaebom.service.dto;
 
-import java.util.Objects;
-
 import com.malhaebom.malhaebom.service.policy.AnswerSubmissionDeadline;
+
+import java.util.Objects;
 
 public sealed interface AnswerSubmissionPreparation
 	permits AnswerSubmissionPreparation.Processing,
-	AnswerSubmissionPreparation.Completed {
-
+			AnswerSubmissionPreparation.Completed {
 	Long submissionId();
 
 	static Processing processing(
@@ -24,10 +23,7 @@ public sealed interface AnswerSubmissionPreparation
 		);
 	}
 
-	static Completed completed(
-		Long submissionId,
-		AnswerSubmissionResult result
-	) {
+	static Completed completed(Long submissionId, AnswerSubmissionResult result) {
 		return new Completed(submissionId, result);
 	}
 
@@ -37,7 +33,6 @@ public sealed interface AnswerSubmissionPreparation
 		AnswerAssessmentInput assessmentInput,
 		AnswerSubmissionDeadline deadline
 	) implements AnswerSubmissionPreparation {
-
 		public Processing {
 			Objects.requireNonNull(submissionId, "답변 제출 예약 ID는 null일 수 없습니다.");
 			if (processingToken == null || processingToken.isBlank()) {
@@ -48,11 +43,7 @@ public sealed interface AnswerSubmissionPreparation
 		}
 	}
 
-	record Completed(
-		Long submissionId,
-		AnswerSubmissionResult result
-	) implements AnswerSubmissionPreparation {
-
+	record Completed(Long submissionId, AnswerSubmissionResult result) implements AnswerSubmissionPreparation {
 		public Completed {
 			Objects.requireNonNull(submissionId, "답변 제출 예약 ID는 null일 수 없습니다.");
 			Objects.requireNonNull(result, "완료된 답변 결과는 null일 수 없습니다.");

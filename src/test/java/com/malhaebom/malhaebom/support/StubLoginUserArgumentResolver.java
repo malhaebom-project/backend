@@ -1,17 +1,14 @@
 package com.malhaebom.malhaebom.support;
 
+import com.malhaebom.malhaebom.presentation.auth.Auth;
+import com.malhaebom.malhaebom.service.dto.LoginUser;
 import org.springframework.core.MethodParameter;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
-import com.malhaebom.malhaebom.presentation.auth.Auth;
-import com.malhaebom.malhaebom.service.dto.LoginUser;
-
-public class StubLoginUserArgumentResolver
-	implements HandlerMethodArgumentResolver {
-
+public class StubLoginUserArgumentResolver implements HandlerMethodArgumentResolver {
 	private final Long userId;
 
 	public StubLoginUserArgumentResolver(Long userId) {

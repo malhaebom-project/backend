@@ -1,12 +1,5 @@
 package com.malhaebom.malhaebom.service;
 
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.malhaebom.malhaebom.domain.User;
 import com.malhaebom.malhaebom.domain.child.ChildLevel;
 import com.malhaebom.malhaebom.domain.child.ChildProfile;
@@ -18,13 +11,17 @@ import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.service.dto.ChildProfileResult;
 import com.malhaebom.malhaebom.service.dto.ChildStatistics;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ChildProfileService {
-
 	private final UserRepository userRepository;
 	private final ChildProfileRepository childProfileRepository;
 	private final LearningSessionRepository learningSessionRepository;

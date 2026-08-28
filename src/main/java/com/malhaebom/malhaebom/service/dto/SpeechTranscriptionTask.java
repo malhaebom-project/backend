@@ -6,7 +6,6 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.BooleanSupplier;
 
 public final class SpeechTranscriptionTask {
-
 	private final CompletionStage<SpeechTranscriptionResult> result;
 	private final BooleanSupplier cancellation;
 

@@ -5,5 +5,4 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableConfigurationProperties(QuestionImageProperties.class)
-public class QuestionImageConfiguration {
-}
+public class QuestionImageConfiguration {}

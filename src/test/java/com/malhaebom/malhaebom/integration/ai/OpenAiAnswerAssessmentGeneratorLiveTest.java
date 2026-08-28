@@ -1,18 +1,13 @@
 package com.malhaebom.malhaebom.integration.ai;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.mockito.Mockito.mock;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.List;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.malhaebom.malhaebom.domain.learning.AnswerResult;
+import com.malhaebom.malhaebom.domain.learning.Difficulty;
+import com.malhaebom.malhaebom.domain.learning.QuestionType;
+import com.malhaebom.malhaebom.infra.ai.OpenAiAnswerAssessmentGenerator;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
+import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -23,13 +18,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.malhaebom.malhaebom.domain.learning.AnswerResult;
-import com.malhaebom.malhaebom.domain.learning.Difficulty;
-import com.malhaebom.malhaebom.domain.learning.QuestionType;
-import com.malhaebom.malhaebom.infra.ai.OpenAiAnswerAssessmentGenerator;
-import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
-import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
-import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 /**
  * 실제 OpenAI 답변 평가 테스트입니다.
@@ -45,10 +41,8 @@ import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 @ActiveProfiles("test")
 @Import(OpenAiAnswerAssessmentGeneratorLiveTest.SpeechTestConfiguration.class)
 class OpenAiAnswerAssessmentGeneratorLiveTest {
-
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-	private static final String CASES_RESOURCE =
-		"answer-assessment-live-cases.json";
+	private static final String CASES_RESOURCE = "answer-assessment-live-cases.json";
 	private static final List<String> STT_FORMATTING_ADVICE_TERMS = List.of(
 		"대문자",
 		"소문자",
@@ -254,7 +248,6 @@ class OpenAiAnswerAssessmentGeneratorLiveTest {
 
 	@TestConfiguration(proxyBeanMethods = false)
 	static class SpeechTestConfiguration {
-
 		@Bean
 		SpeechTranscriber speechTranscriber() {
 			return mock(SpeechTranscriber.class);

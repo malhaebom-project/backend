@@ -1,9 +1,9 @@
 package com.malhaebom.malhaebom.service.dto;
 
+import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
+
 import java.util.List;
 import java.util.Objects;
-
-import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
 
 public record SpeechAnswerStartResult(
 	SpeechAnswer speechAnswer,
@@ -11,7 +11,6 @@ public record SpeechAnswerStartResult(
 	SpeechAnswerStartStatus status,
 	String processingToken
 ) {
-
 	public SpeechAnswerStartResult {
 		Objects.requireNonNull(
 			speechAnswer,

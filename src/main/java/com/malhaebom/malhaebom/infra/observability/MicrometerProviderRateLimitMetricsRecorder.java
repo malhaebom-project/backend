@@ -1,30 +1,25 @@
 package com.malhaebom.malhaebom.infra.observability;
 
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.stereotype.Component;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongSupplier;
 
-import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.MeterRegistry;
-
-import org.springframework.stereotype.Component;
-
 @Component
 public class MicrometerProviderRateLimitMetricsRecorder
 	implements ProviderRateLimitMetricsRecorder {
 
-	private static final String REQUEST_METRIC =
-		"malhaebom.ai.provider.rate.limit.requests";
-	private static final String AVAILABLE_METRIC =
-		"malhaebom.ai.provider.rate.limit.available";
-	private static final String CAPACITY_METRIC =
-		"malhaebom.ai.provider.rate.limit.capacity";
+	private static final String REQUEST_METRIC = "malhaebom.ai.provider.rate.limit.requests";
+	private static final String AVAILABLE_METRIC = "malhaebom.ai.provider.rate.limit.available";
+	private static final String CAPACITY_METRIC = "malhaebom.ai.provider.rate.limit.capacity";
 
 	private final MeterRegistry meterRegistry;
-	private final List<LongSupplier> availableTokenSuppliers =
-		new ArrayList<>();
+	private final List<LongSupplier> availableTokenSuppliers = new ArrayList<>();
 	private final List<AtomicLong> capacities = new ArrayList<>();
 
 	public MicrometerProviderRateLimitMetricsRecorder(
@@ -37,11 +32,7 @@ public class MicrometerProviderRateLimitMetricsRecorder
 	}
 
 	@Override
-	public synchronized void bindCapacity(
-		String provider,
-		String quota,
-		long capacity
-	) {
+	public synchronized void bindCapacity(String provider, String quota, long capacity) {
 		AtomicLong value = new AtomicLong(capacity);
 		capacities.add(value);
 		Gauge.builder(CAPACITY_METRIC, value, AtomicLong::get)
@@ -51,11 +42,7 @@ public class MicrometerProviderRateLimitMetricsRecorder
 	}
 
 	@Override
-	public synchronized void bindAvailable(
-		String provider,
-		String quota,
-		LongSupplier availableTokens
-	) {
+	public synchronized void bindAvailable(String provider, String quota, LongSupplier availableTokens) {
 		LongSupplier supplier = Objects.requireNonNull(availableTokens);
 		availableTokenSuppliers.add(supplier);
 		Gauge.builder(

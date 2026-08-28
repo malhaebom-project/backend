@@ -2,18 +2,7 @@ package com.malhaebom.malhaebom.domain.child;
 
 import com.malhaebom.malhaebom.domain.BaseEntity;
 import com.malhaebom.malhaebom.domain.User;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,7 +12,6 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChildProfile extends BaseEntity {
-
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -48,13 +36,7 @@ public class ChildProfile extends BaseEntity {
 	@Column(nullable = false)
 	private boolean active;
 
-	public static ChildProfile create(
-		User user,
-		String nickname,
-		int age,
-		int grade,
-		ChildLevel level
-	) {
+	public static ChildProfile create(User user, String nickname, int age, int grade, ChildLevel level) {
 		ChildProfile profile = new ChildProfile();
 		profile.user = user;
 		profile.nickname = normalizeNickname(nickname);
@@ -65,12 +47,7 @@ public class ChildProfile extends BaseEntity {
 		return profile;
 	}
 
-	public void update(
-		String nickname,
-		Integer age,
-		Integer grade,
-		ChildLevel level
-	) {
+	public void update(String nickname, Integer age, Integer grade, ChildLevel level) {
 		if (nickname != null) {
 			this.nickname = normalizeNickname(nickname);
 		}

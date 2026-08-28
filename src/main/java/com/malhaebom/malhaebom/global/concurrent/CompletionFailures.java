@@ -4,9 +4,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletionException;
 
 public final class CompletionFailures {
-
-	private CompletionFailures() {
-	}
+	private CompletionFailures() {}
 
 	public static Throwable unwrap(Throwable failure) {
 		Throwable current = Objects.requireNonNull(

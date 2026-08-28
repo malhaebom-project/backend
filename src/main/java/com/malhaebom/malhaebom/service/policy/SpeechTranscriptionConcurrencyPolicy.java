@@ -4,7 +4,6 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SpeechTranscriptionConcurrencyPolicy {
-
 	private final Semaphore permits;
 	private final int maxConcurrentRequests;
 
@@ -46,12 +45,11 @@ public class SpeechTranscriptionConcurrencyPolicy {
 			this.policy = policy;
 		}
 
-		public boolean release() {
+		public void release() {
 			if (!released.compareAndSet(false, true)) {
-				return false;
+				return;
 			}
 			policy.release();
-			return true;
 		}
 	}
 }

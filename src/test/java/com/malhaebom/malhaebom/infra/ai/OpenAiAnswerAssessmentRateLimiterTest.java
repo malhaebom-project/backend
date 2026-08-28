@@ -1,21 +1,16 @@
 package com.malhaebom.malhaebom.infra.ai;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.malhaebom.malhaebom.infra.observability.MicrometerProviderRateLimitMetricsRecorder;
+import io.github.bucket4j.TimeMeter;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 
-import io.github.bucket4j.TimeMeter;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-
-import org.junit.jupiter.api.Test;
-
-import com.malhaebom.malhaebom.infra.observability.MicrometerProviderRateLimitMetricsRecorder;
+import static org.junit.jupiter.api.Assertions.*;
 
 class OpenAiAnswerAssessmentRateLimiterTest {
-
 	@Test
 	void 요청마다_고정_토큰을_차감하고_greedy_refill_후_다시_허용한다() {
 		Fixture fixture = fixture(2, 6_000, 3_000);
@@ -91,8 +86,7 @@ class OpenAiAnswerAssessmentRateLimiterTest {
 		OpenAiAnswerAssessmentRateLimiter limiter,
 		SimpleMeterRegistry registry,
 		ManualTimeMeter time
-	) {
-	}
+	) {}
 
 	static final class ManualTimeMeter implements TimeMeter {
 

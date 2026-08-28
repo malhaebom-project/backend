@@ -1,14 +1,5 @@
 package com.malhaebom.malhaebom.service.speech;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
 import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
@@ -17,16 +8,22 @@ import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionReposit
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
 import com.malhaebom.malhaebom.service.policy.SpeechProcessingLease;
-import com.malhaebom.malhaebom.service.ChildProfileService;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class SpeechAnswerStateService {
-
 	private final LearningSessionRepository learningSessionRepository;
 	private final SpeechAnswerRepository speechAnswerRepository;
 	private final SpeechProcessingLease processingLease;
@@ -190,10 +187,7 @@ public class SpeechAnswerStateService {
 		return claimedAt.plus(processingLease.value());
 	}
 
-	private boolean isSameQuestion(
-		LearningSessionQuestion first,
-		LearningSessionQuestion second
-	) {
+	private boolean isSameQuestion(LearningSessionQuestion first, LearningSessionQuestion second) {
 		if (first == second) {
 			return true;
 		}
@@ -204,13 +198,9 @@ public class SpeechAnswerStateService {
 			&& Objects.equals(first.getId(), second.getId());
 	}
 
-	private void validateCurrentQuestion(
-		LearningSessionQuestion currentQuestion,
-		Long sessionQuestionId
-	) {
+	private void validateCurrentQuestion(LearningSessionQuestion currentQuestion, Long sessionQuestionId) {
 		if (!Objects.equals(currentQuestion.getId(), sessionQuestionId)) {
 			throw new ApiException(ErrorCode.CURRENT_QUESTION_MISMATCH);
 		}
 	}
-
 }

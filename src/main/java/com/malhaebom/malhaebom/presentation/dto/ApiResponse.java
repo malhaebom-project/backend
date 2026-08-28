@@ -9,7 +9,6 @@ public record ApiResponse<T>(
 	@JsonInclude(JsonInclude.Include.NON_NULL)
 	String errorCode
 ) {
-
 	public static <T> ApiResponse<T> success(T data) {
 		return new ApiResponse<>(true, data, null, null);
 	}

@@ -1,11 +1,11 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-
 import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionStatus;
+
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 public record CreateLearningSessionResponse(
 	Long sessionId,
@@ -17,7 +17,6 @@ public record CreateLearningSessionResponse(
 	LearningSessionStatus status,
 	OffsetDateTime startedAt
 ) {
-
 	public static CreateLearningSessionResponse from(LearningSession session) {
 		return new CreateLearningSessionResponse(
 			session.getId(),

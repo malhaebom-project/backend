@@ -1,12 +1,12 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
-import java.time.Instant;
-import java.util.Set;
-
 import com.malhaebom.malhaebom.domain.learning.Difficulty;
 import com.malhaebom.malhaebom.domain.learning.LearningTopic;
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
+
+import java.time.Instant;
+import java.util.Set;
 
 public record AdminQuestionResponse(
 	Long questionId,
@@ -25,11 +25,7 @@ public record AdminQuestionResponse(
 	Instant createdAt,
 	Instant updatedAt
 ) {
-
-	public static AdminQuestionResponse from(
-		Question question,
-		String imageUrl
-	) {
+	public static AdminQuestionResponse from(Question question, String imageUrl) {
 		return new AdminQuestionResponse(
 			question.getId(),
 			question.getTopic(),

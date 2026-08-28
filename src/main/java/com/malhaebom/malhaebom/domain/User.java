@@ -1,14 +1,6 @@
 package com.malhaebom.malhaebom.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,7 +10,6 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseEntity {
-
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -36,12 +27,7 @@ public class User extends BaseEntity {
 	@Column(nullable = false, length = 20)
 	private AccountRole role;
 
-	private User(
-		String name,
-		String email,
-		String password,
-		AccountRole role
-	) {
+	private User(String name, String email, String password, AccountRole role) {
 		this.name = name;
 		this.email = email;
 		this.password = password;
@@ -49,25 +35,11 @@ public class User extends BaseEntity {
 	}
 
 	public static User create(String name, String email, String encodedPassword) {
-		return new User(
-			name,
-			email,
-			encodedPassword,
-			AccountRole.GUARDIAN
-		);
+		return new User(name, email, encodedPassword, AccountRole.GUARDIAN);
 	}
 
-	public static User createAdmin(
-		String name,
-		String email,
-		String encodedPassword
-	) {
-		return new User(
-			name,
-			email,
-			encodedPassword,
-			AccountRole.ADMIN
-		);
+	public static User createAdmin(String name, String email, String encodedPassword) {
+		return new User(name, email, encodedPassword, AccountRole.ADMIN);
 	}
 
 	public boolean isAdmin() {

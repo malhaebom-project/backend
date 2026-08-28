@@ -1,24 +1,10 @@
 package com.malhaebom.malhaebom.infra.speech;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CancellationException;
-
 import com.google.api.core.ApiFuture;
 import com.google.api.core.ApiFutureCallback;
 import com.google.api.core.ApiFutures;
 import com.google.api.gax.rpc.StatusCode;
-import com.google.cloud.speech.v2.AutoDetectDecodingConfig;
-import com.google.cloud.speech.v2.RecognitionConfig;
-import com.google.cloud.speech.v2.RecognizeRequest;
-import com.google.cloud.speech.v2.RecognizeResponse;
-import com.google.cloud.speech.v2.RecognizerName;
-import com.google.cloud.speech.v2.PhraseSet;
-import com.google.cloud.speech.v2.SpeechClient;
-import com.google.cloud.speech.v2.SpeechAdaptation;
-import com.google.cloud.speech.v2.SpeechRecognitionAlternative;
+import com.google.cloud.speech.v2.*;
 import com.google.protobuf.ByteString;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
@@ -27,8 +13,13 @@ import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
 
-public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.List;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 
+public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 	public static final String PROVIDER = "GOOGLE_CLOUD_STT_V2";
 
 	private static final int CONFIDENCE_SCALE = 4;
@@ -40,11 +31,7 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 	private final String recognizer;
 	private final float adaptationBoost;
 
-	public GoogleSpeechV2Transcriber(
-		SpeechClient client,
-		GoogleSpeechV2Properties properties,
-		String projectId
-	) {
+	public GoogleSpeechV2Transcriber(SpeechClient client, GoogleSpeechV2Properties properties, String projectId) {
 		this.client = client;
 		this.recognitionConfig = createRecognitionConfig(properties);
 		this.recognizer = createRecognizerName(properties, projectId);
@@ -57,10 +44,7 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 	}
 
 	@Override
-	public SpeechTranscriptionTask transcribeAsync(
-		SpeechAudio audio,
-		List<String> adaptationPhrases
-	) {
+	public SpeechTranscriptionTask transcribeAsync(SpeechAudio audio, List<String> adaptationPhrases) {
 		RecognizeRequest request = RecognizeRequest.newBuilder()
 			.setRecognizer(recognizer)
 			.setConfig(createRequestConfig(adaptationPhrases))
@@ -76,8 +60,7 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 			);
 		}
 
-		CompletableFuture<SpeechTranscriptionResult> result =
-			new CompletableFuture<>();
+		CompletableFuture<SpeechTranscriptionResult> result = new CompletableFuture<>();
 		ApiFutures.addCallback(
 			googleFuture,
 			new ApiFutureCallback<>() {
@@ -120,9 +103,7 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 		return new ApiException(ErrorCode.STT_PROCESSING_FAILED, exception);
 	}
 
-	private RecognitionConfig createRequestConfig(
-		List<String> adaptationPhrases
-	) {
+	private RecognitionConfig createRequestConfig(List<String> adaptationPhrases) {
 		List<String> phrases = adaptationPhrases.stream()
 			.filter(phrase -> phrase != null && !phrase.isBlank())
 			.map(String::strip)
@@ -181,9 +162,7 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 		);
 	}
 
-	private Double normalizeConfidence(
-		List<SpeechRecognitionAlternative> alternatives
-	) {
+	private Double normalizeConfidence(List<SpeechRecognitionAlternative> alternatives) {
 		double average = alternatives.stream()
 			.mapToDouble(SpeechRecognitionAlternative::getConfidence)
 			.filter(confidence -> confidence > 0.0 && confidence <= 1.0)
@@ -198,9 +177,7 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 			.doubleValue();
 	}
 
-	private ApiException mapGoogleException(
-		com.google.api.gax.rpc.ApiException exception
-	) {
+	private ApiException mapGoogleException(com.google.api.gax.rpc.ApiException exception) {
 		StatusCode statusCode = exception.getStatusCode();
 		StatusCode.Code code = statusCode == null
 			? null
@@ -221,9 +198,7 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 		return new ApiException(ErrorCode.STT_PROCESSING_FAILED, exception);
 	}
 
-	private static RecognitionConfig createRecognitionConfig(
-		GoogleSpeechV2Properties properties
-	) {
+	private static RecognitionConfig createRecognitionConfig(GoogleSpeechV2Properties properties) {
 		return RecognitionConfig.newBuilder()
 			.setAutoDecodingConfig(
 				AutoDetectDecodingConfig.newBuilder().build()
@@ -233,10 +208,7 @@ public class GoogleSpeechV2Transcriber implements SpeechTranscriber {
 			.build();
 	}
 
-	private static String createRecognizerName(
-		GoogleSpeechV2Properties properties,
-		String projectId
-	) {
+	private static String createRecognizerName(GoogleSpeechV2Properties properties, String projectId) {
 		return RecognizerName.of(
 			projectId,
 			properties.location(),

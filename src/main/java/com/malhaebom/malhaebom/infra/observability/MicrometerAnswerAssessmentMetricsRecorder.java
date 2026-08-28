@@ -1,24 +1,20 @@
 package com.malhaebom.malhaebom.infra.observability;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import org.springframework.stereotype.Component;
+
 import java.time.Duration;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.IntSupplier;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
-
-import org.springframework.stereotype.Component;
-
 @Component
-public class MicrometerAnswerAssessmentMetricsRecorder
-	implements AnswerAssessmentMetricsRecorder {
-
-	private static final String METRIC_PREFIX =
-		"malhaebom.answer.assessment.";
+public class MicrometerAnswerAssessmentMetricsRecorder implements AnswerAssessmentMetricsRecorder {
+	private static final String METRIC_PREFIX = "malhaebom.answer.assessment.";
 
 	private final MeterRegistry meterRegistry;
 	private final Counter acceptedRequests;
@@ -30,16 +26,13 @@ public class MicrometerAnswerAssessmentMetricsRecorder
 	private final Counter queueFullRequests;
 	private final Counter queueTimeoutRequests;
 	private final Counter queueCancelledRequests;
-	private final Map<QueueWaitResult, Timer> queueWaitTimers =
-		new EnumMap<>(QueueWaitResult.class);
+	private final Map<QueueWaitResult, Timer> queueWaitTimers = new EnumMap<>(QueueWaitResult.class);
 
 	private IntSupplier queuedRequests;
 	private int queueCapacity;
 	private boolean bound;
 
-	public MicrometerAnswerAssessmentMetricsRecorder(
-		MeterRegistry meterRegistry
-	) {
+	public MicrometerAnswerAssessmentMetricsRecorder(MeterRegistry meterRegistry) {
 		this.meterRegistry = Objects.requireNonNull(
 			meterRegistry,
 			"MeterRegistry는 null일 수 없습니다."
@@ -61,10 +54,7 @@ public class MicrometerAnswerAssessmentMetricsRecorder
 	}
 
 	@Override
-	public synchronized void bind(
-		IntSupplier queuedRequests,
-		int queueCapacity
-	) {
+	public synchronized void bind(IntSupplier queuedRequests, int queueCapacity) {
 		if (bound) {
 			throw new IllegalStateException("답안 평가 지표는 이미 연결되었습니다.");
 		}
@@ -125,10 +115,7 @@ public class MicrometerAnswerAssessmentMetricsRecorder
 	}
 
 	@Override
-	public void recordQueueWait(
-		QueueWaitResult result,
-		Duration duration
-	) {
+	public void recordQueueWait(QueueWaitResult result, Duration duration) {
 		queueWaitTimers.get(result).record(duration);
 	}
 

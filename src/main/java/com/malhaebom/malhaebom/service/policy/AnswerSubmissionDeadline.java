@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.util.Objects;
 
 public record AnswerSubmissionDeadline(Instant expiresAt) {
-
 	public AnswerSubmissionDeadline {
 		Objects.requireNonNull(expiresAt, "답변 제출 작업 기한은 null일 수 없습니다.");
 	}

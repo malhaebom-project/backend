@@ -1,11 +1,5 @@
 package com.malhaebom.malhaebom.service;
 
-import java.util.List;
-
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.malhaebom.malhaebom.domain.User;
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
@@ -14,13 +8,16 @@ import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.service.dto.AdminQuestionCommand;
 import com.malhaebom.malhaebom.service.event.QuestionTtsRequestedEvent;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class AdminQuestionService {
-
 	private final UserRepository userRepository;
 	private final QuestionRepository questionRepository;
 	private final ApplicationEventPublisher eventPublisher;

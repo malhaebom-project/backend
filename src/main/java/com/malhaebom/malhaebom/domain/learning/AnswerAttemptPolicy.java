@@ -3,11 +3,9 @@ package com.malhaebom.malhaebom.domain.learning;
 import java.util.Objects;
 
 public final class AnswerAttemptPolicy {
-
 	private static final int MAX_ATTEMPT_COUNT = 2;
 
-	private AnswerAttemptPolicy() {
-	}
+	private AnswerAttemptPolicy() {}
 
 	public static boolean isAllowed(int attemptNo) {
 		return attemptNo >= 1 && attemptNo <= MAX_ATTEMPT_COUNT;
@@ -20,8 +18,9 @@ public final class AnswerAttemptPolicy {
 	}
 
 	public static int remainingAttempts(Answer answer) {
-		return canRetry(answer)
-			? MAX_ATTEMPT_COUNT - answer.getAttemptNo()
-			: 0;
+		if (canRetry(answer)) {
+			return MAX_ATTEMPT_COUNT - answer.getAttemptNo();
+		}
+		return 0;
 	}
 }

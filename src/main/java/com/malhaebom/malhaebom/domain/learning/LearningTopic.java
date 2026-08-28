@@ -1,9 +1,11 @@
 package com.malhaebom.malhaebom.domain.learning;
 
+import lombok.Getter;
+
 import java.util.Arrays;
 
+@Getter
 public enum LearningTopic {
-
 	ANIMAL(1L, "동물"),
 	FOOD(2L, "음식"),
 	DAILY_LIFE(3L, "일상생활");
@@ -16,15 +18,7 @@ public enum LearningTopic {
 		this.name = name;
 	}
 
-	public Long getTopicId() {
-		return topicId;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public String getCode() {
+    public String getCode() {
 		return name();
 	}
 

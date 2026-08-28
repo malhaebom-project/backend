@@ -1,20 +1,17 @@
 package com.malhaebom.malhaebom.presentation;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import com.malhaebom.malhaebom.domain.learning.AnswerResult;
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.infra.async.AnswerSubmissionAsyncProperties;
+import com.malhaebom.malhaebom.service.LearningAnswerRetryService;
+import com.malhaebom.malhaebom.service.LearningAnswerService;
+import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
+import com.malhaebom.malhaebom.service.dto.AnswerSubmissionTask;
+import com.malhaebom.malhaebom.support.StubLoginUserArgumentResolver;
+import jakarta.servlet.AsyncEvent;
+import jakarta.servlet.AsyncListener;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,30 +24,27 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import com.malhaebom.malhaebom.domain.learning.AnswerResult;
-import com.malhaebom.malhaebom.global.exception.ApiException;
-import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
-import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.infra.async.AnswerSubmissionAsyncProperties;
-import com.malhaebom.malhaebom.service.LearningAnswerService;
-import com.malhaebom.malhaebom.service.LearningAnswerRetryService;
-import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
-import com.malhaebom.malhaebom.service.dto.AnswerSubmissionTask;
-import com.malhaebom.malhaebom.support.StubLoginUserArgumentResolver;
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import jakarta.servlet.AsyncEvent;
-import jakarta.servlet.AsyncListener;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
 class LearningAnswerControllerTest {
-
 	private static final Long SESSION_ID = 1L;
 	private static final Long SESSION_QUESTION_ID = 2L;
 	private static final Long SPEECH_ANSWER_ID = 3L;
 	private static final Long USER_ID = 4L;
 	private static final String ENDPOINT =
-		"/api/v1/learning-sessions/{sessionId}/questions/"
-			+ "{sessionQuestionId}/answers";
+		"/api/v1/learning-sessions/{sessionId}/questions/{sessionQuestionId}/answers";
 
 	@Mock
 	private LearningAnswerService learningAnswerService;
@@ -218,9 +212,7 @@ class LearningAnswerControllerTest {
 		);
 	}
 
-	private AnswerSubmissionTask submissionTask(
-		CompletableFuture<AnswerSubmissionResult> result
-	) {
+	private AnswerSubmissionTask submissionTask(CompletableFuture<AnswerSubmissionResult> result) {
 		return new AnswerSubmissionTask(result, () -> result.cancel(true));
 	}
 }

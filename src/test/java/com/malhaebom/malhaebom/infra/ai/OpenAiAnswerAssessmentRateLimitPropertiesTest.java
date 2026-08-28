@@ -1,12 +1,11 @@
 package com.malhaebom.malhaebom.infra.ai;
 
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.junit.jupiter.api.Test;
-
 class OpenAiAnswerAssessmentRateLimitPropertiesTest {
-
 	@Test
 	void 모든_한도는_양수이고_요청당_토큰은_TPM_이하여야_한다() {
 		assertThrows(IllegalArgumentException.class,

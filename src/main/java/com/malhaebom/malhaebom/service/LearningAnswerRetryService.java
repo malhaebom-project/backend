@@ -1,25 +1,18 @@
 package com.malhaebom.malhaebom.service;
 
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import com.malhaebom.malhaebom.domain.learning.Answer;
-import com.malhaebom.malhaebom.domain.learning.AnswerAttemptPolicy;
-import com.malhaebom.malhaebom.domain.learning.LearningSession;
-import com.malhaebom.malhaebom.domain.learning.LearningSessionAnswerSubmissionException;
-import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
+import com.malhaebom.malhaebom.domain.learning.*;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.AnswerSubmissionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class LearningAnswerRetryService {
-
 	private final LearningSessionRepository learningSessionRepository;
 	private final AnswerRepository answerRepository;
 	private final AnswerSubmissionRepository answerSubmissionRepository;
@@ -54,10 +47,7 @@ public class LearningAnswerRetryService {
 		session.skipRetry(latestAnswer);
 	}
 
-	private LearningSessionQuestion getRetrySkipTarget(
-		LearningSession session,
-		Long sessionQuestionId
-	) {
+	private LearningSessionQuestion getRetrySkipTarget(LearningSession session, Long sessionQuestionId) {
 		try {
 			return session.retrySkipTarget(sessionQuestionId);
 		} catch (LearningSessionAnswerSubmissionException exception) {
@@ -72,9 +62,7 @@ public class LearningAnswerRetryService {
 		}
 	}
 
-	private ApiException toApiException(
-		LearningSessionAnswerSubmissionException exception
-	) {
+	private ApiException toApiException(LearningSessionAnswerSubmissionException exception) {
 		return switch (exception.getReason()) {
 			case SESSION_NOT_IN_PROGRESS -> new ApiException(
 				ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS,

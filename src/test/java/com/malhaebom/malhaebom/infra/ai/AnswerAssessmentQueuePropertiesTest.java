@@ -1,14 +1,13 @@
 package com.malhaebom.malhaebom.infra.ai;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class AnswerAssessmentQueuePropertiesTest {
-
 	@Test
 	void queue_capacity는_0_이상이어야_한다() {
 		assertThrows(IllegalArgumentException.class,

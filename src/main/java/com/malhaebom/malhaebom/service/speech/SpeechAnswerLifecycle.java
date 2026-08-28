@@ -1,5 +1,15 @@
 package com.malhaebom.malhaebom.service.speech;
 
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
+import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
+import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
+import com.malhaebom.malhaebom.service.port.SpeechAnswerLifecycleOperations;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -9,33 +19,18 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
-import org.springframework.stereotype.Service;
-
-import com.malhaebom.malhaebom.global.exception.ApiException;
-import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
-import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
-import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
-import com.malhaebom.malhaebom.service.port.SpeechAnswerLifecycleOperations;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class SpeechAnswerLifecycle implements SpeechAnswerLifecycleOperations {
-
 	private static final long MAX_SHUTDOWN_CLEANUP_MILLIS = 5_000L;
 	private static final long MIN_SHUTDOWN_CLEANUP_MILLIS = 100L;
 
 	private final InFlightSpeechAnswerRegistry inFlightRegistry;
 	private final SpeechTranscriptionConcurrencyPolicy concurrencyPolicy;
 	private final SpeechShutdownPolicy shutdownPolicy;
-	private final ReentrantReadWriteLock lifecycleLock =
-		new ReentrantReadWriteLock();
-	private final CompletableFuture<Void> shutdownCompletion =
-		new CompletableFuture<>();
+	private final ReentrantReadWriteLock lifecycleLock = new ReentrantReadWriteLock();
+	private final CompletableFuture<Void> shutdownCompletion = new CompletableFuture<>();
 	private volatile boolean running = true;
 
 	public <T> T whileAcceptingRequests(Supplier<T> operation) {
@@ -69,8 +64,7 @@ public class SpeechAnswerLifecycle implements SpeechAnswerLifecycleOperations {
 
 	@Override
 	public void stop() {
-		stop(() -> {
-		});
+		stop(() -> {});
 	}
 
 	@Override
@@ -137,12 +131,10 @@ public class SpeechAnswerLifecycle implements SpeechAnswerLifecycleOperations {
 			completeShutdown(true, 0);
 			return;
 		}
-		long cleanupMillis = Math.min(
-			MAX_SHUTDOWN_CLEANUP_MILLIS,
-			Math.max(
-				MIN_SHUTDOWN_CLEANUP_MILLIS,
-				shutdownPolicy.drainTimeout().toMillis() / 4
-			)
+		long cleanupMillis = Math.clamp(
+                shutdownPolicy.drainTimeout().toMillis() / 4,
+                MIN_SHUTDOWN_CLEANUP_MILLIS,
+                MAX_SHUTDOWN_CLEANUP_MILLIS
 		);
 		allTasks(pending)
 			.completeOnTimeout(null, cleanupMillis, TimeUnit.MILLISECONDS)

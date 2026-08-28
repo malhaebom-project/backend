@@ -1,11 +1,10 @@
 package com.malhaebom.malhaebom.service.policy;
 
-import java.time.Duration;
-
+import jakarta.validation.constraints.NotNull;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
-import jakarta.validation.constraints.NotNull;
+import java.time.Duration;
 
 @Validated
 @ConfigurationProperties(prefix = "malhaebom.answer-submission")

@@ -1,18 +1,5 @@
 package com.malhaebom.malhaebom.presentation;
 
-import java.util.List;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.ChildProfileResponse;
@@ -21,15 +8,18 @@ import com.malhaebom.malhaebom.presentation.dto.UpdateChildProfileRequest;
 import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.dto.ChildProfileResult;
 import com.malhaebom.malhaebom.service.dto.LoginUser;
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/children")
 @RequiredArgsConstructor
 public class ChildProfileController {
-
 	private final ChildProfileService childProfileService;
 
 	@PostMapping
@@ -52,9 +42,7 @@ public class ChildProfileController {
 	}
 
 	@GetMapping
-	public ApiResponse<List<ChildProfileResponse>> getAll(
-		@Auth LoginUser loginUser
-	) {
+	public ApiResponse<List<ChildProfileResponse>> getAll(@Auth LoginUser loginUser) {
 		return ApiResponse.success(
 			childProfileService.getAll(loginUser.userId()).stream()
 				.map(this::toResponse)
@@ -63,10 +51,7 @@ public class ChildProfileController {
 	}
 
 	@GetMapping("/{childId}")
-	public ApiResponse<ChildProfileResponse> get(
-		@Auth LoginUser loginUser,
-		@PathVariable Long childId
-	) {
+	public ApiResponse<ChildProfileResponse> get(@Auth LoginUser loginUser, @PathVariable Long childId) {
 		return ApiResponse.success(
 			toResponse(childProfileService.get(loginUser.userId(), childId))
 		);
@@ -92,10 +77,7 @@ public class ChildProfileController {
 	}
 
 	@DeleteMapping("/{childId}")
-	public ApiResponse<Void> delete(
-		@Auth LoginUser loginUser,
-		@PathVariable Long childId
-	) {
+	public ApiResponse<Void> delete(@Auth LoginUser loginUser, @PathVariable Long childId) {
 		childProfileService.delete(loginUser.userId(), childId);
 		return ApiResponse.success(null, "어린이 프로필이 삭제되었습니다.");
 	}

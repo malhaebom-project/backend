@@ -1,23 +1,20 @@
 package com.malhaebom.malhaebom.service;
 
-import java.util.Objects;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.malhaebom.malhaebom.domain.learning.LearningSession;
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class LearningHintService {
-
 	private final LearningSessionRepository learningSessionRepository;
 	private final ChildProfileService childProfileService;
 
@@ -47,10 +44,7 @@ public class LearningHintService {
 		}
 	}
 
-	private void validateCurrentQuestion(
-		LearningSessionQuestion currentQuestion,
-		Long questionId
-	) {
+	private void validateCurrentQuestion(LearningSessionQuestion currentQuestion, Long questionId) {
 		if (!Objects.equals(currentQuestion.getQuestion().getId(), questionId)) {
 			throw new ApiException(ErrorCode.CURRENT_QUESTION_MISMATCH);
 		}

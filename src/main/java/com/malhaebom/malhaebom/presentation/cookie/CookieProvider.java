@@ -1,20 +1,14 @@
 package com.malhaebom.malhaebom.presentation.cookie;
 
-import java.time.Duration;
-
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.time.Duration;
+
 @Component
 public class CookieProvider {
-
-	public ResponseCookie create(
-		String name,
-		String value,
-		CookieProperties properties,
-		Duration ttl
-	) {
+	public ResponseCookie create(String name, String value, CookieProperties properties, Duration ttl) {
 		ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(name, value)
 			.maxAge(ttl)
 			.sameSite(properties.getSameSite())

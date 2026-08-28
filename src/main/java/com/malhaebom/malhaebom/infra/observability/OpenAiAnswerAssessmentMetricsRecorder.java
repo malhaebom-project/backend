@@ -1,7 +1,6 @@
 package com.malhaebom.malhaebom.infra.observability;
 
 public interface OpenAiAnswerAssessmentMetricsRecorder {
-
 	void recordTokenUsage(
 		long promptTokens,
 		long completionTokens,

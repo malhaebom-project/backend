@@ -1,11 +1,13 @@
 package com.malhaebom.malhaebom.infra.ai;
 
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.malhaebom.malhaebom.infra.observability.OpenAiAnswerAssessmentMetricsRecorder;
+import com.malhaebom.malhaebom.infra.observability.OpenAiAnswerAssessmentMetricsRecorder.FailureReason;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
+import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 import com.openai.client.OpenAIClientAsync;
 import com.openai.errors.OpenAIInvalidDataException;
 import com.openai.models.ReasoningEffort;
@@ -16,17 +18,12 @@ import com.openai.models.completions.CompletionUsage;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.stereotype.Component;
 
-import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
-import com.malhaebom.malhaebom.service.dto.AnswerAssessmentInput;
-import com.malhaebom.malhaebom.service.dto.AnswerAssessmentTask;
-import com.malhaebom.malhaebom.infra.observability.OpenAiAnswerAssessmentMetricsRecorder;
-import com.malhaebom.malhaebom.infra.observability.OpenAiAnswerAssessmentMetricsRecorder.FailureReason;
-import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 @Component
-public class OpenAiAnswerAssessmentGenerator
-	implements AnswerAssessmentGenerator {
-
+public class OpenAiAnswerAssessmentGenerator implements AnswerAssessmentGenerator {
 	private static final ObjectMapper SCHEMA_MAPPER = new ObjectMapper();
 
 	private static final String COMMON_SYSTEM_PROMPT = """
@@ -318,16 +315,12 @@ public class OpenAiAnswerAssessmentGenerator
 	}
 
 	@Override
-	public AnswerAssessmentTask generateAsync(
-		AnswerAssessmentInput input
-	) {
+	public AnswerAssessmentTask generateAsync(AnswerAssessmentInput input) {
 		Objects.requireNonNull(input, "채점 입력은 null일 수 없습니다.");
 		return rateLimitQueue.execute(() -> generate(input));
 	}
 
-	private AnswerAssessmentTask generate(
-		AnswerAssessmentInput input
-	) {
+	private AnswerAssessmentTask generate(AnswerAssessmentInput input) {
 		CompletableFuture<ChatCompletion> request = openAiClient.chat()
 			.completions()
 			.create(createParams(input));
@@ -344,9 +337,7 @@ public class OpenAiAnswerAssessmentGenerator
 		);
 	}
 
-	private ChatCompletionCreateParams createParams(
-		AnswerAssessmentInput input
-	) {
+	private ChatCompletionCreateParams createParams(AnswerAssessmentInput input) {
 		OpenAiAnswerAssessmentProperties.Chat chat = properties.getChat();
 		ChatCompletionCreateParams.Builder builder =
 			ChatCompletionCreateParams.builder()
@@ -418,9 +409,7 @@ public class OpenAiAnswerAssessmentGenerator
 		return COMMON_SYSTEM_PROMPT + "\n\n" + difficultyPrompt;
 	}
 
-	private AnswerAssessment extractAssessment(
-		ChatCompletion completion
-	) {
+	private AnswerAssessment extractAssessment(ChatCompletion completion) {
 		try {
 			return extractValidAssessment(completion);
 		} catch (OpenAIInvalidDataException exception) {
@@ -429,9 +418,7 @@ public class OpenAiAnswerAssessmentGenerator
 		}
 	}
 
-	private AnswerAssessment extractValidAssessment(
-		ChatCompletion completion
-	) {
+	private AnswerAssessment extractValidAssessment(ChatCompletion completion) {
 		completion.usage().ifPresent(this::recordTokenUsage);
 		if (completion.choices().isEmpty()) {
 			metricsRecorder.recordFailure(FailureReason.EMPTY_RESPONSE);
@@ -472,5 +459,4 @@ public class OpenAiAnswerAssessmentGenerator
 			reasoningTokens
 		);
 	}
-
 }

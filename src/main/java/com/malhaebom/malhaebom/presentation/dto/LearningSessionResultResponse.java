@@ -1,9 +1,9 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
+import com.malhaebom.malhaebom.domain.learning.LearningSession;
+
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-
-import com.malhaebom.malhaebom.domain.learning.LearningSession;
 
 public record LearningSessionResultResponse(
 	Long sessionId,
@@ -13,7 +13,6 @@ public record LearningSessionResultResponse(
 	long studySeconds,
 	OffsetDateTime completedAt
 ) {
-
 	public static LearningSessionResultResponse from(LearningSession session) {
 		int questionCount = session.getQuestionCount();
 		int correctCount = session.getCorrectCount();

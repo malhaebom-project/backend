@@ -1,31 +1,24 @@
 package com.malhaebom.malhaebom.integration.learning;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
+import com.malhaebom.malhaebom.domain.learning.*;
+import com.malhaebom.malhaebom.domain.learning.repository.AnswerSubmissionRepository;
+import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
+import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
+import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
+import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 
-import jakarta.persistence.EntityManager;
-
-import com.malhaebom.malhaebom.domain.learning.AnswerSubmission;
-import com.malhaebom.malhaebom.domain.learning.AnswerSubmissionStatus;
-import com.malhaebom.malhaebom.domain.learning.LearningSession;
-import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
-import com.malhaebom.malhaebom.domain.learning.SpeechAnswer;
-import com.malhaebom.malhaebom.domain.learning.repository.AnswerSubmissionRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
-import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @DataJpaTest
 @Import(JpaAuditingConfiguration.class)
 class AnswerSubmissionRepositoryJpaTest {
-
 	@Autowired
 	private AnswerSubmissionRepository answerSubmissionRepository;
 	@Autowired
@@ -109,10 +102,7 @@ class AnswerSubmissionRepositoryJpaTest {
 		);
 	}
 
-	private SpeechAnswer saveCompletedSpeechAnswer(
-		LearningSessionQuestion question,
-		int recordingNo
-	) {
+	private SpeechAnswer saveCompletedSpeechAnswer(LearningSessionQuestion question, int recordingNo) {
 		SpeechAnswer speechAnswer = SpeechAnswer.start(
 			question,
 			"request-key-" + recordingNo,

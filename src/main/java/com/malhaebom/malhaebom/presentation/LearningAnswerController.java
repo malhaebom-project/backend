@@ -1,32 +1,25 @@
 package com.malhaebom.malhaebom.presentation;
 
-import org.springframework.web.context.request.async.DeferredResult;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
-import com.malhaebom.malhaebom.presentation.dto.SubmitAnswerRequest;
-import com.malhaebom.malhaebom.presentation.dto.SubmitAnswerResponse;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.async.AnswerSubmissionAsyncProperties;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
+import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
+import com.malhaebom.malhaebom.presentation.dto.SubmitAnswerRequest;
+import com.malhaebom.malhaebom.presentation.dto.SubmitAnswerResponse;
 import com.malhaebom.malhaebom.service.LearningAnswerRetryService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionTask;
 import com.malhaebom.malhaebom.service.dto.LoginUser;
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.async.DeferredResult;
 
 @RestController
 @RequestMapping("/api/v1/learning-sessions")
 @RequiredArgsConstructor
 public class LearningAnswerController {
-
 	private final LearningAnswerService learningAnswerService;
 	private final LearningAnswerRetryService learningAnswerRetryService;
 	private final AnswerSubmissionAsyncProperties asyncProperties;
@@ -71,11 +64,7 @@ public class LearningAnswerController {
 		@PathVariable Long sessionId,
 		@PathVariable Long sessionQuestionId
 	) {
-		learningAnswerRetryService.skipRetry(
-			loginUser.userId(),
-			sessionId,
-			sessionQuestionId
-		);
+		learningAnswerRetryService.skipRetry(loginUser.userId(), sessionId, sessionQuestionId);
 		return ApiResponse.success(null);
 	}
 }

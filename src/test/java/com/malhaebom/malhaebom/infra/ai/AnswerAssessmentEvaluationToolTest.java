@@ -1,22 +1,18 @@
 package com.malhaebom.malhaebom.infra.ai;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.malhaebom.malhaebom.domain.learning.AnswerResult;
+import com.malhaebom.malhaebom.domain.learning.Difficulty;
+import com.malhaebom.malhaebom.domain.learning.QuestionType;
+import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
+import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.jupiter.api.Test;
-
-import com.malhaebom.malhaebom.domain.learning.AnswerResult;
-import com.malhaebom.malhaebom.domain.learning.Difficulty;
-import com.malhaebom.malhaebom.domain.learning.QuestionType;
-import com.malhaebom.malhaebom.service.dto.AnswerAssessment;
+import static org.junit.jupiter.api.Assertions.*;
 
 class AnswerAssessmentEvaluationToolTest {
-
 	@Test
 	void 사람_검토가_끝나지_않은_데이터셋은_기본적으로_실행하지_않는다() {
 		var dataset = new AnswerAssessmentEvaluationTool.Dataset(
@@ -126,9 +122,7 @@ class AnswerAssessmentEvaluationToolTest {
 		);
 	}
 
-	private static AnswerAssessmentEvaluationTool.Settings settings(
-		boolean allowUnreviewed
-	) {
+	private static AnswerAssessmentEvaluationTool.Settings settings(boolean allowUnreviewed) {
 		return new AnswerAssessmentEvaluationTool.Settings(
 			Path.of("dataset.json"), Path.of("reports"), 10, 1, 90,
 			"test-model", allowUnreviewed
@@ -138,6 +132,5 @@ class AnswerAssessmentEvaluationToolTest {
 	private record Fixture(
 		AnswerAssessmentEvaluationTool.Dataset dataset,
 		List<AnswerAssessmentEvaluationTool.EvalCase> cases
-	) {
-	}
+	) {}
 }

@@ -1,8 +1,8 @@
 package com.malhaebom.malhaebom.presentation.dto;
 
-import java.util.List;
-
 import com.malhaebom.malhaebom.service.dto.LearningStatistics;
+
+import java.util.List;
 
 public record LearningStatisticsResponse(
 	long totalSessionCount,
@@ -11,10 +11,7 @@ public record LearningStatisticsResponse(
 	int consecutiveStudyDays,
 	List<TopicStatisticsResponse> topicStatistics
 ) {
-
-	public static LearningStatisticsResponse from(
-		LearningStatistics statistics
-	) {
+	public static LearningStatisticsResponse from(LearningStatistics statistics) {
 		return new LearningStatisticsResponse(
 			statistics.totalSessionCount(),
 			statistics.totalStudySeconds(),

@@ -1,26 +1,18 @@
 package com.malhaebom.malhaebom.domain.learning;
 
-import static com.malhaebom.malhaebom.support.LearningSessionTestActions.completeCurrentQuestion;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
-import org.junit.jupiter.api.Test;
+import static com.malhaebom.malhaebom.support.LearningSessionTestActions.completeCurrentQuestion;
+import static org.junit.jupiter.api.Assertions.*;
 
 class AnswerSubmissionTest {
-	private static final String PROCESSING_TOKEN =
-		"215bf1ca-03dc-4a7a-af56-09ad0cc26a24";
-	private static final Instant CLAIMED_AT =
-		Instant.parse("2026-08-13T07:00:00Z");
-	private static final Instant LEASE_EXPIRES_AT =
-		Instant.parse("2026-08-13T07:01:00Z");
+	private static final String PROCESSING_TOKEN = "215bf1ca-03dc-4a7a-af56-09ad0cc26a24";
+	private static final Instant CLAIMED_AT = Instant.parse("2026-08-13T07:00:00Z");
+	private static final Instant LEASE_EXPIRES_AT = Instant.parse("2026-08-13T07:01:00Z");
 
 	@Test
 	void 완료된_음성_답변의_제출을_예약한다() {

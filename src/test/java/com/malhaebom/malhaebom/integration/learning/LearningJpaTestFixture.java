@@ -1,21 +1,16 @@
 package com.malhaebom.malhaebom.integration.learning;
 
-import java.util.List;
-import java.util.Set;
-
-import com.malhaebom.malhaebom.domain.learning.Difficulty;
-import com.malhaebom.malhaebom.domain.learning.LearningSession;
-import com.malhaebom.malhaebom.domain.learning.LearningTopic;
-import com.malhaebom.malhaebom.domain.learning.Question;
-import com.malhaebom.malhaebom.domain.learning.QuestionType;
+import com.malhaebom.malhaebom.domain.learning.*;
 import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
 import com.malhaebom.malhaebom.domain.learning.repository.QuestionRepository;
+
+import java.util.List;
+import java.util.Set;
 
 final class LearningJpaTestFixture {
 	static final Long USER_ID = 1L;
 
-	private LearningJpaTestFixture() {
-	}
+	private LearningJpaTestFixture() {}
 
 	static LearningSession saveSession(
 		QuestionRepository questionRepository,

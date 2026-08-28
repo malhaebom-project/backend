@@ -1,9 +1,9 @@
 package com.malhaebom.malhaebom.presentation;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
+import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
+import com.malhaebom.malhaebom.presentation.auth.Auth;
+import com.malhaebom.malhaebom.service.ChildProfileService;
+import com.malhaebom.malhaebom.service.dto.LoginUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,14 +18,12 @@ import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
-import com.malhaebom.malhaebom.global.exception.ApiExceptionHandler;
-import com.malhaebom.malhaebom.presentation.auth.Auth;
-import com.malhaebom.malhaebom.service.ChildProfileService;
-import com.malhaebom.malhaebom.service.dto.LoginUser;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
 class ChildProfileControllerTest {
-
 	private static final Long USER_ID = 1L;
 
 	@Mock

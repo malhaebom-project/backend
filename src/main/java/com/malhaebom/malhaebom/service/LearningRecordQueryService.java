@@ -1,5 +1,19 @@
 package com.malhaebom.malhaebom.service;
 
+import com.malhaebom.malhaebom.domain.learning.AnswerResult;
+import com.malhaebom.malhaebom.domain.learning.LearningSessionStatus;
+import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
+import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
+import com.malhaebom.malhaebom.domain.learning.repository.projection.*;
+import com.malhaebom.malhaebom.global.time.LearningTime;
+import com.malhaebom.malhaebom.service.dto.*;
+import com.malhaebom.malhaebom.service.port.QuestionImageUrlResolver;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -9,35 +23,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import com.malhaebom.malhaebom.domain.learning.LearningSessionStatus;
-import com.malhaebom.malhaebom.domain.learning.AnswerResult;
-import com.malhaebom.malhaebom.domain.learning.repository.AnswerRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionRepository;
-import com.malhaebom.malhaebom.domain.learning.repository.projection.ChildStatisticsProjection;
-import com.malhaebom.malhaebom.domain.learning.repository.projection.LearningHistoryProjection;
-import com.malhaebom.malhaebom.domain.learning.repository.projection.LearningSessionPeriodProjection;
-import com.malhaebom.malhaebom.domain.learning.repository.projection.TopicStatisticsProjection;
-import com.malhaebom.malhaebom.domain.learning.repository.projection.WrongAnswerProjection;
-import com.malhaebom.malhaebom.global.time.LearningTime;
-import com.malhaebom.malhaebom.service.dto.ChildStatistics;
-import com.malhaebom.malhaebom.service.dto.LearningHistory;
-import com.malhaebom.malhaebom.service.dto.LearningHistoryItem;
-import com.malhaebom.malhaebom.service.dto.LearningStatistics;
-import com.malhaebom.malhaebom.service.dto.TopicStatistics;
-import com.malhaebom.malhaebom.service.dto.WrongAnswer;
-import com.malhaebom.malhaebom.service.port.QuestionImageUrlResolver;
-
-import lombok.RequiredArgsConstructor;
-
 @Service
 @RequiredArgsConstructor
 public class LearningRecordQueryService {
-
 	private static final int RECENT_WRONG_ANSWER_LIMIT = 10;
 	private static final List<AnswerResult> WRONG_ANSWER_RESULTS = List.of(
 		AnswerResult.PARTIALLY_CORRECT,
@@ -99,9 +87,7 @@ public class LearningRecordQueryService {
 		List<TopicStatistics> topicStatistics = learningSessionRepository
 			.findTopicStatistics(childId, LearningSessionStatus.COMPLETED)
 			.stream()
-			.sorted(Comparator.comparing(
-				projection -> projection.getTopic().getTopicId()
-			))
+			.sorted(Comparator.comparing(projection -> projection.getTopic().getTopicId()))
 			.map(this::toTopicStatistics)
 			.toList();
 
@@ -115,10 +101,7 @@ public class LearningRecordQueryService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<WrongAnswer> getRecentWrongAnswers(
-		Long userId,
-		Long childId
-	) {
+	public List<WrongAnswer> getRecentWrongAnswers(Long userId, Long childId) {
 		childProfileService.getOwnedActive(userId, childId);
 
 		return answerRepository.findRecentWrongAnswers(
@@ -130,9 +113,7 @@ public class LearningRecordQueryService {
 			.toList();
 	}
 
-	private LearningHistoryItem toHistoryItem(
-		LearningHistoryProjection projection
-	) {
+	private LearningHistoryItem toHistoryItem(LearningHistoryProjection projection) {
 		int questionCount = Math.toIntExact(projection.getQuestionCount());
 		int correctCount = Math.toIntExact(projection.getCorrectCount());
 
@@ -151,9 +132,7 @@ public class LearningRecordQueryService {
 		);
 	}
 
-	private ChildStatistics toChildStatistics(
-		ChildStatisticsProjection projection
-	) {
+	private ChildStatistics toChildStatistics(ChildStatisticsProjection projection) {
 		return new ChildStatistics(
 			projection.getTotalStudyCount(),
 			projection.getCorrectCount(),
@@ -161,9 +140,7 @@ public class LearningRecordQueryService {
 		);
 	}
 
-	private TopicStatistics toTopicStatistics(
-		TopicStatisticsProjection projection
-	) {
+	private TopicStatistics toTopicStatistics(TopicStatisticsProjection projection) {
 		long questionCount = projection.getQuestionCount();
 		long correctCount = projection.getCorrectCount();
 		return new TopicStatistics(
@@ -186,9 +163,7 @@ public class LearningRecordQueryService {
 		);
 	}
 
-	private long calculateTotalStudySeconds(
-		List<LearningSessionPeriodProjection> periods
-	) {
+	private long calculateTotalStudySeconds(List<LearningSessionPeriodProjection> periods) {
 		return periods.stream()
 			.mapToLong(period -> calculateStudySeconds(
 				period.getStartedAt(),
@@ -197,9 +172,7 @@ public class LearningRecordQueryService {
 			.sum();
 	}
 
-	private int calculateConsecutiveStudyDays(
-		List<LearningSessionPeriodProjection> periods
-	) {
+	private int calculateConsecutiveStudyDays(List<LearningSessionPeriodProjection> periods) {
 		Set<LocalDate> studyDates = new HashSet<>();
 		for (LearningSessionPeriodProjection period : periods) {
 			if (period.getCompletedAt() != null) {
@@ -230,11 +203,7 @@ public class LearningRecordQueryService {
 		return Math.round(correctCount * 1000.0 / questionCount) / 10.0;
 	}
 
-	private long calculateStudySeconds(
-		LocalDateTime startedAt,
-		LocalDateTime completedAt
-	) {
+	private long calculateStudySeconds(LocalDateTime startedAt, LocalDateTime completedAt) {
 		return Duration.between(startedAt, completedAt).getSeconds();
 	}
-
 }

@@ -1,17 +1,16 @@
 package com.malhaebom.malhaebom.infra.speech;
 
-import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.time.Duration;
-import java.util.List;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.TimeUnit;
-
+import com.google.api.core.SettableApiFuture;
+import com.google.api.gax.grpc.GrpcStatusCode;
+import com.google.api.gax.rpc.ApiExceptionFactory;
+import com.google.api.gax.rpc.UnaryCallable;
+import com.google.cloud.speech.v2.*;
+import com.google.protobuf.ByteString;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.service.dto.SpeechAudio;
+import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
+import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
+import io.grpc.Status;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,26 +18,20 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.google.api.core.SettableApiFuture;
-import com.google.api.gax.grpc.GrpcStatusCode;
-import com.google.api.gax.rpc.ApiExceptionFactory;
-import com.google.api.gax.rpc.UnaryCallable;
-import com.google.cloud.speech.v2.RecognizeRequest;
-import com.google.cloud.speech.v2.RecognizeResponse;
-import com.google.cloud.speech.v2.SpeechClient;
-import com.google.cloud.speech.v2.SpeechRecognitionAlternative;
-import com.google.cloud.speech.v2.SpeechRecognitionResult;
-import com.google.protobuf.ByteString;
-import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.service.dto.SpeechAudio;
-import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
-import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
+import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
 
-import io.grpc.Status;
+import static com.malhaebom.malhaebom.support.ApiExceptionAssertions.assertApiException;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class GoogleSpeechV2TranscriberTest {
-
 	private static final byte[] AUDIO_CONTENT = {1, 2, 3};
 	private static final SpeechAudio AUDIO = new SpeechAudio(
 		AUDIO_CONTENT,
@@ -322,19 +315,14 @@ class GoogleSpeechV2TranscriberTest {
 		return response.build();
 	}
 
-	private SpeechRecognitionAlternative alternative(
-		String transcript,
-		float confidence
-	) {
+	private SpeechRecognitionAlternative alternative(String transcript, float confidence) {
 		return SpeechRecognitionAlternative.newBuilder()
 			.setTranscript(transcript)
 			.setConfidence(confidence)
 			.build();
 	}
 
-	private com.google.api.gax.rpc.ApiException googleException(
-		Status.Code code
-	) {
+	private com.google.api.gax.rpc.ApiException googleException(Status.Code code) {
 		return ApiExceptionFactory.createException(
 			new RuntimeException("Google API error"),
 			GrpcStatusCode.of(code),

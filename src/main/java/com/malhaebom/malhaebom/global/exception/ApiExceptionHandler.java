@@ -1,20 +1,16 @@
 package com.malhaebom.malhaebom.global.exception;
 
+import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
-
 	@ExceptionHandler(ApiException.class)
-	public ResponseEntity<ApiResponse<Void>> handleApiException(
-		ApiException exception
-	) {
+	public ResponseEntity<ApiResponse<Void>> handleApiException(ApiException exception) {
 		ErrorCode errorCode = exception.getErrorCode();
 		return ResponseEntity.status(errorCode.getHttpStatus())
 			.body(ApiResponse.error(
@@ -24,9 +20,7 @@ public class ApiExceptionHandler {
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
-	public ResponseEntity<ApiResponse<Void>> handleValidation(
-		MethodArgumentNotValidException exception
-	) {
+	public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException exception) {
 		String message = exception.getBindingResult()
 			.getFieldErrors()
 			.getFirst()

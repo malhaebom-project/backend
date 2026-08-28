@@ -1,5 +1,13 @@
 package com.malhaebom.malhaebom.service.speech;
 
+import com.malhaebom.malhaebom.global.exception.ApiException;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
+import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -10,20 +18,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
-import org.springframework.stereotype.Component;
-
-import com.malhaebom.malhaebom.global.exception.ApiException;
-import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
-import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
-
-import lombok.extern.slf4j.Slf4j;
-
 @Component
 @Slf4j
 public class InFlightSpeechAnswerRegistry {
-
 	private static final int REQUEST_LOCK_COUNT = 64;
 
 	private final ConcurrentMap<String, InFlightSpeechAnswerTask> tasks =
@@ -41,10 +38,7 @@ public class InFlightSpeechAnswerRegistry {
 		}
 	}
 
-	public SpeechAnswerTask join(
-		SpeechAnswerStartResult startResult,
-		String requestKey
-	) {
+	public SpeechAnswerTask join(SpeechAnswerStartResult startResult, String requestKey) {
 		InFlightSpeechAnswerTask inFlight = tasks.get(requestKey);
 		if (inFlight == null || !inFlight.matches(
 			startResult.speechAnswer().getId(),
@@ -61,11 +55,7 @@ public class InFlightSpeechAnswerRegistry {
 		return inFlight.subscribe();
 	}
 
-	public SpeechAnswerTask register(
-		String requestKey,
-		SpeechAnswerStartResult startResult,
-		SpeechAnswerTask sharedTask
-	) {
+	public SpeechAnswerTask register(String requestKey, SpeechAnswerStartResult startResult, SpeechAnswerTask sharedTask) {
 		InFlightSpeechAnswerTask inFlight = new InFlightSpeechAnswerTask(
 			startResult.speechAnswer().getId(),
 			startResult.processingToken(),

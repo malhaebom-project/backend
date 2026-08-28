@@ -1,15 +1,12 @@
 package com.malhaebom.malhaebom.domain.learning;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 class QuestionTest {
-
 	@Test
 	void 모범_답안의_대소문자와_공백과_문장부호를_정규화해_비교한다() {
 		Question question = createQuestion();
@@ -54,10 +51,7 @@ class QuestionTest {
 		);
 	}
 
-	private Question createQuestion(
-		String modelAnswer,
-		Set<String> acceptedAnswers
-	) {
+	private Question createQuestion(String modelAnswer, Set<String> acceptedAnswers) {
 		return Question.create(
 			LearningTopic.DAILY_LIFE,
 			Difficulty.EASY,

@@ -4,11 +4,7 @@ import java.time.Duration;
 import java.util.function.IntSupplier;
 
 public interface AnswerAssessmentMetricsRecorder {
-
-	void bind(
-		IntSupplier queuedRequests,
-		int queueCapacity
-	);
+	void bind(IntSupplier queuedRequests, int queueCapacity);
 
 	void recordAccepted();
 

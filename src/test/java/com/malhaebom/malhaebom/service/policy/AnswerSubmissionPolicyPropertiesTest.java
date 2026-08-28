@@ -1,13 +1,12 @@
 package com.malhaebom.malhaebom.service.policy;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AnswerSubmissionPolicyPropertiesTest {
-
 	@Test
 	void 시간_설정은_1초_이상이어야_한다() {
 		assertThatThrownBy(() -> new AnswerSubmissionPolicyProperties(
