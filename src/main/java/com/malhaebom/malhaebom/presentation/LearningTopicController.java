@@ -1,6 +1,7 @@
 package com.malhaebom.malhaebom.presentation;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,7 +17,7 @@ public class LearningTopicController {
 
 	@GetMapping
 	public ApiResponse<List<LearningTopicResponse>> getLearningTopics() {
-		List<LearningTopicResponse> response = List.of(LearningTopic.values()).stream()
+		List<LearningTopicResponse> response = Stream.of(LearningTopic.values())
 			.map(LearningTopicResponse::from)
 			.toList();
 

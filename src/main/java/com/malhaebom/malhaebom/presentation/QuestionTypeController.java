@@ -1,6 +1,7 @@
 package com.malhaebom.malhaebom.presentation;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,7 +17,7 @@ public class QuestionTypeController {
 
 	@GetMapping
 	public ApiResponse<List<QuestionTypeResponse>> getQuestionTypes() {
-		List<QuestionTypeResponse> response = List.of(QuestionType.values()).stream()
+		List<QuestionTypeResponse> response = Stream.of(QuestionType.values())
 			.map(QuestionTypeResponse::from)
 			.toList();
 
