@@ -29,8 +29,10 @@ import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
 import com.malhaebom.malhaebom.infra.async.SpeechAnswerPolicyConfiguration;
 import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
-import com.malhaebom.malhaebom.service.SpeechAnswerService;
-import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerCoordinator;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerStateService;
+import com.malhaebom.malhaebom.service.speech.InFlightSpeechAnswerRegistry;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerLifecycle;
 import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerRequest;
@@ -38,6 +40,7 @@ import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import com.malhaebom.malhaebom.service.port.SpeechTranscriptionRateLimit;
 import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
 
 @DataJpaTest
@@ -46,7 +49,7 @@ import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
 	SpeechAnswerPolicyConfiguration.class,
 	JpaAuditingConfiguration.class
 })
-class SpeechAnswerServiceJpaTest {
+class SpeechAnswerCoordinatorJpaTest {
 
 	private static final String REQUEST_KEY =
 		"e23b37e7-d7d4-407e-9f54-dcdaee508799";
@@ -68,7 +71,7 @@ class SpeechAnswerServiceJpaTest {
 	private ChildProfileService childProfileService;
 
 	private TestSpeechTranscriber transcriber;
-	private SpeechAnswerService speechAnswerService;
+	private SpeechAnswerCoordinator speechAnswerCoordinator;
 	private LearningSession session;
 	private Long sessionQuestionId;
 
@@ -82,15 +85,26 @@ class SpeechAnswerServiceJpaTest {
 				Duration.ofSeconds(60),
 				Duration.ofSeconds(20)
 			);
-		speechAnswerService = new SpeechAnswerService(
+		SpeechTranscriptionConcurrencyPolicy concurrencyPolicy =
+			new SpeechTranscriptionConcurrencyPolicy(
+				asyncProperties.maxConcurrentRequests()
+			);
+		SpeechShutdownPolicy shutdownPolicy = new SpeechShutdownPolicy(
+			asyncProperties.shutdownDrainTimeout()
+		);
+		InFlightSpeechAnswerRegistry inFlightRegistry =
+			new InFlightSpeechAnswerRegistry();
+		speechAnswerCoordinator = new SpeechAnswerCoordinator(
 			stateService,
 			transcriber,
 			Runnable::run,
-			new SpeechTranscriptionConcurrencyPolicy(
-				asyncProperties.maxConcurrentRequests()
-			),
-			new SpeechShutdownPolicy(
-				asyncProperties.shutdownDrainTimeout()
+			concurrencyPolicy,
+			SpeechTranscriptionRateLimit.UNLIMITED,
+			inFlightRegistry,
+			new SpeechAnswerLifecycle(
+				inFlightRegistry,
+				concurrencyPolicy,
+				shutdownPolicy
 			)
 		);
 		session = LearningJpaTestFixture.saveSession(
@@ -150,7 +164,7 @@ class SpeechAnswerServiceJpaTest {
 	}
 
 	private SpeechAnswerResult upload() {
-		return await(speechAnswerService.uploadAsync(
+		return await(speechAnswerCoordinator.uploadAsync(
 			new SpeechAnswerRequest(
 				LearningJpaTestFixture.USER_ID,
 				session.getId(),

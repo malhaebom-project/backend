@@ -43,8 +43,10 @@ import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecor
 import com.malhaebom.malhaebom.infra.speech.GoogleSpeechRateLimitProperties;
 import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
 import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionRateLimiter;
-import com.malhaebom.malhaebom.service.SpeechAnswerService;
-import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
+import com.malhaebom.malhaebom.service.speech.InFlightSpeechAnswerRegistry;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerLifecycle;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerCoordinator;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
@@ -67,7 +69,9 @@ import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
 @Import({
 	JpaAuditingConfiguration.class,
 	SpeechAnswerStateService.class,
-	SpeechAnswerService.class,
+	SpeechAnswerCoordinator.class,
+	InFlightSpeechAnswerRegistry.class,
+	SpeechAnswerLifecycle.class,
 	SpeechAnswerTransactionBoundaryJpaTest.SpeechTestConfiguration.class
 })
 class SpeechAnswerTransactionBoundaryJpaTest {
@@ -86,7 +90,7 @@ class SpeechAnswerTransactionBoundaryJpaTest {
 	@Autowired
 	private SpeechAnswerRepository speechAnswerRepository;
 	@Autowired
-	private SpeechAnswerService speechAnswerService;
+	private SpeechAnswerCoordinator speechAnswerCoordinator;
 	@Autowired
 	private TestSpeechTranscriber transcriber;
 	@Autowired
@@ -115,7 +119,7 @@ class SpeechAnswerTransactionBoundaryJpaTest {
 		);
 		Long sessionQuestionId = session.getCurrentQuestion().getId();
 
-		SpeechAnswerTask task = speechAnswerService.uploadAsync(
+		SpeechAnswerTask task = speechAnswerCoordinator.uploadAsync(
 			new SpeechAnswerRequest(
 				LearningJpaTestFixture.USER_ID,
 				session.getId(),

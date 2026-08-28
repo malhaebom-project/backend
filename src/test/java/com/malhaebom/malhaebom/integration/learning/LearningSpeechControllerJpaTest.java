@@ -53,13 +53,16 @@ import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPoli
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.presentation.LearningSpeechController;
 import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
-import com.malhaebom.malhaebom.service.SpeechAnswerService;
-import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
+import com.malhaebom.malhaebom.service.speech.InFlightSpeechAnswerRegistry;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerLifecycle;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerCoordinator;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import com.malhaebom.malhaebom.service.port.SpeechTranscriptionRateLimit;
 import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
 import com.malhaebom.malhaebom.support.StubLoginUserArgumentResolver;
 
@@ -111,18 +114,28 @@ class LearningSpeechControllerJpaTest {
 		concurrencyPolicy = new SpeechTranscriptionConcurrencyPolicy(
 			asyncProperties.maxConcurrentRequests()
 		);
-		SpeechAnswerService speechAnswerService = new SpeechAnswerService(
+		SpeechShutdownPolicy shutdownPolicy = new SpeechShutdownPolicy(
+			asyncProperties.shutdownDrainTimeout()
+		);
+		InFlightSpeechAnswerRegistry inFlightRegistry =
+			new InFlightSpeechAnswerRegistry();
+		SpeechAnswerCoordinator speechAnswerCoordinator =
+			new SpeechAnswerCoordinator(
 			stateService,
 			transcriber,
 			Runnable::run,
 			concurrencyPolicy,
-			new SpeechShutdownPolicy(
-				asyncProperties.shutdownDrainTimeout()
+			SpeechTranscriptionRateLimit.UNLIMITED,
+			inFlightRegistry,
+			new SpeechAnswerLifecycle(
+				inFlightRegistry,
+				concurrencyPolicy,
+				shutdownPolicy
 			)
 		);
 		mockMvc = MockMvcBuilders.standaloneSetup(
 			new LearningSpeechController(
-				speechAnswerService,
+				speechAnswerCoordinator,
 				new SpeechRequestTimeout(asyncProperties.requestTimeout())
 			)
 		)

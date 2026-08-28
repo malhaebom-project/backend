@@ -20,7 +20,7 @@ import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.SpeechAnswerResponse;
-import com.malhaebom.malhaebom.service.SpeechAnswerService;
+import com.malhaebom.malhaebom.service.speech.SpeechAnswerCoordinator;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerRequest;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerTask;
 import com.malhaebom.malhaebom.service.dto.SpeechAudio;
@@ -34,7 +34,7 @@ import lombok.RequiredArgsConstructor;
 public class LearningSpeechController {
 
 	private static final long MAX_AUDIO_FILE_SIZE = 5L * 1024 * 1024;
-	private final SpeechAnswerService speechAnswerService;
+	private final SpeechAnswerCoordinator speechAnswerCoordinator;
 	private final SpeechRequestTimeout requestTimeout;
 
 	@PostMapping(
@@ -52,7 +52,7 @@ public class LearningSpeechController {
 		@RequestPart(value = "audio", required = false) MultipartFile audio
 	) {
 		SpeechAudio speechAudio = toSpeechAudio(audio);
-		SpeechAnswerTask task = speechAnswerService.uploadAsync(
+		SpeechAnswerTask task = speechAnswerCoordinator.uploadAsync(
 			new SpeechAnswerRequest(
 				loginUser.userId(),
 				sessionId,
