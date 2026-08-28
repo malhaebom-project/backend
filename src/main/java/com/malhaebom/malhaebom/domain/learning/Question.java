@@ -174,6 +174,10 @@ public class Question extends BaseEntity {
 		return gradingContext == null ? "" : gradingContext;
 	}
 
+	public boolean hasHint() {
+		return hintText != null && !hintText.isBlank();
+	}
+
 	public boolean matchesAnswer(String answerText) {
 		if (answerText == null || answerText.isBlank()) {
 			return false;

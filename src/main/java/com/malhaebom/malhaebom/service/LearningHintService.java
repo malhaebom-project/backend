@@ -32,10 +32,11 @@ public class LearningHintService {
 		validateInProgress(session);
 		LearningSessionQuestion currentQuestion = session.getCurrentQuestion();
 		validateCurrentQuestion(currentQuestion, questionId);
-		validateHint(currentQuestion.getQuestion());
+		Question question = currentQuestion.getQuestion();
+		validateHint(question);
 
 		session.useHintOnCurrentQuestion();
-		return currentQuestion.getQuestion();
+		return question;
 	}
 
 	private void validateInProgress(LearningSession session) {
@@ -56,7 +57,7 @@ public class LearningHintService {
 	}
 
 	private void validateHint(Question question) {
-		if (question.getHintText() == null || question.getHintText().isBlank()) {
+		if (!question.hasHint()) {
 			throw new ApiException(
 				ErrorCode.INVALID_REQUEST,
 				"현재 문제에 등록된 힌트가 없습니다."
