@@ -43,6 +43,7 @@ import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecor
 import com.malhaebom.malhaebom.infra.speech.GoogleSpeechRateLimitProperties;
 import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
 import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionRateLimiter;
+import com.malhaebom.malhaebom.service.InFlightSpeechAnswerRegistry;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
@@ -68,6 +69,7 @@ import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
 	JpaAuditingConfiguration.class,
 	SpeechAnswerStateService.class,
 	SpeechAnswerService.class,
+	InFlightSpeechAnswerRegistry.class,
 	SpeechAnswerTransactionBoundaryJpaTest.SpeechTestConfiguration.class
 })
 class SpeechAnswerTransactionBoundaryJpaTest {

@@ -53,6 +53,7 @@ import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPoli
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.presentation.LearningSpeechController;
 import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
+import com.malhaebom.malhaebom.service.InFlightSpeechAnswerRegistry;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
@@ -60,6 +61,7 @@ import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import com.malhaebom.malhaebom.service.port.SpeechTranscriptionRateLimit;
 import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
 import com.malhaebom.malhaebom.support.StubLoginUserArgumentResolver;
 
@@ -116,9 +118,11 @@ class LearningSpeechControllerJpaTest {
 			transcriber,
 			Runnable::run,
 			concurrencyPolicy,
+			SpeechTranscriptionRateLimit.UNLIMITED,
 			new SpeechShutdownPolicy(
 				asyncProperties.shutdownDrainTimeout()
-			)
+			),
+			new InFlightSpeechAnswerRegistry()
 		);
 		mockMvc = MockMvcBuilders.standaloneSetup(
 			new LearningSpeechController(

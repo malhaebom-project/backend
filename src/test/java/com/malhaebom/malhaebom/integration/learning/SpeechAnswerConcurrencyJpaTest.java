@@ -64,6 +64,7 @@ import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPoli
 import com.malhaebom.malhaebom.infra.speech.SpeechTranscriptionRateLimiter;
 import com.malhaebom.malhaebom.presentation.LearningSpeechController;
 import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
+import com.malhaebom.malhaebom.service.InFlightSpeechAnswerRegistry;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
@@ -75,6 +76,7 @@ import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import com.malhaebom.malhaebom.service.port.SpeechTranscriptionRateLimit;
 import com.malhaebom.malhaebom.service.policy.SpeechProcessingLease;
 import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
 import com.malhaebom.malhaebom.support.StubLoginUserArgumentResolver;
@@ -85,6 +87,7 @@ import com.malhaebom.malhaebom.support.StubLoginUserArgumentResolver;
 	JpaAuditingConfiguration.class,
 	SpeechAnswerStateService.class,
 	SpeechAnswerService.class,
+	InFlightSpeechAnswerRegistry.class,
 	SpeechAnswerConcurrencyJpaTest.SpeechTestConfiguration.class
 })
 class SpeechAnswerConcurrencyJpaTest {
@@ -259,7 +262,8 @@ class SpeechAnswerConcurrencyJpaTest {
 			),
 			new SpeechShutdownPolicy(
 				properties.shutdownDrainTimeout()
-			)
+			),
+			new InFlightSpeechAnswerRegistry()
 		);
 		LearningSession session = saveSession();
 		Long sessionQuestionId = session.getCurrentQuestion().getId();
@@ -518,9 +522,11 @@ class SpeechAnswerConcurrencyJpaTest {
 			new SpeechTranscriptionConcurrencyPolicy(
 				properties.maxConcurrentRequests()
 			),
+			SpeechTranscriptionRateLimit.UNLIMITED,
 			new SpeechShutdownPolicy(
 				properties.shutdownDrainTimeout()
-			)
+			),
+			new InFlightSpeechAnswerRegistry()
 		);
 	}
 

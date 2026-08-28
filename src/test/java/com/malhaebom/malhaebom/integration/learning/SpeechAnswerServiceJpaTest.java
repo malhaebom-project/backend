@@ -31,6 +31,7 @@ import com.malhaebom.malhaebom.infra.async.SpeechAnswerPolicyConfiguration;
 import com.malhaebom.malhaebom.service.policy.SpeechTranscriptionConcurrencyPolicy;
 import com.malhaebom.malhaebom.service.SpeechAnswerService;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
+import com.malhaebom.malhaebom.service.InFlightSpeechAnswerRegistry;
 import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerResult;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerRequest;
@@ -38,6 +39,7 @@ import com.malhaebom.malhaebom.service.dto.SpeechAudio;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionResult;
 import com.malhaebom.malhaebom.service.dto.SpeechTranscriptionTask;
 import com.malhaebom.malhaebom.service.port.SpeechTranscriber;
+import com.malhaebom.malhaebom.service.port.SpeechTranscriptionRateLimit;
 import com.malhaebom.malhaebom.service.policy.SpeechShutdownPolicy;
 
 @DataJpaTest
@@ -89,9 +91,11 @@ class SpeechAnswerServiceJpaTest {
 			new SpeechTranscriptionConcurrencyPolicy(
 				asyncProperties.maxConcurrentRequests()
 			),
+			SpeechTranscriptionRateLimit.UNLIMITED,
 			new SpeechShutdownPolicy(
 				asyncProperties.shutdownDrainTimeout()
-			)
+			),
+			new InFlightSpeechAnswerRegistry()
 		);
 		session = LearningJpaTestFixture.saveSession(
 			questionRepository,
