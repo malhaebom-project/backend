@@ -2,6 +2,7 @@ package com.malhaebom.malhaebom.service;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
@@ -23,6 +24,7 @@ import com.malhaebom.malhaebom.service.dto.AnswerSubmissionPreparation.Processin
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionResult;
 import com.malhaebom.malhaebom.service.dto.AnswerSubmissionTask;
 import com.malhaebom.malhaebom.service.exception.AnswerAssessmentOverloadedException;
+import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 
 import lombok.RequiredArgsConstructor;
 
@@ -30,7 +32,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class LearningAnswerService {
 
-	private final AnswerAssessmentService answerAssessmentService;
+	private final AnswerAssessmentGenerator answerAssessmentGenerator;
 	private final AnswerSubmissionTransactionService submissionTransactionService;
 	private final Clock clock;
 
@@ -54,8 +56,7 @@ public class LearningAnswerService {
 	private AnswerSubmissionTask assessAndComplete(
 		Processing processing
 	) {
-		AnswerAssessmentTask task = answerAssessmentService
-			.assessAsync(processing.assessmentInput());
+		AnswerAssessmentTask task = assessAsync(processing);
 
 		AtomicReference<ApiException> cancellation = new AtomicReference<>();
 		CompletionStage<AnswerSubmissionResult> result = withinDeadline(
@@ -77,6 +78,21 @@ public class LearningAnswerService {
 			result,
 			() -> cancel(processing, task, cancellation)
 		);
+	}
+
+	private AnswerAssessmentTask assessAsync(Processing processing) {
+		AnswerAssessmentTask task = Objects.requireNonNull(
+			answerAssessmentGenerator.generateAsync(
+				processing.assessmentInput()
+			),
+			"AI 평가 작업은 null일 수 없습니다."
+		);
+		return task.map(result -> {
+			if (result == null) {
+				throw new IllegalStateException("AI 평가 결과가 비어 있습니다.");
+			}
+			return result;
+		});
 	}
 
 	private CompletionStage<AnswerAssessment> withinDeadline(

@@ -68,7 +68,6 @@ import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerAssessmentMet
 import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerSubmissionMetricsRecorder;
 import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
-import com.malhaebom.malhaebom.service.AnswerAssessmentService;
 import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.LearningAnswerService;
@@ -91,7 +90,6 @@ import com.malhaebom.malhaebom.service.port.AnswerAssessmentGenerator;
 	MicrometerAnswerAssessmentMetricsRecorder.class,
 	MicrometerAnswerSubmissionMetricsRecorder.class,
 	AnswerSubmissionTransactionService.class,
-	AnswerAssessmentService.class,
 	LearningAnswerConcurrencyJpaTest.AssessmentTestConfiguration.class
 })
 class LearningAnswerConcurrencyJpaTest {

@@ -46,7 +46,6 @@ import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.observability.MicrometerAnswerSubmissionMetricsRecorder;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
-import com.malhaebom.malhaebom.service.AnswerAssessmentService;
 import com.malhaebom.malhaebom.service.AnswerSubmissionTransactionService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
 import com.malhaebom.malhaebom.service.LearningAnswerRetryService;
@@ -92,8 +91,6 @@ class LearningAnswerServiceJpaTest {
 	void setUp() {
 		assessmentGenerator = new TestAnswerAssessmentGenerator();
 		meterRegistry = new SimpleMeterRegistry();
-		AnswerAssessmentService assessmentService =
-			new AnswerAssessmentService(assessmentGenerator);
 		Clock clock = Clock.systemUTC();
 		submissionTransactionService = new AnswerSubmissionTransactionService(
 			learningSessionRepository,
@@ -109,7 +106,7 @@ class LearningAnswerServiceJpaTest {
 			new MicrometerAnswerSubmissionMetricsRecorder(meterRegistry)
 		);
 		learningAnswerService = new LearningAnswerService(
-			assessmentService,
+			assessmentGenerator,
 			submissionTransactionService,
 			clock
 		);
