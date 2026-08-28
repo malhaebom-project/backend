@@ -17,8 +17,8 @@ import com.malhaebom.malhaebom.domain.learning.repository.LearningSessionReposit
 import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository;
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
 import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
+import com.malhaebom.malhaebom.service.policy.SpeechProcessingLease;
 
 import lombok.RequiredArgsConstructor;
 
@@ -28,7 +28,7 @@ public class SpeechAnswerStateService {
 
 	private final LearningSessionRepository learningSessionRepository;
 	private final SpeechAnswerRepository speechAnswerRepository;
-	private final SpeechAnswerAsyncProperties asyncProperties;
+	private final SpeechProcessingLease processingLease;
 	private final ChildProfileService childProfileService;
 
 	@Transactional
@@ -186,7 +186,7 @@ public class SpeechAnswerStateService {
 	}
 
 	private Instant leaseExpiresAt(Instant claimedAt) {
-		return claimedAt.plus(asyncProperties.processingLease());
+		return claimedAt.plus(processingLease.value());
 	}
 
 	private boolean isSameQuestion(

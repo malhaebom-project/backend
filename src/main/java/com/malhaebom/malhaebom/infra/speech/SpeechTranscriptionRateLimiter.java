@@ -12,9 +12,11 @@ import org.springframework.stereotype.Component;
 
 import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder;
 import com.malhaebom.malhaebom.infra.observability.ProviderRateLimitMetricsRecorder.Result;
+import com.malhaebom.malhaebom.service.port.SpeechTranscriptionRateLimit;
 
 @Component
-public class SpeechTranscriptionRateLimiter {
+public class SpeechTranscriptionRateLimiter
+	implements SpeechTranscriptionRateLimit {
 
 	static final String PROVIDER = "gcp-stt";
 
@@ -56,6 +58,7 @@ public class SpeechTranscriptionRateLimiter {
 		);
 	}
 
+	@Override
 	public boolean tryAcquire() {
 		if (requestBucket.tryConsume(1)) {
 			metrics.record(PROVIDER, Result.ALLOWED);

@@ -12,7 +12,6 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -28,6 +27,7 @@ import com.malhaebom.malhaebom.domain.learning.repository.SpeechAnswerRepository
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
+import com.malhaebom.malhaebom.infra.async.SpeechAnswerPolicyConfiguration;
 import com.malhaebom.malhaebom.infra.persistence.JpaAuditingConfiguration;
 import com.malhaebom.malhaebom.service.SpeechAnswerStateService;
 import com.malhaebom.malhaebom.service.ChildProfileService;
@@ -36,8 +36,11 @@ import com.malhaebom.malhaebom.service.dto.SpeechAnswerStartResult;
 import jakarta.persistence.EntityManager;
 
 @DataJpaTest
-@Import({SpeechAnswerStateService.class, JpaAuditingConfiguration.class})
-@EnableConfigurationProperties(SpeechAnswerAsyncProperties.class)
+@Import({
+	SpeechAnswerStateService.class,
+	SpeechAnswerPolicyConfiguration.class,
+	JpaAuditingConfiguration.class
+})
 class SpeechAnswerStateServiceJpaTest {
 
 	private static final String REQUEST_KEY =

@@ -16,7 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
-import com.malhaebom.malhaebom.infra.async.SpeechAnswerAsyncProperties;
+import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.SpeechAnswerResponse;
@@ -35,7 +35,7 @@ public class LearningSpeechController {
 
 	private static final long MAX_AUDIO_FILE_SIZE = 5L * 1024 * 1024;
 	private final SpeechAnswerService speechAnswerService;
-	private final SpeechAnswerAsyncProperties asyncProperties;
+	private final SpeechRequestTimeout requestTimeout;
 
 	@PostMapping(
 		path = "/{sessionId}/questions/{sessionQuestionId}/speech",
@@ -62,7 +62,7 @@ public class LearningSpeechController {
 			)
 		);
 		DeferredResult<ApiResponse<SpeechAnswerResponse>> response =
-			new DeferredResult<>(asyncProperties.requestTimeout().toMillis());
+			new DeferredResult<>(requestTimeout.value().toMillis());
 
 		task.result().whenComplete((result, exception) -> {
 			if (exception != null) {
