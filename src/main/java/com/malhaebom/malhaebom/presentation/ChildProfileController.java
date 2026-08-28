@@ -1,5 +1,7 @@
 package com.malhaebom.malhaebom.presentation;
 
+import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.ChildProfileResponse;
@@ -24,11 +26,13 @@ import java.util.List;
 @RequiredArgsConstructor
 @Tag(name = "어린이 프로필", description = "어린이 프로필을 관리하는 API")
 @SecurityRequirement(name = "bearerAuth")
+@AuthenticatedErrorResponses
 public class ChildProfileController {
 	private final ChildProfileService childProfileService;
 
 	@PostMapping
 	@Operation(summary = "어린이 프로필 생성")
+	@ValidationErrorResponses
 	public ResponseEntity<ApiResponse<ChildProfileResponse>> create(
 		@Auth LoginUser loginUser,
 		@Valid @RequestBody CreateChildProfileRequest request
@@ -67,6 +71,7 @@ public class ChildProfileController {
 
 	@PatchMapping("/{childId}")
 	@Operation(summary = "어린이 프로필 수정")
+	@ValidationErrorResponses
 	public ApiResponse<ChildProfileResponse> update(
 		@Auth LoginUser loginUser,
 		@PathVariable Long childId,

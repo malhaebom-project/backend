@@ -1,5 +1,6 @@
 package com.malhaebom.malhaebom.presentation;
 
+import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
 import com.malhaebom.malhaebom.presentation.cookie.RefreshCookieProvider;
 import com.malhaebom.malhaebom.presentation.dto.*;
 import com.malhaebom.malhaebom.service.LoginService;
@@ -25,6 +26,7 @@ public class LoginController {
 
 	@PostMapping("/signup")
 	@Operation(summary = "회원가입")
+	@ValidationErrorResponses
 	public ResponseEntity<ApiResponse<UserResponse>> signup(@Valid @RequestBody SignupRequest request) {
 		UserResponse user = UserResponse.from(userService.create(
 			request.name(),
@@ -37,6 +39,7 @@ public class LoginController {
 
 	@PostMapping("/login")
 	@Operation(summary = "로그인")
+	@ValidationErrorResponses
 	public ResponseEntity<ApiResponse<AccessTokenResponse>> login(@Valid @RequestBody LoginRequest request) {
 		TokenPair tokens = loginService.login(
 			request.email(),

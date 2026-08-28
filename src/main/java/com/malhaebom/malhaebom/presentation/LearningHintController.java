@@ -1,5 +1,7 @@
 package com.malhaebom.malhaebom.presentation;
 
+import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.HintResponse;
@@ -19,11 +21,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Tag(name = "학습 세션")
 @SecurityRequirement(name = "bearerAuth")
+@AuthenticatedErrorResponses
 public class LearningHintController {
 	private final LearningHintService learningHintService;
 
 	@PostMapping("/{sessionId}/questions/{questionId}/hint")
 	@Operation(summary = "힌트 요청")
+	@ValidationErrorResponses
 	public ApiResponse<HintResponse> request(
 		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId,

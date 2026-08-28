@@ -1,6 +1,8 @@
 package com.malhaebom.malhaebom.presentation;
 
 import com.malhaebom.malhaebom.domain.learning.Question;
+import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.AdminQuestionRequest;
 import com.malhaebom.malhaebom.presentation.dto.AdminQuestionResponse;
@@ -24,12 +26,14 @@ import java.util.List;
 @RequiredArgsConstructor
 @Tag(name = "관리자", description = "관리자가 학습 문제를 관리하는 API")
 @SecurityRequirement(name = "bearerAuth")
+@AuthenticatedErrorResponses
 public class AdminQuestionController {
 	private final AdminQuestionService adminQuestionService;
 	private final QuestionImageUrlResolver questionImageUrlResolver;
 
 	@PostMapping
 	@Operation(summary = "문제 등록")
+	@ValidationErrorResponses
 	public ResponseEntity<ApiResponse<AdminQuestionResponse>> create(
 		@Auth LoginUser loginUser,
 		@Valid @RequestBody AdminQuestionRequest request
@@ -71,6 +75,7 @@ public class AdminQuestionController {
 
 	@PutMapping("/{questionId}")
 	@Operation(summary = "문제 수정")
+	@ValidationErrorResponses
 	public ApiResponse<AdminQuestionResponse> update(
 		@Auth LoginUser loginUser,
 		@PathVariable Long questionId,

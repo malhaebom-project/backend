@@ -2,6 +2,8 @@ package com.malhaebom.malhaebom.presentation;
 
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
 import com.malhaebom.malhaebom.infra.async.AnswerSubmissionAsyncProperties;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
@@ -24,6 +26,7 @@ import org.springframework.web.context.request.async.DeferredResult;
 @RequiredArgsConstructor
 @Tag(name = "학습 세션")
 @SecurityRequirement(name = "bearerAuth")
+@AuthenticatedErrorResponses
 public class LearningAnswerController {
 	private final LearningAnswerService learningAnswerService;
 	private final LearningAnswerRetryService learningAnswerRetryService;
@@ -31,6 +34,7 @@ public class LearningAnswerController {
 
 	@PostMapping("/{sessionId}/questions/{sessionQuestionId}/answers")
 	@Operation(summary = "답변 제출")
+	@ValidationErrorResponses
 	public DeferredResult<ApiResponse<SubmitAnswerResponse>> submit(
 		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId,
@@ -66,6 +70,7 @@ public class LearningAnswerController {
 
 	@PostMapping("/{sessionId}/questions/{sessionQuestionId}/skip-retry")
 	@Operation(summary = "재시도 건너뛰기")
+	@ValidationErrorResponses
 	public ApiResponse<Void> skipRetry(
 		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId,

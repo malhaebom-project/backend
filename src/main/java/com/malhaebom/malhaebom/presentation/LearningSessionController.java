@@ -1,6 +1,8 @@
 package com.malhaebom.malhaebom.presentation;
 
 import com.malhaebom.malhaebom.domain.learning.LearningSessionQuestion;
+import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.*;
 import com.malhaebom.malhaebom.service.LearningSessionService;
@@ -18,12 +20,14 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @Tag(name = "학습 세션", description = "학습을 시작하고 진행 상태를 관리하는 API")
 @SecurityRequirement(name = "bearerAuth")
+@AuthenticatedErrorResponses
 public class LearningSessionController {
 	private final LearningSessionService learningSessionService;
 	private final QuestionImageUrlResolver questionImageUrlResolver;
 
 	@PostMapping
 	@Operation(summary = "학습 시작")
+	@ValidationErrorResponses
 	public ApiResponse<CreateLearningSessionResponse> create(
 		@Auth LoginUser loginUser,
 		@Valid @RequestBody CreateLearningSessionRequest request

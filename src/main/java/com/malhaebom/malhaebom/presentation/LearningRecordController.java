@@ -1,5 +1,7 @@
 package com.malhaebom.malhaebom.presentation;
 
+import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.*;
 import com.malhaebom.malhaebom.service.LearningRecordQueryService;
@@ -19,11 +21,13 @@ import java.util.List;
 @RequiredArgsConstructor
 @Tag(name = "학습 기록", description = "어린이의 학습 이력과 통계를 조회하는 API")
 @SecurityRequirement(name = "bearerAuth")
+@AuthenticatedErrorResponses
 public class LearningRecordController {
 	private final LearningRecordQueryService learningRecordQueryService;
 
 	@GetMapping("/{childId}/learning-history")
 	@Operation(summary = "학습 이력 조회")
+	@ValidationErrorResponses
 	public ApiResponse<LearningHistoryResponse> getHistory(
 		@Auth LoginUser loginUser,
 		@PathVariable Long childId,

@@ -2,6 +2,8 @@ package com.malhaebom.malhaebom.presentation;
 
 import com.malhaebom.malhaebom.global.exception.ApiException;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
+import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
@@ -29,6 +31,7 @@ import java.util.Locale;
 @RequiredArgsConstructor
 @Tag(name = "학습 세션")
 @SecurityRequirement(name = "bearerAuth")
+@AuthenticatedErrorResponses
 public class LearningSpeechController {
 	private static final long MAX_AUDIO_FILE_SIZE = 5L * 1024 * 1024;
 	private final SpeechAnswerCoordinator speechAnswerCoordinator;
@@ -39,6 +42,7 @@ public class LearningSpeechController {
 		consumes = MediaType.MULTIPART_FORM_DATA_VALUE
 	)
 	@Operation(summary = "음성 답변 업로드")
+	@ValidationErrorResponses
 	public DeferredResult<ApiResponse<SpeechAnswerResponse>> upload(
 		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId,
