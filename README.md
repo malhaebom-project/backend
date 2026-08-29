@@ -4,6 +4,7 @@ Java 21과 Spring Boot 기반의 말해봄 백엔드 애플리케이션입니다
 
 ## 프로젝트 문서
 
+- [Swagger API 문서 접근 및 운영 정책](docs/swagger-api.md)
 - [학습 기록 API 집계 기준](docs/learning-record-api.md)
 - [답안 평가 동시성 제한 지표](docs/answer-assessment-metrics.md)
 - [답안 제출 비동기 부하 테스트](load-tests/answer-submission/README.md)

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="말해봄">
+  <defs>
+    <linearGradient id="malhaebom-mark" x1="9" y1="5" x2="40" y2="44" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#72dd21"/>
+      <stop offset="1" stop-color="#45b900"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="44" height="44" rx="15" fill="url(#malhaebom-mark)"/>
+  <path d="M14.5 13.5h19a4 4 0 0 1 4 4v9a4 4 0 0 1-4 4h-7.8l-6.9 5.6v-5.6h-4.3a4 4 0 0 1-4-4v-9a4 4 0 0 1 4-4Z" fill="#fff"/>
+  <circle cx="18" cy="22" r="2" fill="#54c90a"/>
+  <circle cx="24" cy="22" r="2" fill="#54c90a"/>
+  <circle cx="30" cy="22" r="2" fill="#54c90a"/>
+  <circle cx="37.5" cy="10.5" r="2.5" fill="#d9ff9b"/>
+</svg>

@@ -1,13 +1,11 @@
-package com.malhaebom.malhaebom.presentation.auth;
+package com.malhaebom.malhaebom.infra.openapi;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import io.swagger.v3.oas.annotations.Parameter;
-
-@Parameter(hidden = true)
-@Target(ElementType.PARAMETER)
+@Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Auth {}
+public @interface AnswerSubmissionErrorResponses {
+}
