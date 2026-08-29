@@ -15,7 +15,7 @@ public record LearningSessionResponse(
 	LearningSessionStatus status,
 	@Schema(description = "현재 문제의 0 기반 인덱스", example = "3")
 	int currentQuestionIndex,
-	@Schema(description = "전체 문제 수", example = "10")
+	@Schema(description = "전체 문제 수", example = "5")
 	int questionCount,
 	@Schema(description = "현재까지 맞힌 문제 수", example = "2")
 	int correctCount,

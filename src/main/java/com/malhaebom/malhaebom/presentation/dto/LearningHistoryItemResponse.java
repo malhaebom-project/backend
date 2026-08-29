@@ -15,13 +15,13 @@ public record LearningHistoryItemResponse(
 	String topicName,
 	@Schema(description = "학습 난이도", example = "EASY")
 	Difficulty difficulty,
-	@Schema(description = "전체 문제 수", example = "10")
+	@Schema(description = "전체 문제 수", example = "5")
 	int questionCount,
-	@Schema(description = "맞힌 문제 수", example = "8")
+	@Schema(description = "맞힌 문제 수", example = "4")
 	int correctCount,
 	@Schema(description = "정답률", example = "80.0")
 	double correctRate,
-	@Schema(description = "학습 시간(초)", example = "420")
+	@Schema(description = "학습 시간(초)", example = "320")
 	long studySeconds,
 	@Schema(
 		description = "학습 완료 시각. UTC의 ISO 8601 형식으로 반환됩니다.",

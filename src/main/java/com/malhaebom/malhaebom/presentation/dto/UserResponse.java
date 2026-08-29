@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public record UserResponse(
 	@Schema(description = "보호자 ID", example = "1") Long guardianId,
 	@Schema(description = "로그인 이메일", example = "parent@example.com") String email,
-	@Schema(description = "보호자 이름", example = "김보호") String name,
+	@Schema(description = "보호자 이름", example = "홍길동") String name,
 	@Schema(description = "계정 권한", example = "GUARDIAN") AccountRole role
 ) {
 	public static UserResponse from(User user) {

@@ -10,13 +10,13 @@ import java.time.ZoneOffset;
 public record LearningSessionResultResponse(
 	@Schema(description = "학습 세션 ID", example = "10")
 	Long sessionId,
-	@Schema(description = "전체 문제 수", example = "10")
+	@Schema(description = "전체 문제 수", example = "5")
 	int questionCount,
-	@Schema(description = "맞힌 문제 수", example = "8")
+	@Schema(description = "맞힌 문제 수", example = "4")
 	int correctCount,
 	@Schema(description = "정답률 (0~100)", example = "80", minimum = "0", maximum = "100")
 	int correctRate,
-	@Schema(description = "총 학습 시간(초)", example = "420")
+	@Schema(description = "총 학습 시간(초)", example = "286")
 	long studySeconds,
 	@Schema(description = "학습 완료 시각 (UTC)", example = "2026-08-01T01:07:00Z", format = "date-time")
 	OffsetDateTime completedAt

@@ -12,7 +12,7 @@ public record CreateChildProfileRequest(
 	String nickname,
 
 	@Positive(message = "나이는 1 이상이어야 합니다.")
-	@Schema(description = "어린이의 만 나이", example = "10", minimum = "1")
+	@Schema(description = "어린이 나이", example = "10", minimum = "1")
 	int age,
 
 	@Min(value = 1, message = "학년은 1 이상이어야 합니다.")

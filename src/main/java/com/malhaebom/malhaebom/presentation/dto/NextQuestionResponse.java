@@ -14,7 +14,7 @@ public record NextQuestionResponse(
 	Long questionId,
 	@Schema(description = "사용자에게 표시할 1 기반 문제 순서", example = "1")
 	int questionIndex,
-	@Schema(description = "세션의 전체 문제 수", example = "10")
+	@Schema(description = "세션의 전체 문제 수", example = "5")
 	int totalQuestionCount,
 	@Schema(description = "문제 유형", example = "SHORT_ANSWER")
 	QuestionType type,

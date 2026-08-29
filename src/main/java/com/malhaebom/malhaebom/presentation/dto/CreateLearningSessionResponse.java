@@ -18,7 +18,7 @@ public record CreateLearningSessionResponse(
 	Long topicId,
 	@Schema(description = "학습 난이도", example = "EASY")
 	Difficulty difficulty,
-	@Schema(description = "세션의 전체 문제 수", example = "10")
+	@Schema(description = "세션의 전체 문제 수", example = "5")
 	int questionCount,
 	@Schema(description = "현재 문제의 0 기반 인덱스", example = "0")
 	int currentQuestionIndex,
