@@ -1,0 +1,202 @@
+.swagger-ui {
+  font-family: Inter, Pretendard, "Noto Sans KR", system-ui, -apple-system, sans-serif;
+}
+
+.swagger-ui .topbar {
+  padding: 14px 0;
+  background: linear-gradient(115deg, #263552 0%, #33486d 100%);
+  box-shadow: 0 4px 18px rgba(38, 53, 82, 0.2);
+}
+
+.swagger-ui .topbar .wrapper {
+  max-width: 1240px;
+}
+
+.swagger-ui .topbar-wrapper .link {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.swagger-ui .topbar-wrapper .link svg {
+  display: none;
+}
+
+.swagger-ui .topbar-wrapper .link::before {
+  width: 42px;
+  height: 42px;
+  content: "";
+  background: url("/swagger-ui-assets/malhaebom-mark.svg") center / contain no-repeat;
+}
+
+.swagger-ui .topbar-wrapper .link::after {
+  color: #fff;
+  content: "말해봄 API";
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.swagger-ui .topbar .download-url-wrapper .select-label {
+  color: #fff;
+}
+
+.swagger-ui .topbar .download-url-wrapper select {
+  min-width: 180px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 12px;
+}
+
+.swagger-ui .wrapper {
+  max-width: 1240px;
+  padding-right: 24px;
+  padding-left: 24px;
+}
+
+.swagger-ui .info {
+  margin: 42px 0 30px;
+}
+
+.swagger-ui .info .title {
+  font-weight: 900;
+  letter-spacing: -0.035em;
+}
+
+.swagger-ui .info .title small {
+  border-radius: 999px;
+}
+
+.swagger-ui .btn.authorize {
+  border-radius: 12px;
+}
+
+.swagger-ui .scheme-container {
+  margin: 0 0 28px;
+  padding: 22px 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.swagger-ui .opblock-tag {
+  margin: 0 0 12px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.swagger-ui .opblock-tag:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.swagger-ui .opblock {
+  overflow: hidden;
+  margin: 0 0 12px;
+  border-width: 1px;
+  border-radius: 14px;
+}
+
+.swagger-ui .opblock .opblock-summary {
+  padding: 10px;
+}
+
+.swagger-ui .opblock .opblock-summary-method {
+  border-radius: 9px;
+  text-shadow: none;
+}
+
+.swagger-ui .btn.execute {
+  border-radius: 12px;
+}
+
+.swagger-ui input[type="email"],
+.swagger-ui input[type="file"],
+.swagger-ui input[type="password"],
+.swagger-ui input[type="search"],
+.swagger-ui input[type="text"],
+.swagger-ui textarea,
+.swagger-ui select {
+  border-radius: 10px;
+}
+
+.swagger-ui .model-box,
+.swagger-ui section.models {
+  border-radius: 14px;
+}
+
+.swagger-ui section.models .model-container {
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.swagger-ui .renderedMarkdown li,
+.swagger-ui .markdown li,
+.swagger-ui .opblock-description-wrapper li {
+  line-height: 1.8;
+}
+
+.swagger-ui .renderedMarkdown li code,
+.swagger-ui .markdown li code,
+.swagger-ui .opblock-description-wrapper li code {
+  padding: 0.1em 0.35em;
+  font-size: inherit;
+  line-height: inherit;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.swagger-ui .opblock-description-wrapper p strong + code {
+  margin-left: 0.25em;
+  padding: 0.05em 0.25em;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.swagger-ui .headers-wrapper table th,
+.swagger-ui .headers-wrapper table td {
+  padding-right: 14px;
+  padding-left: 14px;
+  line-height: 1.5;
+  vertical-align: top;
+}
+
+.swagger-ui .headers-wrapper table th:first-child,
+.swagger-ui .headers-wrapper table td:first-child {
+  width: 18%;
+  min-width: 120px;
+  padding-left: 0;
+  padding-right: 24px;
+  white-space: nowrap;
+}
+
+.swagger-ui .headers-wrapper table th:last-child,
+.swagger-ui .headers-wrapper table td:last-child {
+  width: 32%;
+  padding-right: 0;
+  padding-left: 24px;
+}
+
+.swagger-ui .headers-wrapper table code {
+  margin: 0;
+  padding: 0.05em 0.2em;
+  font-size: inherit;
+  line-height: 1.3;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+@media (max-width: 640px) {
+  .swagger-ui .topbar .download-url-wrapper {
+    max-width: 58%;
+  }
+
+  .swagger-ui .topbar-wrapper .link::after {
+    content: "말해봄";
+    font-size: 18px;
+  }
+
+  .swagger-ui .wrapper {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+}
