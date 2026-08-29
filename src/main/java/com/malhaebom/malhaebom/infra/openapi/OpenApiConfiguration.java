@@ -1,6 +1,7 @@
 package com.malhaebom.malhaebom.infra.openapi;
 
 import com.malhaebom.malhaebom.presentation.dto.ApiErrorResponse;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import io.swagger.v3.core.converter.ModelConverters;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -18,7 +19,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.LinkedHashMap;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Configuration
 @OpenAPIDefinition(
@@ -71,10 +75,20 @@ public class OpenApiConfiguration {
 			if (authenticated) {
 				responses.addApiResponse("401", errorResponse(
 					"인증 정보가 없거나 유효하지 않음",
-					Map.of("UNAUTHORIZED", errorExample(
-						"인증이 필요합니다.",
-						"UNAUTHORIZED"
-					))
+					Map.of(
+						"UNAUTHORIZED", errorExample(
+							"인증이 필요합니다.",
+							"UNAUTHORIZED"
+						),
+						"INVALID_ACCESS_TOKEN", errorExample(
+							"유효하지 않은 인증 정보입니다.",
+							"UNAUTHORIZED"
+						),
+						"EXPIRED_ACCESS_TOKEN", errorExample(
+							"만료된 액세스 토큰입니다.",
+							"UNAUTHORIZED"
+						)
+					)
 				));
 				responses.addApiResponse("403", errorResponse(
 					"리소스에 접근할 권한이 없음",
@@ -97,9 +111,76 @@ public class OpenApiConfiguration {
 			if (handlerMethod.hasMethodAnnotation(AnswerSubmissionErrorResponses.class)) {
 				addAnswerSubmissionResponses(responses);
 			}
+			addDomainErrorResponses(responses, handlerMethod.getBeanType()
+				.getAnnotationsByType(DomainErrorResponses.class));
+			addDomainErrorResponses(responses, handlerMethod.getMethod()
+				.getAnnotationsByType(DomainErrorResponses.class));
 			return operation;
 		};
 	}
+
+	private void addDomainErrorResponses(
+		ApiResponses responses,
+		DomainErrorResponses[] annotations
+	) {
+		Map<Integer, List<OpenApiErrorExample>> errorsByStatus = Arrays.stream(annotations)
+			.flatMap(annotation -> java.util.stream.Stream.concat(
+				Arrays.stream(annotation.value())
+					.map(errorCode -> new OpenApiErrorExample(
+						errorCode,
+						errorCode.name(),
+						errorCode.getMessage()
+					)),
+				Arrays.stream(annotation.examples())
+					.map(example -> new OpenApiErrorExample(
+						example.code(),
+						example.name().isBlank() ? example.code().name() : example.name(),
+						example.message()
+					))
+			))
+			.distinct()
+			.collect(Collectors.groupingBy(
+				example -> example.errorCode().getHttpStatus().value(),
+				LinkedHashMap::new,
+				Collectors.toList()
+			));
+
+		errorsByStatus.forEach((status, errorCodes) ->
+			mergeDomainErrorResponse(responses, status.toString(), errorCodes));
+	}
+
+	private void mergeDomainErrorResponse(
+		ApiResponses responses,
+		String status,
+		List<OpenApiErrorExample> examples
+	) {
+		ApiResponse response = responses.get(status);
+		if (response == null) {
+			response = errorResponse(
+				examples.stream()
+					.map(OpenApiErrorExample::message)
+					.distinct()
+					.collect(Collectors.joining(" / ")),
+				new LinkedHashMap<>()
+			);
+			responses.addApiResponse(status, response);
+		}
+
+		MediaType mediaType = response.getContent().get("application/json");
+		if (mediaType.getExamples() == null) {
+			mediaType.setExamples(new LinkedHashMap<>());
+		}
+		examples.forEach(example -> mediaType.addExamples(
+			example.name(),
+			errorExample(example.message(), example.errorCode().name())
+		));
+	}
+
+	private record OpenApiErrorExample(
+		ErrorCode errorCode,
+		String name,
+		String message
+	) {}
 
 	private void markSpeechAudioAsRequired(io.swagger.v3.oas.models.Operation operation) {
 		if (operation.getRequestBody() == null || operation.getRequestBody().getContent() == null) {

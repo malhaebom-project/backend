@@ -2,6 +2,8 @@ package com.malhaebom.malhaebom.presentation;
 
 import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.DomainErrorResponses;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.*;
 import com.malhaebom.malhaebom.service.LearningRecordQueryService;
@@ -39,6 +41,7 @@ public class LearningRecordController {
 			"""
 	)
 	@ValidationErrorResponses
+	@DomainErrorResponses(ErrorCode.CHILD_PROFILE_NOT_FOUND)
 	public ApiResponse<LearningHistoryResponse> getHistory(
 		@Auth LoginUser loginUser,
 		@PathVariable Long childId,
@@ -60,6 +63,7 @@ public class LearningRecordController {
 
 	@GetMapping("/{childId}/statistics")
 	@Operation(summary = "학습 통계 조회")
+	@DomainErrorResponses(ErrorCode.CHILD_PROFILE_NOT_FOUND)
 	public ApiResponse<LearningStatisticsResponse> getStatistics(
 		@Auth LoginUser loginUser,
 		@PathVariable Long childId
@@ -76,6 +80,7 @@ public class LearningRecordController {
 
 	@GetMapping("/{childId}/wrong-answers")
 	@Operation(summary = "최근 오답 조회")
+	@DomainErrorResponses(ErrorCode.CHILD_PROFILE_NOT_FOUND)
 	public ApiResponse<List<WrongAnswerResponse>> getRecentWrongAnswers(
 		@Auth LoginUser loginUser,
 		@PathVariable Long childId

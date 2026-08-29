@@ -5,6 +5,8 @@ import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.SpeechProcessingErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.DomainErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.DomainErrorExample;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
@@ -59,6 +61,22 @@ public class LearningSpeechController {
 	)
 	@ValidationErrorResponses
 	@SpeechProcessingErrorResponses
+	@DomainErrorResponses(
+		value = {
+			ErrorCode.CURRENT_QUESTION_MISMATCH,
+			ErrorCode.CHILD_PROFILE_NOT_FOUND,
+			ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS
+		},
+		examples = {
+			@DomainErrorExample(code = ErrorCode.INVALID_AUDIO_FILE, message = "음성 파일을 읽을 수 없습니다.", name = "AUDIO_READ_FAILED"),
+			@DomainErrorExample(code = ErrorCode.INVALID_AUDIO_FILE, message = "음성 파일은 비어 있을 수 없습니다.", name = "EMPTY_AUDIO_FILE"),
+			@DomainErrorExample(code = ErrorCode.INVALID_AUDIO_FILE, message = "음성 파일은 5MB를 초과할 수 없습니다.", name = "AUDIO_FILE_TOO_LARGE"),
+			@DomainErrorExample(code = ErrorCode.INVALID_AUDIO_FILE, message = "지원하지 않는 음성 파일 형식입니다.", name = "UNSUPPORTED_AUDIO_TYPE"),
+			@DomainErrorExample(code = ErrorCode.INVALID_REQUEST, message = "중복 요청 방지를 위한 요청 식별 키가 필요합니다.", name = "IDEMPOTENCY_KEY_REQUIRED"),
+			@DomainErrorExample(code = ErrorCode.INVALID_REQUEST, message = "요청 식별 키는 100자를 초과할 수 없습니다.", name = "IDEMPOTENCY_KEY_TOO_LONG"),
+			@DomainErrorExample(code = ErrorCode.SPEECH_PROCESSING, message = "음성 답변 처리 권한이 만료되었습니다.", name = "SPEECH_PROCESSING_LEASE_EXPIRED")
+		}
+	)
 	public DeferredResult<ApiResponse<SpeechAnswerResponse>> upload(
 		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId,

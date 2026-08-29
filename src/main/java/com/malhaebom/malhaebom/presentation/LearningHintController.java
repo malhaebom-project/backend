@@ -2,6 +2,9 @@ package com.malhaebom.malhaebom.presentation;
 
 import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.DomainErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.DomainErrorExample;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.HintResponse;
@@ -28,6 +31,19 @@ public class LearningHintController {
 	@PostMapping("/{sessionId}/questions/{questionId}/hint")
 	@Operation(summary = "힌트 요청")
 	@ValidationErrorResponses
+	@DomainErrorResponses(
+		value = {
+			ErrorCode.LEARNING_SESSION_NOT_FOUND,
+			ErrorCode.CHILD_PROFILE_NOT_FOUND,
+			ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS,
+			ErrorCode.CURRENT_QUESTION_MISMATCH
+		},
+		examples = @DomainErrorExample(
+			code = ErrorCode.INVALID_REQUEST,
+			message = "현재 문제에 등록된 힌트가 없습니다.",
+			name = "HINT_NOT_AVAILABLE"
+		)
+	)
 	public ApiResponse<HintResponse> request(
 		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId,

@@ -1,6 +1,9 @@
 package com.malhaebom.malhaebom.presentation;
 
 import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.DomainErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.DomainErrorExample;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.presentation.cookie.RefreshCookieProvider;
 import com.malhaebom.malhaebom.presentation.dto.*;
 import com.malhaebom.malhaebom.service.LoginService;
@@ -27,6 +30,7 @@ public class LoginController {
 	@PostMapping("/signup")
 	@Operation(summary = "회원가입")
 	@ValidationErrorResponses
+	@DomainErrorResponses(ErrorCode.EMAIL_ALREADY_EXISTS)
 	public ResponseEntity<ApiResponse<UserResponse>> signup(@Valid @RequestBody SignupRequest request) {
 		UserResponse user = UserResponse.from(userService.create(
 			request.name(),
@@ -40,6 +44,11 @@ public class LoginController {
 	@PostMapping("/login")
 	@Operation(summary = "로그인")
 	@ValidationErrorResponses
+	@DomainErrorResponses(examples = @DomainErrorExample(
+		code = ErrorCode.UNAUTHORIZED,
+		message = "이메일 또는 비밀번호가 올바르지 않습니다.",
+		name = "INVALID_CREDENTIALS"
+	))
 	public ResponseEntity<ApiResponse<AccessTokenResponse>> login(@Valid @RequestBody LoginRequest request) {
 		TokenPair tokens = loginService.login(
 			request.email(),
@@ -50,6 +59,18 @@ public class LoginController {
 
 	@PostMapping("/refresh")
 	@Operation(summary = "액세스 토큰 재발급")
+	@DomainErrorResponses(examples = {
+		@DomainErrorExample(
+			code = ErrorCode.UNAUTHORIZED,
+			message = "리프레시 토큰이 유효하지 않습니다.",
+			name = "INVALID_REFRESH_TOKEN"
+		),
+		@DomainErrorExample(
+			code = ErrorCode.NOT_FOUND,
+			message = "존재하지 않는 로그인 세션입니다.",
+			name = "LOGIN_SESSION_NOT_FOUND"
+		)
+	})
 	public ResponseEntity<ApiResponse<AccessTokenResponse>> refresh(
 		@CookieValue(RefreshCookieProvider.REFRESH_TOKEN_KEY)
 		String refreshToken
@@ -60,6 +81,11 @@ public class LoginController {
 
 	@DeleteMapping("/logout")
 	@Operation(summary = "로그아웃")
+	@DomainErrorResponses(examples = @DomainErrorExample(
+		code = ErrorCode.NOT_FOUND,
+		message = "존재하지 않는 로그인 세션입니다.",
+		name = "LOGIN_SESSION_NOT_FOUND"
+	))
 	public ResponseEntity<Void> logout(
 		@CookieValue(value = RefreshCookieProvider.REFRESH_TOKEN_KEY, required = false)
 		String refreshToken

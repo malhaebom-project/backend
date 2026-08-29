@@ -2,6 +2,8 @@ package com.malhaebom.malhaebom.presentation;
 
 import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.DomainErrorResponses;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.ChildProfileResponse;
@@ -33,6 +35,7 @@ public class ChildProfileController {
 	@PostMapping
 	@Operation(summary = "어린이 프로필 생성")
 	@ValidationErrorResponses
+	@DomainErrorResponses(ErrorCode.CHILD_NICKNAME_ALREADY_EXISTS)
 	public ResponseEntity<ApiResponse<ChildProfileResponse>> create(
 		@Auth LoginUser loginUser,
 		@Valid @RequestBody CreateChildProfileRequest request
@@ -63,6 +66,7 @@ public class ChildProfileController {
 
 	@GetMapping("/{childId}")
 	@Operation(summary = "어린이 프로필 조회")
+	@DomainErrorResponses(ErrorCode.CHILD_PROFILE_NOT_FOUND)
 	public ApiResponse<ChildProfileResponse> get(@Auth LoginUser loginUser, @PathVariable Long childId) {
 		return ApiResponse.success(
 			toResponse(childProfileService.get(loginUser.userId(), childId))
@@ -72,6 +76,10 @@ public class ChildProfileController {
 	@PatchMapping("/{childId}")
 	@Operation(summary = "어린이 프로필 수정")
 	@ValidationErrorResponses
+	@DomainErrorResponses({
+		ErrorCode.CHILD_PROFILE_NOT_FOUND,
+		ErrorCode.CHILD_NICKNAME_ALREADY_EXISTS
+	})
 	public ApiResponse<ChildProfileResponse> update(
 		@Auth LoginUser loginUser,
 		@PathVariable Long childId,
@@ -92,6 +100,7 @@ public class ChildProfileController {
 
 	@DeleteMapping("/{childId}")
 	@Operation(summary = "어린이 프로필 삭제")
+	@DomainErrorResponses(ErrorCode.CHILD_PROFILE_NOT_FOUND)
 	public ApiResponse<Void> delete(@Auth LoginUser loginUser, @PathVariable Long childId) {
 		childProfileService.delete(loginUser.userId(), childId);
 		return ApiResponse.success(null, "어린이 프로필이 삭제되었습니다.");

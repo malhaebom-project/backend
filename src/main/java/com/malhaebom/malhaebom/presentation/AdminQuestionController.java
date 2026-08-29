@@ -3,6 +3,9 @@ package com.malhaebom.malhaebom.presentation;
 import com.malhaebom.malhaebom.domain.learning.Question;
 import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.DomainErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.DomainErrorExample;
+import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.AdminQuestionRequest;
 import com.malhaebom.malhaebom.presentation.dto.AdminQuestionResponse;
@@ -27,6 +30,11 @@ import java.util.List;
 @Tag(name = "관리자", description = "관리자가 학습 문제를 관리하는 API")
 @SecurityRequirement(name = "bearerAuth")
 @AuthenticatedErrorResponses
+@DomainErrorResponses(examples = @DomainErrorExample(
+	code = ErrorCode.FORBIDDEN,
+	message = "관리자 권한이 필요합니다.",
+	name = "ADMIN_REQUIRED"
+))
 public class AdminQuestionController {
 	private final AdminQuestionService adminQuestionService;
 	private final QuestionImageUrlResolver questionImageUrlResolver;
@@ -62,6 +70,7 @@ public class AdminQuestionController {
 
 	@GetMapping("/{questionId}")
 	@Operation(summary = "문제 상세 조회")
+	@DomainErrorResponses(ErrorCode.QUESTION_NOT_FOUND)
 	public ApiResponse<AdminQuestionResponse> get(@Auth LoginUser loginUser, @PathVariable Long questionId) {
 		return ApiResponse.success(
 			toResponse(
@@ -76,6 +85,7 @@ public class AdminQuestionController {
 	@PutMapping("/{questionId}")
 	@Operation(summary = "문제 수정")
 	@ValidationErrorResponses
+	@DomainErrorResponses(ErrorCode.QUESTION_NOT_FOUND)
 	public ApiResponse<AdminQuestionResponse> update(
 		@Auth LoginUser loginUser,
 		@PathVariable Long questionId,
@@ -94,6 +104,7 @@ public class AdminQuestionController {
 
 	@DeleteMapping("/{questionId}")
 	@Operation(summary = "문제 삭제")
+	@DomainErrorResponses(ErrorCode.QUESTION_NOT_FOUND)
 	public ApiResponse<Void> delete(@Auth LoginUser loginUser, @PathVariable Long questionId) {
 		adminQuestionService.delete(loginUser.userId(), questionId);
 		return ApiResponse.success(null, "문제를 삭제했습니다.");

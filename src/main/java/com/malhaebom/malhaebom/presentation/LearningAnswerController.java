@@ -5,6 +5,8 @@ import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.AnswerSubmissionErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.DomainErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.DomainErrorExample;
 import com.malhaebom.malhaebom.infra.async.AnswerSubmissionAsyncProperties;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
@@ -49,6 +51,19 @@ public class LearningAnswerController {
 	)
 	@ValidationErrorResponses
 	@AnswerSubmissionErrorResponses
+	@DomainErrorResponses(
+		value = {
+			ErrorCode.CURRENT_QUESTION_MISMATCH,
+			ErrorCode.CHILD_PROFILE_NOT_FOUND,
+			ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS
+		},
+		examples = {
+			@DomainErrorExample(code = ErrorCode.INVALID_REQUEST, message = "이미 답변 제출에 사용된 음성 답변입니다.", name = "SPEECH_ANSWER_ALREADY_USED"),
+			@DomainErrorExample(code = ErrorCode.INVALID_REQUEST, message = "처리가 완료되지 않은 음성 답변입니다.", name = "SPEECH_ANSWER_NOT_COMPLETED"),
+			@DomainErrorExample(code = ErrorCode.INVALID_REQUEST, message = "답변 가능 횟수를 초과했습니다.", name = "ANSWER_ATTEMPT_LIMIT_EXCEEDED"),
+			@DomainErrorExample(code = ErrorCode.ANSWER_SUBMISSION_PROCESSING, message = "답변 제출 처리 권한이 만료되었습니다.", name = "ANSWER_SUBMISSION_LEASE_EXPIRED")
+		}
+	)
 	public DeferredResult<ApiResponse<SubmitAnswerResponse>> submit(
 		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId,
@@ -88,6 +103,19 @@ public class LearningAnswerController {
 		description = "오답 재도전 기회가 남아 있을 때 재시도를 포기하고 다음 문제로 진행합니다. 이미 진행 중인 제출이 있으면 `409 ANSWER_SUBMISSION_CONFLICT`를 반환합니다."
 	)
 	@ValidationErrorResponses
+	@DomainErrorResponses(
+		value = {
+			ErrorCode.LEARNING_SESSION_NOT_FOUND,
+			ErrorCode.CHILD_PROFILE_NOT_FOUND,
+			ErrorCode.LEARNING_SESSION_NOT_IN_PROGRESS,
+			ErrorCode.CURRENT_QUESTION_MISMATCH,
+			ErrorCode.ANSWER_SUBMISSION_CONFLICT
+		},
+		examples = {
+			@DomainErrorExample(code = ErrorCode.INVALID_REQUEST, message = "오답 제출 후에만 재시도를 건너뛸 수 있습니다.", name = "WRONG_ANSWER_REQUIRED"),
+			@DomainErrorExample(code = ErrorCode.INVALID_REQUEST, message = "재시도 가능한 오답이 아닙니다.", name = "ANSWER_NOT_RETRYABLE")
+		}
+	)
 	public ApiResponse<Void> skipRetry(
 		@Auth LoginUser loginUser,
 		@PathVariable Long sessionId,
