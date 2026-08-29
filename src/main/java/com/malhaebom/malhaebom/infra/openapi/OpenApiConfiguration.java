@@ -16,6 +16,7 @@ import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
+import org.springdoc.core.models.GroupedOpenApi;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springdoc.core.customizers.OperationCustomizer;
 import org.springframework.context.annotation.Bean;
@@ -45,6 +46,34 @@ import java.util.stream.Collectors;
 )
 public class OpenApiConfiguration {
 	private static final String ERROR_SCHEMA_REF = "#/components/schemas/ApiErrorResponse";
+	private static final String ADMIN_API_PATH = "/api/v1/admin/**";
+
+	@Bean
+	public GroupedOpenApi userApi(
+		OperationCustomizer apiDocumentationOperationCustomizer,
+		OpenApiCustomizer apiErrorResponseSchemaCustomizer
+	) {
+		return GroupedOpenApi.builder()
+			.group("user-api")
+			.pathsToMatch("/api/v1/**")
+			.pathsToExclude(ADMIN_API_PATH)
+			.addOperationCustomizer(apiDocumentationOperationCustomizer)
+			.addOpenApiCustomizer(apiErrorResponseSchemaCustomizer)
+			.build();
+	}
+
+	@Bean
+	public GroupedOpenApi adminApi(
+		OperationCustomizer apiDocumentationOperationCustomizer,
+		OpenApiCustomizer apiErrorResponseSchemaCustomizer
+	) {
+		return GroupedOpenApi.builder()
+			.group("admin-api")
+			.pathsToMatch(ADMIN_API_PATH)
+			.addOperationCustomizer(apiDocumentationOperationCustomizer)
+			.addOpenApiCustomizer(apiErrorResponseSchemaCustomizer)
+			.build();
+	}
 
 	@Bean
 	public OpenApiCustomizer apiErrorResponseSchemaCustomizer() {
