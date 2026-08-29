@@ -5,6 +5,7 @@ import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.DomainErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.DomainErrorExample;
+import com.malhaebom.malhaebom.infra.openapi.SuccessfulResponse;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.*;
@@ -30,6 +31,7 @@ public class LearningSessionController {
 
 	@PostMapping
 	@Operation(summary = "학습 시작")
+	@SuccessfulResponse(description = "학습 세션 생성 및 시작 성공")
 	@ValidationErrorResponses
 	@DomainErrorResponses({
 		ErrorCode.CHILD_PROFILE_NOT_FOUND,
@@ -57,6 +59,7 @@ public class LearningSessionController {
 
 	@GetMapping("/{sessionId}/questions/next")
 	@Operation(summary = "다음 문제 조회")
+	@SuccessfulResponse(description = "현재 진행할 문제 조회 성공")
 	@DomainErrorResponses({
 		ErrorCode.LEARNING_SESSION_NOT_FOUND,
 		ErrorCode.CHILD_PROFILE_NOT_FOUND,
@@ -80,6 +83,7 @@ public class LearningSessionController {
 
 	@GetMapping("/{sessionId}")
 	@Operation(summary = "학습 세션 조회")
+	@SuccessfulResponse(description = "학습 세션 진행 상태 조회 성공")
 	@DomainErrorResponses({
 		ErrorCode.LEARNING_SESSION_NOT_FOUND,
 		ErrorCode.CHILD_PROFILE_NOT_FOUND
@@ -98,6 +102,7 @@ public class LearningSessionController {
 
 	@PostMapping("/{sessionId}/complete")
 	@Operation(summary = "학습 완료")
+	@SuccessfulResponse(description = "학습 세션 완료 결과 조회 성공")
 	@DomainErrorResponses(
 		value = {
 			ErrorCode.LEARNING_SESSION_NOT_FOUND,

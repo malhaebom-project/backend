@@ -1,5 +1,6 @@
 package com.malhaebom.malhaebom.presentation;
 
+import com.malhaebom.malhaebom.infra.openapi.SuccessfulResponse;
 import com.malhaebom.malhaebom.domain.learning.LearningTopic;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.LearningTopicResponse;
@@ -18,6 +19,7 @@ import java.util.stream.Stream;
 public class LearningTopicController {
 	@GetMapping
 	@Operation(summary = "학습 주제 목록 조회")
+	@SuccessfulResponse(description = "지원하는 학습 주제 목록 조회 성공")
 	public ApiResponse<List<LearningTopicResponse>> getLearningTopics() {
 		List<LearningTopicResponse> response = Stream.of(LearningTopic.values())
 			.map(LearningTopicResponse::from)

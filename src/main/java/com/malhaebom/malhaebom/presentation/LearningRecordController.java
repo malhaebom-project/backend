@@ -3,6 +3,7 @@ package com.malhaebom.malhaebom.presentation;
 import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.DomainErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.SuccessfulResponse;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.*;
@@ -40,6 +41,7 @@ public class LearningRecordController {
 			- 응답의 `completedAt`은 UTC ISO 8601 시각(`Z`)으로 반환
 			"""
 	)
+	@SuccessfulResponse(description = "완료된 학습 이력 페이지 조회 성공")
 	@ValidationErrorResponses
 	@DomainErrorResponses(ErrorCode.CHILD_PROFILE_NOT_FOUND)
 	public ApiResponse<LearningHistoryResponse> getHistory(
@@ -63,6 +65,7 @@ public class LearningRecordController {
 
 	@GetMapping("/{childId}/statistics")
 	@Operation(summary = "학습 통계 조회")
+	@SuccessfulResponse(description = "어린이 누적 학습 통계 조회 성공")
 	@DomainErrorResponses(ErrorCode.CHILD_PROFILE_NOT_FOUND)
 	public ApiResponse<LearningStatisticsResponse> getStatistics(
 		@Auth LoginUser loginUser,
@@ -80,6 +83,7 @@ public class LearningRecordController {
 
 	@GetMapping("/{childId}/wrong-answers")
 	@Operation(summary = "최근 오답 조회")
+	@SuccessfulResponse(description = "최근 오답 목록 조회 성공")
 	@DomainErrorResponses(ErrorCode.CHILD_PROFILE_NOT_FOUND)
 	public ApiResponse<List<WrongAnswerResponse>> getRecentWrongAnswers(
 		@Auth LoginUser loginUser,

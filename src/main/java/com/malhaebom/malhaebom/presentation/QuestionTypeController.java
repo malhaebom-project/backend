@@ -1,5 +1,6 @@
 package com.malhaebom.malhaebom.presentation;
 
+import com.malhaebom.malhaebom.infra.openapi.SuccessfulResponse;
 import com.malhaebom.malhaebom.domain.learning.QuestionType;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.QuestionTypeResponse;
@@ -18,6 +19,7 @@ import java.util.stream.Stream;
 public class QuestionTypeController {
 	@GetMapping
 	@Operation(summary = "문제 유형 목록 조회")
+	@SuccessfulResponse(description = "지원하는 문제 유형 목록 조회 성공")
 	public ApiResponse<List<QuestionTypeResponse>> getQuestionTypes() {
 		List<QuestionTypeResponse> response = Stream.of(QuestionType.values())
 			.map(QuestionTypeResponse::from)

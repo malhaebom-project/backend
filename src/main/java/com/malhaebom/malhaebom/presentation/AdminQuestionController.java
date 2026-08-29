@@ -5,6 +5,7 @@ import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.DomainErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.DomainErrorExample;
+import com.malhaebom.malhaebom.infra.openapi.SuccessfulResponse;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.AdminQuestionRequest;
@@ -41,6 +42,7 @@ public class AdminQuestionController {
 
 	@PostMapping
 	@Operation(summary = "문제 등록")
+	@SuccessfulResponse(status = 201, description = "학습 문제 등록 성공")
 	@ValidationErrorResponses
 	public ResponseEntity<ApiResponse<AdminQuestionResponse>> create(
 		@Auth LoginUser loginUser,
@@ -59,6 +61,7 @@ public class AdminQuestionController {
 
 	@GetMapping
 	@Operation(summary = "전체 문제 조회")
+	@SuccessfulResponse(description = "관리자용 전체 문제 조회 성공")
 	public ApiResponse<List<AdminQuestionResponse>> getAll(@Auth LoginUser loginUser) {
 		List<AdminQuestionResponse> questions =
 			adminQuestionService.getAll(loginUser.userId())
@@ -70,6 +73,7 @@ public class AdminQuestionController {
 
 	@GetMapping("/{questionId}")
 	@Operation(summary = "문제 상세 조회")
+	@SuccessfulResponse(description = "관리자용 문제 상세 조회 성공")
 	@DomainErrorResponses(ErrorCode.QUESTION_NOT_FOUND)
 	public ApiResponse<AdminQuestionResponse> get(@Auth LoginUser loginUser, @PathVariable Long questionId) {
 		return ApiResponse.success(
@@ -84,6 +88,7 @@ public class AdminQuestionController {
 
 	@PutMapping("/{questionId}")
 	@Operation(summary = "문제 수정")
+	@SuccessfulResponse(description = "학습 문제 수정 성공")
 	@ValidationErrorResponses
 	@DomainErrorResponses(ErrorCode.QUESTION_NOT_FOUND)
 	public ApiResponse<AdminQuestionResponse> update(
@@ -104,6 +109,7 @@ public class AdminQuestionController {
 
 	@DeleteMapping("/{questionId}")
 	@Operation(summary = "문제 삭제")
+	@SuccessfulResponse(description = "학습 문제 비활성화 성공")
 	@DomainErrorResponses(ErrorCode.QUESTION_NOT_FOUND)
 	public ApiResponse<Void> delete(@Auth LoginUser loginUser, @PathVariable Long questionId) {
 		adminQuestionService.delete(loginUser.userId(), questionId);

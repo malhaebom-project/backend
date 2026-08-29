@@ -7,6 +7,7 @@ import com.malhaebom.malhaebom.infra.openapi.SpeechProcessingErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.DomainErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.DomainErrorExample;
+import com.malhaebom.malhaebom.infra.openapi.SuccessfulResponse;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.config.SpeechRequestTimeout;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
@@ -59,6 +60,7 @@ public class LearningSpeechController {
 			- 새로 녹음한 답변에는 새로운 `Idempotency-Key` 사용
 			"""
 	)
+	@SuccessfulResponse(description = "음성 답변 업로드 및 STT 처리 성공")
 	@ValidationErrorResponses
 	@SpeechProcessingErrorResponses
 	@DomainErrorResponses(

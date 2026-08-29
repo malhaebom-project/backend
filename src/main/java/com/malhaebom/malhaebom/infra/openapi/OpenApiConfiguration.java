@@ -63,6 +63,11 @@ public class OpenApiConfiguration {
 				responses = new ApiResponses();
 				operation.setResponses(responses);
 			}
+			SuccessfulResponse successfulResponse = handlerMethod
+				.getMethodAnnotation(SuccessfulResponse.class);
+			if (successfulResponse != null) {
+				applySuccessfulResponse(responses, successfulResponse);
+			}
 			if (validated) {
 				responses.addApiResponse("400", errorResponse(
 					"요청 값이 올바르지 않음",
@@ -117,6 +122,25 @@ public class OpenApiConfiguration {
 				.getAnnotationsByType(DomainErrorResponses.class));
 			return operation;
 		};
+	}
+
+	private void applySuccessfulResponse(
+		ApiResponses responses,
+		SuccessfulResponse successfulResponse
+	) {
+		String responseCode = Integer.toString(successfulResponse.status());
+		ApiResponse response = responses.get(responseCode);
+		if (response == null && !"200".equals(responseCode)) {
+			response = responses.remove("200");
+		}
+		if (response == null) {
+			response = new ApiResponse();
+		}
+		response.setDescription(successfulResponse.description());
+		if (successfulResponse.status() == 204) {
+			response.setContent(null);
+		}
+		responses.addApiResponse(responseCode, response);
 	}
 
 	private void addDomainErrorResponses(

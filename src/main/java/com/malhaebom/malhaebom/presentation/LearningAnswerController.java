@@ -7,6 +7,7 @@ import com.malhaebom.malhaebom.infra.openapi.AnswerSubmissionErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.DomainErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.DomainErrorExample;
+import com.malhaebom.malhaebom.infra.openapi.SuccessfulResponse;
 import com.malhaebom.malhaebom.infra.async.AnswerSubmissionAsyncProperties;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
@@ -49,6 +50,7 @@ public class LearningAnswerController {
 			- 동일 제출 재요청은 서버의 제출 예약 상태를 재사용하여 중복 채점을 방지
 			"""
 	)
+	@SuccessfulResponse(description = "음성 답변 채점 및 학습 답변 저장 성공")
 	@ValidationErrorResponses
 	@AnswerSubmissionErrorResponses
 	@DomainErrorResponses(
@@ -102,6 +104,7 @@ public class LearningAnswerController {
 		summary = "재시도 건너뛰기",
 		description = "오답 재도전 기회가 남아 있을 때 재시도를 포기하고 다음 문제로 진행합니다. 이미 진행 중인 제출이 있으면 `409 ANSWER_SUBMISSION_CONFLICT`를 반환합니다."
 	)
+	@SuccessfulResponse(description = "남은 재시도 포기 및 다음 문제 이동 성공")
 	@ValidationErrorResponses
 	@DomainErrorResponses(
 		value = {

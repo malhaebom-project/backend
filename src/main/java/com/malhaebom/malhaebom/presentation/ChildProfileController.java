@@ -3,6 +3,7 @@ package com.malhaebom.malhaebom.presentation;
 import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.DomainErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.SuccessfulResponse;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
@@ -34,6 +35,7 @@ public class ChildProfileController {
 
 	@PostMapping
 	@Operation(summary = "어린이 프로필 생성")
+	@SuccessfulResponse(status = 201, description = "어린이 프로필 생성 성공")
 	@ValidationErrorResponses
 	@DomainErrorResponses(ErrorCode.CHILD_NICKNAME_ALREADY_EXISTS)
 	public ResponseEntity<ApiResponse<ChildProfileResponse>> create(
@@ -56,6 +58,7 @@ public class ChildProfileController {
 
 	@GetMapping
 	@Operation(summary = "어린이 프로필 목록 조회")
+	@SuccessfulResponse(description = "어린이 프로필 목록 조회 성공")
 	public ApiResponse<List<ChildProfileResponse>> getAll(@Auth LoginUser loginUser) {
 		return ApiResponse.success(
 			childProfileService.getAll(loginUser.userId()).stream()
@@ -66,6 +69,7 @@ public class ChildProfileController {
 
 	@GetMapping("/{childId}")
 	@Operation(summary = "어린이 프로필 조회")
+	@SuccessfulResponse(description = "어린이 프로필 조회 성공")
 	@DomainErrorResponses(ErrorCode.CHILD_PROFILE_NOT_FOUND)
 	public ApiResponse<ChildProfileResponse> get(@Auth LoginUser loginUser, @PathVariable Long childId) {
 		return ApiResponse.success(
@@ -75,6 +79,7 @@ public class ChildProfileController {
 
 	@PatchMapping("/{childId}")
 	@Operation(summary = "어린이 프로필 수정")
+	@SuccessfulResponse(description = "어린이 프로필 수정 성공")
 	@ValidationErrorResponses
 	@DomainErrorResponses({
 		ErrorCode.CHILD_PROFILE_NOT_FOUND,
@@ -100,6 +105,7 @@ public class ChildProfileController {
 
 	@DeleteMapping("/{childId}")
 	@Operation(summary = "어린이 프로필 삭제")
+	@SuccessfulResponse(description = "어린이 프로필 삭제 성공")
 	@DomainErrorResponses(ErrorCode.CHILD_PROFILE_NOT_FOUND)
 	public ApiResponse<Void> delete(@Auth LoginUser loginUser, @PathVariable Long childId) {
 		childProfileService.delete(loginUser.userId(), childId);

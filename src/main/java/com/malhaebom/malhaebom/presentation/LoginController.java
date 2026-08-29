@@ -3,6 +3,7 @@ package com.malhaebom.malhaebom.presentation;
 import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.DomainErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.DomainErrorExample;
+import com.malhaebom.malhaebom.infra.openapi.SuccessfulResponse;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.presentation.cookie.RefreshCookieProvider;
 import com.malhaebom.malhaebom.presentation.dto.*;
@@ -29,6 +30,7 @@ public class LoginController {
 
 	@PostMapping("/signup")
 	@Operation(summary = "회원가입")
+	@SuccessfulResponse(status = 201, description = "보호자 회원가입 성공")
 	@ValidationErrorResponses
 	@DomainErrorResponses(ErrorCode.EMAIL_ALREADY_EXISTS)
 	public ResponseEntity<ApiResponse<UserResponse>> signup(@Valid @RequestBody SignupRequest request) {
@@ -43,6 +45,7 @@ public class LoginController {
 
 	@PostMapping("/login")
 	@Operation(summary = "로그인")
+	@SuccessfulResponse(description = "로그인 및 액세스 토큰 발급 성공")
 	@ValidationErrorResponses
 	@DomainErrorResponses(examples = @DomainErrorExample(
 		code = ErrorCode.UNAUTHORIZED,
@@ -59,6 +62,7 @@ public class LoginController {
 
 	@PostMapping("/refresh")
 	@Operation(summary = "액세스 토큰 재발급")
+	@SuccessfulResponse(description = "액세스 토큰 재발급 성공")
 	@DomainErrorResponses(examples = {
 		@DomainErrorExample(
 			code = ErrorCode.UNAUTHORIZED,
@@ -81,6 +85,7 @@ public class LoginController {
 
 	@DeleteMapping("/logout")
 	@Operation(summary = "로그아웃")
+	@SuccessfulResponse(status = 204, description = "로그아웃 및 Refresh Token 쿠키 만료 성공")
 	@DomainErrorResponses(examples = @DomainErrorExample(
 		code = ErrorCode.NOT_FOUND,
 		message = "존재하지 않는 로그인 세션입니다.",

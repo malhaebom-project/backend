@@ -4,6 +4,7 @@ import com.malhaebom.malhaebom.infra.openapi.AuthenticatedErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.ValidationErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.DomainErrorResponses;
 import com.malhaebom.malhaebom.infra.openapi.DomainErrorExample;
+import com.malhaebom.malhaebom.infra.openapi.SuccessfulResponse;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.presentation.auth.Auth;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
@@ -30,6 +31,7 @@ public class LearningHintController {
 
 	@PostMapping("/{sessionId}/questions/{questionId}/hint")
 	@Operation(summary = "힌트 요청")
+	@SuccessfulResponse(description = "현재 문제의 힌트 사용 성공")
 	@ValidationErrorResponses
 	@DomainErrorResponses(
 		value = {

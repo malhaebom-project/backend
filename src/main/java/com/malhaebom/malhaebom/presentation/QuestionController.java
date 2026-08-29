@@ -7,6 +7,7 @@ import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import com.malhaebom.malhaebom.presentation.dto.ApiResponse;
 import com.malhaebom.malhaebom.presentation.dto.QuestionTtsResponse;
 import com.malhaebom.malhaebom.infra.openapi.DomainErrorResponses;
+import com.malhaebom.malhaebom.infra.openapi.SuccessfulResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class QuestionController {
 
 	@GetMapping("/{questionId}/tts")
 	@Operation(summary = "문제 음성 조회")
+	@SuccessfulResponse(description = "문제 문장과 음성 URL 조회 성공")
 	@DomainErrorResponses(ErrorCode.QUESTION_NOT_FOUND)
 	public ApiResponse<QuestionTtsResponse> getTts(@PathVariable Long questionId) {
 		Question question = questionRepository
