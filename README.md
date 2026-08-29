@@ -1,215 +1,193 @@
 # 말해봄 백엔드
 
-Java 21과 Spring Boot 기반의 말해봄 백엔드 애플리케이션입니다.
+영어 말하기 학습 서비스 **말해봄**의 Java 21·Spring Boot 백엔드입니다.
+학습 세션과 답안 제출, Google Cloud Speech-to-Text 기반 음성 인식,
+OpenAI 기반 답안 평가, 학습 기록 및 관리자용 문제 관리를 제공합니다.
+
+## 기술 스택
+
+- Java 21, Spring Boot 4.1, Gradle
+- Spring Web MVC, Spring Data JPA, Bean Validation
+- PostgreSQL(Supabase, 운영), H2(로컬·테스트)
+- OpenAI, Google Cloud Speech-to-Text·Text-to-Speech, Amazon S3
+- Springdoc OpenAPI, Actuator, Micrometer, Prometheus
 
 ## 프로젝트 문서
 
 - [Swagger API 문서 접근 및 운영 정책](docs/swagger-api.md)
 - [학습 기록 API 집계 기준](docs/learning-record-api.md)
-- [답안 평가 동시성 제한 지표](docs/answer-assessment-metrics.md)
+- [답안 평가 rate limit·대기열 지표](docs/answer-assessment-metrics.md)
+- [OpenAI 답안 평가 데이터셋과 반복 평가](docs/answer-assessment-evaluation-dataset.md)
 - [답안 제출 비동기 부하 테스트](load-tests/answer-submission/README.md)
 
-## 애플리케이션 설정
+## 시작하기
 
-기본 설정 파일인 `src/main/resources/application.yaml`은 다음 외부 파일을
-선택적으로 불러옵니다.
+### 요구 사항
 
-- `config/application.yaml`: 공용 및 배포 설정
-- 프로젝트 루트의 `.env`: 환경변수 형식의 선택 설정
+- JDK 21
+- Git
+- Google STT나 OpenAI 답안 평가 등 외부 연동을 실행하려면 `config`
+  저장소 접근 권한과 각 provider의 유효한 자격증명
 
-현재 프로젝트는 `config/application.yaml`에 필요한 값을 직접 설정하므로
-`.env`는 필수가 아닙니다. `config/`는 별도 Git 서브모듈이므로 처음 저장소를
-받은 경우 다음 명령으로 초기화합니다.
+Gradle은 별도 설치하지 않고 저장소의 Gradle Wrapper를 사용합니다.
 
-```bash
+### 저장소와 비공개 설정 준비
+
+`config/`는 별도 비공개 Git 서브모듈입니다. 저장소를 처음 받은 뒤 다음 명령으로
+초기화합니다.
+
+```powershell
 git submodule update --init --recursive
 ```
 
-### JWT
+공통 설정인 `src/main/resources/application.yaml`은 다음 외부 파일을 선택적으로
+불러옵니다.
 
-Access Token과 Refresh Token에는 서로 다른 비밀키를 사용합니다. 각 키는 최소
-32바이트 이상의 충분히 긴 난수 문자열이어야 합니다.
+- `config/application.yaml`: JWT, 쿠키, AWS 등 비공개 설정
+- 프로젝트 루트의 `.env`: 환경변수 형식의 선택 설정
 
-```bash
-openssl rand -base64 32
-openssl rand -base64 32
-```
+현재 개발 환경은 비공개 `config/application.yaml`을 사용하므로 `.env`가 필수는
+아닙니다. 실제 비밀값은 README, 이슈, 로그 또는 추적되는 설정 파일에 기록하지
+않습니다.
 
-각 명령의 출력값을 따로 설정합니다.
+### 로컬 실행
 
-```yaml
-jwt:
-  access:
-    secret-key: ACCESS_TOKEN_비밀키
-    expiration: 1h
-  refresh:
-    secret-key: REFRESH_TOKEN_비밀키
-    expiration: 14d
-```
-
-비밀키를 변경하면 기존 키로 발급한 토큰은 더 이상 사용할 수 없습니다.
-
-### Refresh Token 쿠키
-
-프런트엔드와 백엔드를 같은 사이트에서 제공하는 HTTPS 운영 환경의 권장 설정은
-다음과 같습니다.
-
-```yaml
-cookie:
-  refresh-token:
-    path: /
-    same-site: Lax
-    secure: true
-    http-only: true
-    ttl: 14d
-```
-
-`domain`을 생략하면 Refresh Token은 API 호스트에만 전송되는 Host-only 쿠키로
-생성됩니다. HTTPS 없이 `localhost` 또는 EC2 IP로 테스트할 때는 브라우저가
-쿠키를 전송할 수 있도록 `secure: false`로 변경해야 합니다.
-
-### 파일 업로드 제한
-
-```yaml
-spring:
-  servlet:
-    multipart:
-      max-file-size: 5MB
-      max-request-size: 6MB
-```
-
-### Google Cloud Text-to-Speech와 S3
-
-TTS를 사용하지 않을 때는 다음 값을 유지합니다. 이 경우 Google Cloud와 S3
-자격증명은 사용되지 않습니다.
-
-```yaml
-google:
-  tts:
-    enabled: false
-```
-
-TTS를 사용하려면 Google Cloud Text-to-Speech API를 활성화한 후 다음 값을
-설정합니다. STT와 TTS는 아래의 공통 Google Cloud 자격증명을 사용합니다.
-
-```yaml
-google:
-  tts:
-    enabled: true
-
-  cloud:
-    project-id: malhaebom-504606
-    credentials:
-      location: file:./config/google-credentials.json
-  stt:
-    enabled: true
-    language-code: en-US
-    timeout: 15s
-    location: global
-    recognizer-id: _
-    model: short
-    adaptation-boost: 5
-  tts:
-    language-code: en-US
-    voice-name: en-US-Standard-C
-    speaking-rate: 1.0
-    pitch: 0.0
-```
-
-`google.cloud.credentials.location`을 설정하면 해당 JSON 키 파일을 사용합니다.
-설정을 생략하면 Google Cloud Java 라이브러리의 Application Default Credentials
-(ADC)를 사용하므로 `GOOGLE_APPLICATION_CREDENTIALS`, 로컬 ADC 또는 실행 환경에
-연결된 서비스 계정을 자동으로 탐색합니다.
-
-현재 S3 클라이언트 구현은 정적 자격증명을 사용하므로 TTS를 활성화할 때
-`access-key`와 `secret-key`가 모두 필요합니다.
-
-```yaml
-aws:
-  s3:
-    access-key: IAM_ACCESS_KEY_ID
-    secret-key: IAM_SECRET_ACCESS_KEY
-    region: ap-northeast-2
-    bucket: malhaebom-tts
-    base-url: https://malhaebom-tts.s3.ap-northeast-2.amazonaws.com
-    key-prefix: tts/questions
-```
-
-IAM 자격증명에는 최소한 다음 리소스에 대한 `s3:PutObject` 권한이 필요합니다.
-
-```text
-arn:aws:s3:::malhaebom-tts/tts/questions/*
-```
-
-생성한 음원은 `tts/questions/{questionId}.mp3` 경로에 저장됩니다. `base-url`은
-해당 경로를 포함하지 않아야 합니다. S3 URL을 브라우저에 직접 반환하므로 객체를
-읽을 수 있도록 공개 읽기를 구성하거나, 비공개 S3 앞에 CloudFront를 연결하고
-CloudFront 배포 도메인을 `base-url`로 사용해야 합니다.
-
-AWS Access Key를 파일에 저장하지 않고 EC2 IAM Role을 사용하려면 S3 클라이언트가
-AWS 기본 자격증명 공급자 체인을 사용하도록 코드를 먼저 변경해야 합니다.
-
-## 데이터베이스
-
-현재 별도의 `spring.datasource` 설정이 없으면 내장 H2 데이터베이스가 사용됩니다.
-메모리 DB의 데이터는 애플리케이션 또는 컨테이너를 재시작하면 유지되지 않습니다.
-운영 데이터를 보존하려면 PostgreSQL 또는 RDS 연결 설정과 스키마 관리 방법을
-별도로 구성해야 합니다.
-
-## 실행
-
-Windows PowerShell:
+기본 프로필은 `local`이며, 인메모리 H2 데이터베이스를 사용합니다.
 
 ```powershell
 .\gradlew.bat bootRun
 ```
 
-macOS 및 Linux:
+macOS와 Linux에서는 `./gradlew bootRun`을 사용합니다. 애플리케이션 기본 포트는
+`8080`, Actuator 관리 포트는 `9090`입니다.
 
-```bash
-./gradlew bootRun
-```
+로컬 실행 후 Swagger UI에서 API를 확인할 수 있습니다.
 
-기본 운영 구현은 Google Cloud Speech-to-Text V2를 사용합니다. 접근 권한이 있는
-`config` 저장소를 내려받으면 STT와 TTS가 함께 사용하는 서비스 계정 자격증명도
-준비됩니다. 로컬 프로필은 `config/google-credentials.json`, 운영 프로필은
-`/app/config/google-credentials.json`을 읽습니다. 경로 설정을 제거하면 Google Cloud
-Java 라이브러리의 ADC를 사용합니다.
+- Swagger UI: <http://localhost:8080/swagger-ui/index.html>
+- 사용자 API 명세: <http://localhost:8080/v3/api-docs/user-api>
+- 관리자 API 명세: <http://localhost:8080/v3/api-docs/admin-api>
+- 상태 확인: <http://localhost:9090/actuator/health>
 
-음성 답변 인식 요청에는 현재 문제의 허용 답안 목록이 inline PhraseSet으로
-포함됩니다. `google.stt.adaptation-boost`는 `0`보다 크고 `20` 이하여야 하며,
-기본 로컬·운영 설정은 기본값 `5`를 사용합니다.
+현재 배포 주소는 다음과 같습니다.
 
-## 테스트
+- 프런트엔드: <https://frontend-eight-psi-26.vercel.app/>
+- 백엔드 Swagger UI: <http://3.35.11.125/swagger-ui/index.html>
 
-테스트는 테스트 전용 설정을 사용하므로 `.env` 없이 실행할 수 있습니다.
+## 실행 프로필과 데이터베이스
 
-Windows PowerShell:
+| 프로필 | 데이터베이스 | 주요 용도 |
+| --- | --- | --- |
+| `local` (기본) | 인메모리 H2, PostgreSQL 호환 모드 | 로컬 개발 |
+| `prod` | Supabase PostgreSQL | 운영 배포 |
+| 테스트 설정 | 인메모리 H2 | 자동 테스트 |
+
+운영 프로필은 `DB_PASSWORD`가 필요하며 다음처럼 실행합니다.
 
 ```powershell
-.\gradlew.bat test
+$env:SPRING_PROFILES_ACTIVE = "prod"
+$env:DB_PASSWORD = "<Supabase database password>"
+.\gradlew.bat bootRun
 ```
 
-macOS 및 Linux:
+운영 배포는 `docker-compose.prod.yml`에서 `prod` 프로필을 활성화하고 `config/`를
+컨테이너의 `/app/config`에 읽기 전용으로 연결합니다. 현재 JPA 스키마 정책은 로컬과
+운영 모두 `ddl-auto: update`이므로 스키마 변경을 배포하기 전에 영향을 확인해야
+합니다.
 
-```bash
-./gradlew test
+## 외부 연동 설정
+
+### OpenAI 답안 평가
+
+OpenAI API 키는 `OPENAI_API_KEY`로 주입합니다. 기본 모델과 답안 평가의 대기열,
+RPM·TPM 제한은 `src/main/resources/application.yaml`의 `spring.ai.openai`와
+`malhaebom.answer-assessment`에서 관리합니다.
+
+답안 평가는 provider quota가 부족할 때 bounded FIFO 대기열을 사용합니다. 관련
+설정과 관측 지표는 [답안 평가 지표 문서](docs/answer-assessment-metrics.md)를
+참고합니다.
+
+### Google Cloud STT·TTS
+
+STT와 TTS는 공통 `gcp.credentials`를 사용합니다. 기본 설정은 STT 활성화,
+TTS 비활성화입니다.
+
+```yaml
+gcp:
+  credentials: file:./config/google-credentials.json
+  stt:
+    enabled: true
+    language-code: en-US
+    timeout: 15s
+    location: us
+    recognizer-id: _
+    model: chirp_3
+    adaptation-boost: 5
+  tts:
+    enabled: false
+    language-code: en-US
+    voice-name: en-US-Standard-C
 ```
 
-IntelliJ IDEA에서 Gradle 동기화를 마치면 로컬 기본 프로필로 실행되는
-`MalhaebomApplication`이 자동으로 감지됩니다. 저장소에서는 `Test`, `Live Test`,
-`Load Test Server` Run Configuration을 공유합니다. `Load Test Server`는 부하
-테스트용 백엔드만 실행하며 전체 답안 제출 부하 테스트는
-[전용 실행 문서](load-tests/answer-submission/README.md)를 따릅니다.
+`gcp.credentials`를 생략하면 Google Cloud Java 라이브러리의 Application Default
+Credentials를 사용합니다. 음성 답변은 최대 5 MB이며, STT 요청에는 현재 문제의
+허용 답안 목록이 inline PhraseSet으로 포함됩니다. `adaptation-boost`는 `0`보다
+크고 `20` 이하여야 합니다.
 
-답안 제출 비동기 부하 테스트는 CI/CD에서 자동 실행하지 않습니다. 별도의 실행
-환경과 fixture가 필요하고 테스트 시간이 오래 걸리며, 실제 OpenAI 호출 비용 및
-실행 시점을 통제해야 하므로 필요할 때 수동으로 실행합니다.
+### TTS와 Amazon S3
+
+TTS를 활성화하면 생성한 MP3를 `aws.s3.key-prefix` 아래에 저장하고
+`aws.s3.base-url`을 기준으로 공개 URL을 생성합니다. 현재 S3 클라이언트는 정적
+자격증명을 사용하므로 `aws.s3.access-key`와 `aws.s3.secret-key`가 모두
+필요합니다. IAM에는 대상 prefix에 대한 `s3:PutObject` 권한이 있어야 합니다.
+
+### JWT와 Refresh Token 쿠키
+
+Access Token과 Refresh Token에는 서로 다른 32바이트 이상의 비밀키를 사용합니다.
+Refresh Token은 HttpOnly 쿠키로 전달됩니다. HTTPS 운영 환경에서는 `secure: true`를
+사용하고, HTTPS가 없는 localhost나 IP 기반 개발 환경에서는 `secure: false`로
+설정합니다. 키를 변경하면 기존 토큰은 더 이상 유효하지 않습니다.
+
+## 테스트와 평가
+
+일반 테스트는 외부 서비스를 호출하는 `live` 태그를 제외하며 `.env` 없이 실행할
+수 있습니다.
+
+```powershell
+.\gradlew.bat test --no-daemon
+```
+
+외부 서비스를 실제 호출하는 테스트는 명시적으로 분리되어 있습니다.
+
+```powershell
+.\gradlew.bat liveTest --no-daemon
+```
+
+OpenAI 답안 평가 품질을 반복 측정하는 유료 평가도 일반 테스트와 분리되어 있습니다.
+기본 데이터셋, 실행 횟수, 결과 경로와 사람 검토 절차는
+[평가 데이터셋 문서](docs/answer-assessment-evaluation-dataset.md)를 먼저 확인합니다.
+
+```powershell
+.\gradlew.bat answerAssessmentEval --no-daemon
+```
+
+IntelliJ IDEA에서는 Gradle 동기화 후 저장소가 공유하는 `Test`, `Live Test`,
+`Answer Assessment Eval`, `Load Test Server` Run Configuration을 사용할 수 있습니다.
+일반 `test` 작업은 live OpenAI 평가나 부하 테스트를 실행하지 않습니다.
+
+## 운영과 관측
+
+Actuator는 별도 관리 포트에서 `health`, `metrics`, `prometheus` endpoint를
+제공합니다. 운영과 부하 테스트에서는 답안 평가 대기열, provider RPM·TPM,
+OpenAI 사용량·실패 원인, HTTP latency와 Hikari 상태를 함께 확인합니다.
+
+답안 제출 부하 테스트는 fixture와 별도 실행 환경이 필요하고 실제 provider 비용이
+발생할 수 있어 CI에서 자동 실행하지 않습니다. 실행 절차는
+[부하 테스트 문서](load-tests/answer-submission/README.md)를 따릅니다.
 
 ## 비밀정보 관리
 
-- JWT 키, Google private key, AWS Access Key를 README, 이슈 또는 메신저에
-  공유하지 않습니다.
+- JWT 키, Google 서비스 계정 키, AWS Access Key, OpenAI API Key, DB 비밀번호를
+  Git에 커밋하거나 문서와 로그에 남기지 않습니다.
 - 비밀정보가 노출되면 해당 키를 즉시 폐기하고 새 키로 교체합니다.
-- `config/application.yaml`의 실제 운영값은 접근 권한을 제한해 관리합니다.
-- `.env`를 사용하도록 전환하는 경우에도 실제 `.env`는 Git에 커밋하지 않습니다.
+- 비공개 `config/application.yaml`과 자격증명 파일은 접근 권한을 제한합니다.
+- `.env`를 사용하는 경우에도 실제 `.env`는 Git에 커밋하지 않습니다.
