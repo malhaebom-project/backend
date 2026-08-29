@@ -54,10 +54,11 @@ public class OpenApiConfiguration {
 	}
 
 	@Bean
-	public OperationCustomizer commonErrorResponseCustomizer(
+	public OperationCustomizer apiDocumentationOperationCustomizer(
 		RefreshTokenCookieProperties refreshCookieProperties
 	) {
 		return (operation, handlerMethod) -> {
+			applyControllerMetadata(operation, handlerMethod.getBeanType());
 			boolean authenticated = handlerMethod.hasMethodAnnotation(AuthenticatedErrorResponses.class)
 				|| handlerMethod.getBeanType().isAnnotationPresent(AuthenticatedErrorResponses.class);
 			boolean validated = handlerMethod.hasMethodAnnotation(ValidationErrorResponses.class)
@@ -137,6 +138,21 @@ public class OpenApiConfiguration {
 				.getAnnotationsByType(DomainErrorResponses.class));
 			return operation;
 		};
+	}
+
+	private void applyControllerMetadata(
+		io.swagger.v3.oas.models.Operation operation,
+		Class<?> controllerType
+	) {
+		String controllerName = controllerType.getSimpleName();
+		String controllerDescription = "**Controller:** `" + controllerName + "`";
+		String description = operation.getDescription();
+		operation.setDescription(
+			description == null || description.isBlank()
+				? controllerDescription
+				: description + "\n\n" + controllerDescription
+		);
+		operation.addExtension("x-controller", controllerName);
 	}
 
 	private void applyRefreshCookieResponse(
