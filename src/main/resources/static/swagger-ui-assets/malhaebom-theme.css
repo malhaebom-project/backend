@@ -145,6 +145,12 @@
   box-decoration-break: clone;
 }
 
+.swagger-ui .renderedMarkdown p code,
+.swagger-ui .markdown p code,
+.swagger-ui .opblock-description-wrapper p code {
+  padding: 0.05em 0.2em;
+}
+
 .swagger-ui .opblock-description-wrapper p strong + code {
   margin-left: 0.25em;
   padding: 0.05em 0.25em;
