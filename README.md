@@ -1,5 +1,8 @@
 # 말해봄 백엔드
 
+[![CI Build](https://github.com/malhaebom-project/backend/actions/workflows/ci-build.yml/badge.svg)](https://github.com/malhaebom-project/backend/actions/workflows/ci-build.yml)
+[![CD Deploy](https://github.com/malhaebom-project/backend/actions/workflows/cd-deploy.yml/badge.svg)](https://github.com/malhaebom-project/backend/actions/workflows/cd-deploy.yml)
+
 영어 말하기 학습 서비스 **말해봄**의 Java 21·Spring Boot 백엔드입니다.
 학습 세션과 답안 제출, Google Cloud Speech-to-Text 기반 음성 인식,
 OpenAI 기반 답안 평가, 학습 기록 및 관리자용 문제 관리를 제공합니다.
