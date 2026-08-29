@@ -1,6 +1,8 @@
 package com.malhaebom.malhaebom.infra.openapi;
 
 import com.malhaebom.malhaebom.presentation.dto.ApiErrorResponse;
+import com.malhaebom.malhaebom.presentation.cookie.RefreshCookieProvider;
+import com.malhaebom.malhaebom.presentation.cookie.RefreshTokenCookieProperties;
 import com.malhaebom.malhaebom.global.exception.ErrorCode;
 import io.swagger.v3.core.converter.ModelConverters;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
@@ -11,6 +13,7 @@ import io.swagger.v3.oas.models.examples.Example;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import org.springdoc.core.customizers.OpenApiCustomizer;
@@ -51,7 +54,9 @@ public class OpenApiConfiguration {
 	}
 
 	@Bean
-	public OperationCustomizer commonErrorResponseCustomizer() {
+	public OperationCustomizer commonErrorResponseCustomizer(
+		RefreshTokenCookieProperties refreshCookieProperties
+	) {
 		return (operation, handlerMethod) -> {
 			boolean authenticated = handlerMethod.hasMethodAnnotation(AuthenticatedErrorResponses.class)
 				|| handlerMethod.getBeanType().isAnnotationPresent(AuthenticatedErrorResponses.class);
@@ -67,6 +72,16 @@ public class OpenApiConfiguration {
 				.getMethodAnnotation(SuccessfulResponse.class);
 			if (successfulResponse != null) {
 				applySuccessfulResponse(responses, successfulResponse);
+			}
+			RefreshCookieResponse refreshCookieResponse = handlerMethod
+				.getMethodAnnotation(RefreshCookieResponse.class);
+			if (refreshCookieResponse != null && successfulResponse != null) {
+				applyRefreshCookieResponse(
+					responses,
+					successfulResponse,
+					refreshCookieResponse,
+					refreshCookieProperties
+				);
 			}
 			if (validated) {
 				responses.addApiResponse("400", errorResponse(
@@ -122,6 +137,71 @@ public class OpenApiConfiguration {
 				.getAnnotationsByType(DomainErrorResponses.class));
 			return operation;
 		};
+	}
+
+	private void applyRefreshCookieResponse(
+		ApiResponses responses,
+		SuccessfulResponse successfulResponse,
+		RefreshCookieResponse refreshCookieResponse,
+		RefreshTokenCookieProperties properties
+	) {
+		ApiResponse response = responses.get(Integer.toString(successfulResponse.status()));
+		if (response == null) {
+			return;
+		}
+
+		boolean expires = refreshCookieResponse.value() == RefreshCookieResponse.Action.EXPIRE;
+		String attributes = cookieAttributes(properties, expires);
+		String description = expires
+			? "브라우저의 Refresh Token 쿠키를 삭제하도록 만료시킵니다. " + attributes
+			: "새 Refresh Token을 HttpOnly 쿠키로 발급합니다. 로그인과 재발급 때마다 값이 갱신됩니다. "
+				+ attributes;
+		String value = expires ? "" : "<refresh-token>";
+		String example = RefreshCookieProvider.REFRESH_TOKEN_KEY + "=" + value + "; "
+			+ cookieDirectives(properties, expires);
+
+		response.addHeaderObject(
+			"Set-Cookie",
+			new io.swagger.v3.oas.models.headers.Header()
+				.description(description)
+				.schema(new StringSchema().example(example))
+		);
+	}
+
+	private String cookieAttributes(RefreshTokenCookieProperties properties, boolean expires) {
+		return "쿠키 이름은 `" + RefreshCookieProvider.REFRESH_TOKEN_KEY + "`, "
+			+ "Path=" + properties.getPath()
+			+ domainDescription(properties)
+			+ ", SameSite=" + properties.getSameSite()
+			+ ", Secure=" + properties.isSecure()
+			+ ", HttpOnly=" + properties.isHttpOnly()
+			+ ", Max-Age=" + (expires ? 0 : properties.getTtl().toSeconds()) + "초입니다.";
+	}
+
+	private String cookieDirectives(RefreshTokenCookieProperties properties, boolean expires) {
+		String directives = "Path=" + properties.getPath()
+			+ domainDirective(properties)
+			+ "; Max-Age=" + (expires ? 0 : properties.getTtl().toSeconds())
+			+ "; SameSite=" + properties.getSameSite();
+		if (properties.isSecure()) {
+			directives += "; Secure";
+		}
+		if (properties.isHttpOnly()) {
+			directives += "; HttpOnly";
+		}
+		return directives;
+	}
+
+	private String domainDescription(RefreshTokenCookieProperties properties) {
+		return properties.getDomain() == null || properties.getDomain().isBlank()
+			? ", Domain 미지정(host-only)"
+			: ", Domain=" + properties.getDomain();
+	}
+
+	private String domainDirective(RefreshTokenCookieProperties properties) {
+		return properties.getDomain() == null || properties.getDomain().isBlank()
+			? ""
+			: "; Domain=" + properties.getDomain();
 	}
 
 	private void applySuccessfulResponse(
